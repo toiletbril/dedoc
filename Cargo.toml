@@ -1,6 +1,6 @@
 [package]
 name = "dedoc"
-version = "0.0.4"
+version = "0.0.5"
 description = "Terminal-based viewer for DevDocs documentation"
 authors = ["toiletbril"]
 readme = "README.md"
