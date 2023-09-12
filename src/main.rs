@@ -21,31 +21,6 @@ use common::{
 };
 use common::{BOLD, UNDERLINE, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RED, RESET, VERSION, YELLOW};
 
-fn show_help() -> Result<(), String> {
-    let help = format!(
-        "\
-{GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
-    Search DevDocs pages from terminal.
-
-{GREEN}SUBCOMMANDS{RESET}
-    {BOLD}fetch{RESET}              Fetch available docsets.
-    {BOLD}list{RESET}               Show available docsets.
-    {BOLD}download{RESET}           Download docsets.
-    {BOLD}remove{RESET}             Delete docsets.
-    {BOLD}search{RESET}             List pages that match your query.
-    {BOLD}open{RESET}               Display specified pages.
-
-{GREEN}OPTIONS{RESET}
-    --help                 Display help message. Can be used with subcommands.
-    --version, -v          Display version.
-
-The design is not final, and may be subject to change."
-);
-    println!("{}", help);
-    Ok(())
-}
-
 fn show_version() -> Result<(), String> {
     let message = format!(
         "\
@@ -60,6 +35,31 @@ There is NO WARRANTY, to the extent permitted by law."
     Ok(())
 }
 
+fn show_help() -> Result<(), String> {
+    let help = format!(
+        "\
+{GREEN}USAGE{RESET}
+    {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
+    Search DevDocs pages from terminal.
+
+{GREEN}SUBCOMMANDS{RESET}
+    {BOLD}fetch{RESET}                       Fetch available docsets.
+    {BOLD}list{RESET}                        Show available docsets.
+    {BOLD}download{RESET}                    Download docsets.
+    {BOLD}remove{RESET}                      Delete docsets.
+    {BOLD}search{RESET}                      List pages that match your query.
+    {BOLD}open{RESET}                        Display specified pages.
+
+{GREEN}OPTIONS{RESET}
+        --help                  Display help message. Can be used with subcommands.
+    -v, --version               Display version.
+
+The design is not final, and may be subject to change."
+);
+    println!("{}", help);
+    Ok(())
+}
+
 fn show_search_help() -> Result<(), String> {
     let help = format!(
         "\
@@ -68,10 +68,10 @@ fn show_search_help() -> Result<(), String> {
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
-    --ignore-case, -i      Ignore character case.
-    --precise,     -p      Search more thoroughly and look for mentions in other files.
-    --open,        -o <n>  Open n-th exact match.
-    --help                 Display help message."
+    -i, --ignore-case           Ignore character case.
+    -p, --precise               Search more thoroughly and look for mentions in other files.
+    -o, --open <n>              Open n-th exact match.
+        --help                  Display help message."
     );
     println!("{}", help);
     Ok(())
@@ -85,7 +85,7 @@ fn show_open_help() -> Result<(), String> {
     Print a page. Pages can be searched using `search`.
 
 {GREEN}OPTIONS{RESET}
-    --help               Display help message."
+        --help             Display help message."
     );
     println!("{}", help);
     Ok(())
@@ -99,8 +99,8 @@ fn show_fetch_help() -> Result<(), String> {
     Fetch latest `docs.json` which lists available languages and frameworks.
 
 {GREEN}OPTIONS{RESET}
-    --force, -f    Update even if `docs.json` is recent.
-    --help         Display help message."
+    -f, --force                 Update even if `docs.json` is recent.
+        --help                  Display help message."
     );
     println!("{}", help);
     Ok(())
@@ -114,9 +114,9 @@ fn show_list_help() -> Result<(), String> {
     Show available docsets.
 
 {GREEN}OPTIONS{RESET}
-    --local, -l    Only show local docsets.
-    --all,   -a    Show all version-specific docsets.
-    --help         Display help message."
+    -l, --local                     Only show local docsets.
+    -a, --all                       Show all version-specific docsets.
+        --help                      Display help message."
     );
     println!("{}", help);
     Ok(())
@@ -130,8 +130,8 @@ fn show_download_help() -> Result<(), String> {
     Download a docset. Available docsets can be displayed using `list`.
 
 {GREEN}OPTIONS{RESET}
-    --force, -f    Overwrite downloaded docsets.
-    --help         Display help message."
+    -f, --force                 Overwrite downloaded docsets.
+        --help                  Display help message."
     );
     println!("{}", help);
     Ok(())
@@ -145,7 +145,7 @@ fn show_remove_help() -> Result<(), String> {
     Delete a docset. Only docsets downloaded by {PROGRAM_NAME} can be removed.
 
 {GREEN}OPTIONS{RESET}
-    --help         Display help message."
+        --help                  Display help message."
     );
     println!("{}", help);
     Ok(())

@@ -66,18 +66,14 @@ USAGE
     Search DevDocs pages from terminal.
 
 SUBCOMMANDS
-    fetch              Fetch latest available docsets.
-    list               Show available docsets.
-    download           Download a docset.
-    search             List pages that match your query.
-    read               Display the specified page.
-
-    Subcommands can be used by their first letter, for example:
-    dedoc s rust -i bufreader
+    fetch                       Fetch available docsets.
+    list                        Show available docsets.
+    download                    Download docsets.
+    remove                      Delete docsets.
+    search                      List pages that match your query.
+    open                        Display specified pages.
 
 OPTIONS
-    --help,                Display help message. Can be used with subcommands.
-    --version              Display version.
-
-The design is not final, and may be subject to change.
+        --help                  Display help message. Can be used with subcommands.
+    -v, --version               Display version.
 ```
