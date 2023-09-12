@@ -1,7 +1,7 @@
 # dedoc
 
 Search [DevDocs](https://devdocs.io/) from your terminal. Offline. Without browser.
-**Without Python, Javascript or other inconveniences**. Even without desktop environment.
+**No need for Python, Javascript or other inconveniences**. Not even desktop environment.
 
 App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`.
 
@@ -19,7 +19,7 @@ Writing `docs.json`...
 Successfully updated `docs.json`.
 ```
 
-You can use `-f` flag to overwrite fetched document if you run into some trouble.
+You can use `-f` flag to overwrite the fetched document if you encounter any issues.
 
 2. To see available docsets, run:
 ```console
@@ -41,7 +41,7 @@ Successfully installed `rust`.
 
 This will make the documentation available locally as a bunch of HTML pages.
 
-4. To search in these pages, for BufReader, as an example, run:
+4. To search, for instance, for `BufReader` from `rust`, run:
 ```console
 $ dedoc search rust bufreader
 Exact matches in `rust`:
@@ -50,11 +50,22 @@ Exact matches in `rust`:
 
 You will get search results which are pages with filenames that match your
 query. If you need a more thorough search, you can use `-p` flag, which will
-look inside of files as well.
+look inside of the files as well.
 
-5. Finally, to see the page:
+5. Finally, to see the page you can either use `dedoc open`:
 ```console
-$ dedoc read rust std/io/struct.bufreader
+$ dedoc open rust std/io/struct.bufreader
+```
+
+Or use `-o <n>`, which will open n-th matched page:
+```console
+$ dedoc search rust bufreader -o 1
+```
+
+You would probably like to pipe very long pages to a pager, like `less`,
+and use `s` instead of `search`, which turns the final command into:
+```console
+$ dedoc s rust bufreader -o 1 | less
 ```
 
 ## Help
