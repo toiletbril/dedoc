@@ -25,8 +25,9 @@ $ dedoc ls
 angular, ansible, apache_http_server, astro, async, ...
 ```
 
-Which will list all docsets available to download from file which you previously fetched.
-If you need version-specific docs, use `-a` flag, which will list *everything*.
+Which will list all docsets available to download from file which you
+previously fetched. If you need version-specific docs, use `-a` flag, which
+will list *everything*.
 
 3. Download the documentation:
 ```console
@@ -36,7 +37,7 @@ Extracting `rust`...
 Successfully installed `rust`.
 ```
 
-This will make the documentation available locally as a bunch of html pages.
+This will make the documentation available locally as a bunch of HTML pages.
 
 4. To search in these pages, for BufReader, as an example, run:
 ```console
@@ -45,8 +46,9 @@ Exact matches in `rust`:
   std/io/struct.bufreader
 ```
 
-You will get search results which are pages with filenames that match your query.
-If you need a more thorough search, you can use `-p` flag, which will look inside of files as well.
+You will get search results which are pages with filenames that match your
+query. If you need a more thorough search, you can use `-p` flag, which will
+look inside of files as well.
 
 5. Finally, to see the page:
 ```console
