@@ -1,12 +1,12 @@
 [package]
 name = "dedoc"
-version = "0.0.1"
+version = "0.0.2"
 description = "Terminal-based viewer for DevDocs documentation"
 authors = ["toiletbril"]
 readme = "README.md"
 
 edition = "2021"
-rust-version = "1.72"
+rust-version = "1.68"
 
 license = "GPLv3"
 keywords = ["docs", "cli"]
