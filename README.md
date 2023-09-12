@@ -62,10 +62,11 @@ Or use `-o <n>`, which will open n-th matched page:
 $ dedoc search rust bufreader -o 1
 ```
 
-You would probably like to pipe very long pages to a pager, like `less`,
-and use `s` instead of `search`, which turns the final command into:
+You would probably like to use `s` instead of `search`, pipe output to a pager,
+like `less` and forcefully enable colors if your pager supports it, which turns
+the final command into:
 ```console
-$ dedoc s rust bufreader -o 1 | less
+$ dedoc -c on s rust bufreader -o 1 | less
 ```
 
 ## Help
@@ -77,14 +78,15 @@ USAGE
     Search DevDocs pages from terminal.
 
 SUBCOMMANDS
-    fetch                       Fetch available docsets.
-    list                        Show available docsets.
-    download                    Download docsets.
-    remove                      Delete docsets.
-    search                      List pages that match your query.
-    open                        Display specified pages.
+    fetch                          Fetch available docsets.
+    list                           Show available docsets.
+    download                       Download docsets.
+    remove                         Delete docsets.
+    search                         List pages that match your query.
+    open                           Display specified pages.
 
 OPTIONS
-        --help                  Display help message. Can be used with subcommands.
-    -v, --version               Display version.
+    -c, --color <yes/no/auto>       Use color when displaying output.
+    -v, --version                   Display version.
+        --help                      Display help message. Can be used with subcommands.
 ```
