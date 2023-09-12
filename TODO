@@ -1,5 +1,5 @@
-- static init for PROGRAM_NAME
-- cool md/man
-- pager
-- check other program's dirs for devdocs pages
-- dash support
+- dynamically set PROGRAM_NAME
+- literally make man pages out of html
+- own pager?
+- check other devdocs browsers docsets
+- zeal/dash docsets support
