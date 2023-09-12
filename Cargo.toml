@@ -1,6 +1,6 @@
 [package]
 name = "dedoc"
-version = "0.0.5"
+version = "0.0.6"
 description = "Terminal-based viewer for DevDocs documentation"
 authors = ["toiletbril"]
 readme = "README.md"
@@ -23,4 +23,4 @@ serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.106"
 tar = "0.4.40"
 tinyquest = "0.4.1"
-toiletcli = "0.8.1"
+toiletcli = "0.9.2"

@@ -3,4 +3,3 @@
 - pager
 - check other program's dirs for devdocs pages
 - dash support
-- update toiletcli with isatty, optional no colors, cooler errors
