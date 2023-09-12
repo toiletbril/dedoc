@@ -1,5 +1,4 @@
 - static init for PROGRAM_NAME
-- "remove" subcommand
 - cool md/man
 - pager
 - check other program's dirs for devdocs pages
