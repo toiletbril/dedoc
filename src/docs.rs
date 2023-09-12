@@ -12,7 +12,7 @@ extern crate tinyquest;
 use tar::Archive;
 use tinyquest::get;
 
-use crate::common::{VERSION, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, DEFAULT_DOWNLOADS_LINK, get_docset_path, write_to_logfile};
+use crate::common::{VERSION, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, DEFAULT_DOWNLOADS_LINK, get_docset_path, write_to_logfile, create_program_directory};
 use crate::common::{get_program_directory, is_docs_json_exists};
 
 #[inline(always)]
@@ -85,8 +85,13 @@ pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
 }
 
 pub fn serialize_and_overwrite_docs_json(docs: Vec<Docs>) -> Result<(), String> {
-    let docs_json_path = get_program_directory()?.join("docs.json");
+    let program_path = get_program_directory()?;
 
+    if !program_path.exists() {
+        create_program_directory()?;
+    }
+
+    let docs_json_path = program_path.join("docs.json");
     let file = File::create(&docs_json_path)
         .map_err(|err| format!("{docs_json_path:?}: {err}"))?;
 

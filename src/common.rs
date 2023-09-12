@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, time::{Duration, SystemTime}, fs::File, io::Write};
+use std::{path::{Path, PathBuf}, time::{Duration, SystemTime}, fs::{File, create_dir_all}, io::Write};
 
 use toiletcli::colors::{Color, Style};
 
@@ -62,6 +62,21 @@ pub fn get_program_directory() -> Result<PathBuf, String> {
     let dot_program = format!(".{PROGRAM_NAME}");
     let program_path = path.join(dot_program);
     Ok(program_path)
+}
+
+pub fn create_program_directory() -> Result<(), String> {
+    let program_path = get_program_directory()?;
+
+    if !program_path.exists() {
+        create_dir_all(&program_path)
+            .map_err(|err| format!("Could not create {program_path:?}: {err}"))?;
+    }
+
+    if program_path.is_dir() {
+        Ok(())
+    } else {
+        Err("Could not create {program_path:?}".to_string())
+    }
 }
 
 const WEEK: Duration = Duration::from_secs(60 * 60 * 24 * 7);
