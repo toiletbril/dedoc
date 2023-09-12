@@ -3,7 +3,7 @@ use std::fs::remove_dir_all;
 
 extern crate toiletcli;
 
-use toiletcli::common::name_from_path;
+use toiletcli::common::{name_from_path, overwrite_should_use_colors};
 use toiletcli::flags::*;
 use toiletcli::flags;
 
@@ -43,16 +43,17 @@ fn show_help() -> Result<(), String> {
     Search DevDocs pages from terminal.
 
 {GREEN}SUBCOMMANDS{RESET}
-    {BOLD}fetch{RESET}                       Fetch available docsets.
-    {BOLD}list{RESET}                        Show available docsets.
-    {BOLD}download{RESET}                    Download docsets.
-    {BOLD}remove{RESET}                      Delete docsets.
-    {BOLD}search{RESET}                      List pages that match your query.
-    {BOLD}open{RESET}                        Display specified pages.
+    {BOLD}fetch{RESET}                           Fetch available docsets.
+    {BOLD}list{RESET}                            Show available docsets.
+    {BOLD}download{RESET}                        Download docsets.
+    {BOLD}remove{RESET}                          Delete docsets.
+    {BOLD}search{RESET}                          List pages that match your query.
+    {BOLD}open{RESET}                            Display specified pages.
 
 {GREEN}OPTIONS{RESET}
-        --help                  Display help message. Can be used with subcommands.
-    -v, --version               Display version.
+    -c, --color <on/off/auto>       Use color when displaying output.
+    -v, --version                   Display version.
+        --help                      Display help message. Can be used with subcommands.
 
 The design is not final, and may be subject to change."
 );
@@ -159,19 +160,29 @@ where
 
     let mut flag_version;
     let mut flag_help;
+    let mut flag_color;
 
     let mut flags = flags![
         flag_help: BoolFlag,    ["--help"],
-        flag_version: BoolFlag, ["--version", "-v"]
+        flag_version: BoolFlag, ["--version", "-v"],
+        flag_color: StringFlag, ["--color", "-c"]
     ];
 
-    let subcommand = parse_flags_until_subcommand(&mut args, &mut flags);
-    if flag_help { return show_help(); }
-    if flag_version { return show_version(); }
-
-    let subcommand = subcommand
-        .map_err(|err| format!("{err}. Try `--help` for more information."))?
+    let subcommand = parse_flags_until_subcommand(&mut args, &mut flags)?
         .to_lowercase();
+
+    if !flag_color.is_empty() {
+        match flag_color.as_str() {
+            "yes"  | "on"  | "always" => unsafe { overwrite_should_use_colors(true) }
+            "no"   | "off" | "never"  => unsafe { overwrite_should_use_colors(false) }
+            "auto" | "tty" => {}
+            other => {
+                return Err(format!("Argument `{other}` for `--color` is invalid."));
+            }
+        }
+    }
+    if flag_version { return show_version(); }
+    if flag_help || subcommand.is_empty() { return show_help(); }
 
     match subcommand.as_str() {
         "f" | "fetch" => {

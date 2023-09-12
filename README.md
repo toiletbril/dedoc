@@ -78,15 +78,15 @@ USAGE
     Search DevDocs pages from terminal.
 
 SUBCOMMANDS
-    fetch                          Fetch available docsets.
-    list                           Show available docsets.
-    download                       Download docsets.
-    remove                         Delete docsets.
-    search                         List pages that match your query.
-    open                           Display specified pages.
+    fetch                           Fetch available docsets.
+    list                            Show available docsets.
+    download                        Download docsets.
+    remove                          Delete docsets.
+    search                          List pages that match your query.
+    open                            Display specified pages.
 
 OPTIONS
-    -c, --color <yes/no/auto>       Use color when displaying output.
+    -c, --color <on/off/auto>       Use color when displaying output.
     -v, --version                   Display version.
         --help                      Display help message. Can be used with subcommands.
 ```
