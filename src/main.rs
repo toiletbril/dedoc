@@ -170,7 +170,7 @@ where
     if flag_version { return show_version(); }
 
     let subcommand = subcommand
-        .map_err(|err| format!("{err}. Try `--help` for more information"))?
+        .map_err(|err| format!("{err}. Try `--help` for more information."))?
         .to_lowercase();
 
     match subcommand.as_str() {
@@ -190,7 +190,7 @@ where
                 let message = format!(
                     "\
 {YELLOW}WARNING{RESET}: It seems that your `docs.json` was updated less than a week ago.
-{YELLOW}WARNING{RESET}: If you still want to update it, re-run this command with `--force`"
+{YELLOW}WARNING{RESET}: If you still want to update it, re-run this command with `--force`."
                 );
                 println!("{}", message);
                 return Ok(());
@@ -368,7 +368,7 @@ where
             };
 
             if !is_docset_downloaded(docset)? {
-                let message = format!("`{docset}` docset is not downloaded. Try using `download`");
+                let message = format!("`{docset}` docset is not downloaded. Try using `download`.");
                 return Err(message);
             }
 
@@ -446,7 +446,7 @@ where
             };
 
             if !is_docset_downloaded(docset)? {
-                let message = format!("`{docset}` docset is not downloaded. Try using `download`");
+                let message = format!("`{docset}` docset is not downloaded. Try using `download`.");
                 return Err(message);
             }
 
@@ -459,7 +459,7 @@ where
 
             print_page_from_docset(docset, &query)?;
         }
-        other => return Err(format!("Unknown subcommand `{other}`")),
+        other => return Err(format!("Unknown subcommand `{other}`.")),
     }
 
     Ok(())
@@ -467,7 +467,7 @@ where
 
 fn main() -> ExitCode {
     let mut args = std::env::args();
-    let _program_name = name_from_path(&args.next().expect("Progran path is provided"));
+    let _program_name = name_from_path(&args.next().expect("Program path is provided"));
 
     match entry(&mut args) {
         Err(err) => {
