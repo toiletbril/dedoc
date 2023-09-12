@@ -1,5 +1,8 @@
 - static init for PROGRAM_NAME
-- docs
+- "remove" subcommand
+- cool md/man
+- pager
 - more colors
 - check other program's dirs for devdocs pages
 - dash support
+- update toiletcli with isatty
