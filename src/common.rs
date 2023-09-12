@@ -1,4 +1,4 @@
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, File, read_dir};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -158,6 +158,28 @@ pub fn print_search_results(paths: Vec<PathBuf>, docset_name: &String) -> Result
     Ok(())
 }
 
+pub fn get_local_docsets() -> Result<Vec<String>, String> {
+    let docsets_path = get_program_directory()?.join("docsets");
+
+    let mut docsets_dir = read_dir(docsets_path)
+        .map_err(|err| err.to_string())?;
+
+    let mut result = vec![];
+
+    while let Some(entry) = docsets_dir.next() {
+        let entry = entry
+            .map_err(|err| err.to_string())?;
+
+        let holy_result_option_please_stop = entry.file_name()
+            .to_string_lossy()
+            .to_string();
+
+        result.push(holy_result_option_please_stop);
+    }
+
+    Ok(result)
+}
+
 #[inline(always)]
 pub fn is_docset_downloaded(docset_name: &String) -> Result<bool, String> {
     get_docset_path(docset_name)?
@@ -174,5 +196,8 @@ pub fn is_docs_json_exists() -> Result<bool, String> {
 #[inline(always)]
 pub fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
+    if PathBuf::from(docset_name).is_absolute() {
+        return Err("Absolute paths are not allowed".to_string());
+    }
     Ok(docsets_path.join(docset_name))
 }
