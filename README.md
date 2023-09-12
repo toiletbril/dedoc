@@ -1,7 +1,7 @@
 # dedoc
 
-Search [DevDocs](https://devdocs.io/) from your terminal. Offline. Without
-browser. Without Python or Javascript. Without desktop environment.
+Search [DevDocs](https://devdocs.io/) from your terminal. Offline. Without browser.
+**Without Python, Javascript or other inconveniences**. Even without desktop environment.
 
 App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`.
 
