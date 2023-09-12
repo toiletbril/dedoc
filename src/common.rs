@@ -1,22 +1,25 @@
-use std::{path::{Path, PathBuf}, time::{Duration, SystemTime}, fs::{File, create_dir_all}, io::Write};
+use std::fs::{create_dir_all, File};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
 use toiletcli::colors::{Color, Style};
 
 use crate::docs::Docs;
 
-pub const VERSION: &str      = env!("CARGO_PKG_VERSION");
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 // @@@
 pub const PROGRAM_NAME: &str = "dedoc";
 
 pub const DEFAULT_DOWNLOADS_LINK: &str = "https://downloads.devdocs.io";
-pub const DEFAULT_DOCS_LINK: &str      = "https://devdocs.io/docs.json";
-pub const DEFAULT_USER_AGENT: &str     = "dedoc";
+pub const DEFAULT_DOCS_LINK: &str = "https://devdocs.io/docs.json";
+pub const DEFAULT_USER_AGENT: &str = "dedoc";
 
-pub const RED: Color    = Color::Red;
-pub const GREEN: Color  = Color::Green;
+pub const RED: Color = Color::Red;
+pub const GREEN: Color = Color::Green;
 pub const YELLOW: Color = Color::Yellow;
 
-pub const BOLD: Style      = Style::Bold;
+pub const BOLD: Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
 
 pub const RESET: Style = Style::Reset;
@@ -43,8 +46,7 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
         if let Ok(home) = home {
             Ok(home)
         } else {
-            let user = std::env::var("USER")
-                .map_err(|err| err.to_string())?;
+            let user = std::env::var("USER").map_err(|err| err.to_string())?;
 
             #[cfg(target_family = "unix")]
             let home = format!("/home/{user}");
@@ -92,16 +94,17 @@ pub fn create_program_directory() -> Result<(), String> {
 const WEEK: Duration = Duration::from_secs(60 * 60 * 24 * 7);
 
 pub fn is_docs_json_old() -> Result<bool, String> {
-    let program_path = get_program_directory()
+    let program_path = get_program_directory().map_err(|err| err.to_string())?;
+
+    let metadata = program_path
+        .join("docs.json")
+        .metadata()
         .map_err(|err| err.to_string())?;
 
-    let metadata = program_path.join("docs.json").metadata()
-        .map_err(|err| err.to_string())?;
+    let modified_time = metadata.modified().map_err(|err| err.to_string())?;
 
-    let modified_time = metadata.modified()
-        .map_err(|err| err.to_string())?;
-
-    let elapsed_time = SystemTime::now().duration_since(modified_time)
+    let elapsed_time = SystemTime::now()
+        .duration_since(modified_time)
         .map_err(|err| err.to_string())?;
 
     if elapsed_time > WEEK {
@@ -118,7 +121,8 @@ pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
         File::open(&log_file_path)
     } else {
         File::create(&log_file_path)
-    }.map_err(|err| format!("Could not open {log_file_path:?}: {err}"))?;
+    }
+    .map_err(|err| format!("Could not open {log_file_path:?}: {err}"))?;
 
     writeln!(log_file, "{}", message)
         .map_err(|err| format!("Could not write {log_file_path:?}: {err}"))?;
@@ -144,7 +148,8 @@ pub fn print_search_results(paths: Vec<PathBuf>, docset_name: &String) -> Result
     let docset_path = get_docset_path(docset_name)?;
 
     for path in paths {
-        let item = path.strip_prefix(&docset_path)
+        let item = path
+            .strip_prefix(&docset_path)
             .map_err(|err| err.to_string())?;
         let item = item.with_extension("");
         println!("  {}", item.display());
@@ -155,7 +160,8 @@ pub fn print_search_results(paths: Vec<PathBuf>, docset_name: &String) -> Result
 
 #[inline(always)]
 pub fn is_docset_downloaded(docset_name: &String) -> Result<bool, String> {
-    get_docset_path(docset_name)?.try_exists()
+    get_docset_path(docset_name)?
+        .try_exists()
         .map_err(|err| format!("Could not check if `{docset_name}` exists: {err}"))
 }
 

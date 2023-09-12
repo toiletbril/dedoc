@@ -1,19 +1,26 @@
-use std::{path::{Path, PathBuf}, io::{BufWriter, BufReader, Write, BufRead, Read}, fs::{create_dir, create_dir_all, remove_file, read_dir}};
-use std::fs::File;
+use std::fs::{File, create_dir_all, read_dir, remove_file};
+use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::path::{Path, PathBuf};
 
 extern crate serde;
-use flate2::bufread::GzDecoder;
-use html2text::from_read;
-use serde::{Serialize, Deserialize};
-
 extern crate serde_json;
-
+extern crate flate2;
+extern crate html2text;
+extern crate tar;
 extern crate tinyquest;
+
+use serde::{Deserialize, Serialize};
+use flate2::bufread::GzDecoder;
+use html2text::from_read_coloured;
+use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
 use tar::Archive;
 use tinyquest::get;
+use toiletcli::colors::{Color, Style};
 
-use crate::{common::{VERSION, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, DEFAULT_DOWNLOADS_LINK, get_docset_path, write_to_logfile, create_program_directory}, debug};
+use crate::debug;
 use crate::common::{get_program_directory, is_docs_json_exists};
+use crate::common::{create_program_directory, get_docset_path, write_to_logfile};
+use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, VERSION};
 
 #[inline(always)]
 fn unknown_version() -> String {
@@ -24,7 +31,7 @@ fn unknown_version() -> String {
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Links {
     home: String,
-    code: String
+    code: String,
 }
 
 #[allow(dead_code)]
@@ -47,21 +54,23 @@ pub struct Docs {
     attribution: String,
 }
 
-/* Example item:
-{
-    "name": "Angular",
-    "slug": "angular",
-    "type": "angular",
-    "links": {
-      "home": "https://google.com",
-      "code": "https://google.com"
-    },
-    "version": "",
-    "release": "16.1.3",
-    "mtime": 1688411876,
-    "db_size": 13128638,
-    "attribution": "whatever"
-} */
+/*
+Example item:
+    {
+        "name": "Angular",
+        "slug": "angular",
+        "type": "angular",
+        "links": {
+          "home": "https://google.com",
+          "code": "https://google.com"
+        },
+        "version": "",
+        "release": "16.1.3",
+        "mtime": 1688411876,
+        "db_size": 13128638,
+        "attribution": "whatever"
+    }
+*/
 
 pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
@@ -72,14 +81,13 @@ pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
 
     let body = String::from_utf8_lossy(request.body()).to_string();
 
-    let docs: Vec<Docs> = serde_json::from_str(body.as_str())
-        .map_err(|err| {
-            let log_file_message = match write_to_logfile(format!("dasd")) {
-                Ok(path) => format!("Log file is saved at {path:?}."),
-                Err(err) => format!("Unable to write log file: {err}.")
-            };
-            format!("Serde error: {err}. {log_file_message}")
-        })?;
+    let docs: Vec<Docs> = serde_json::from_str(body.as_str()).map_err(|err| {
+        let log_file_message = match write_to_logfile(format!("dasd")) {
+            Ok(path) => format!("Log file is saved at {path:?}."),
+            Err(err) => format!("Unable to write log file: {err}."),
+        };
+        format!("Serde error: {err}. {log_file_message}")
+    })?;
 
     Ok(docs)
 }
@@ -92,8 +100,7 @@ pub fn serialize_and_overwrite_docs_json(docs: Vec<Docs>) -> Result<(), String> 
     }
 
     let docs_json_path = program_path.join("docs.json");
-    let file = File::create(&docs_json_path)
-        .map_err(|err| format!("{docs_json_path:?}: {err}"))?;
+    let file = File::create(&docs_json_path).map_err(|err| format!("{docs_json_path:?}: {err}"))?;
 
     let writer = BufWriter::new(file);
 
@@ -133,7 +140,9 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
                     .map_err(|err| format!("Cannot create `{docset_name}` directory: {err}"))?;
             }
 
-            let tar_gz_path = specific_docset_path.join(docset_name).with_extension("tar.gz");
+            let tar_gz_path = specific_docset_path
+                .join(docset_name)
+                .with_extension("tar.gz");
 
             let mut file = File::create(&tar_gz_path)
                 .map_err(|err| format!("Could not create `{tar_gz_path:?}`: {err}"))?;
@@ -146,8 +155,7 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
 
             let body = request.body();
 
-            file.write_all(body)
-                .map_err(|err| format!("{err:?}"))?;
+            file.write_all(body).map_err(|err| format!("{err:?}"))?;
         }
     }
 
@@ -164,18 +172,18 @@ pub fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
 
     let tar_gz_path = docset_path.join(docset_name).with_extension("tar.gz");
 
-    let tar_gz_file = File::open(&tar_gz_path)
-        .map_err(|err| format!("Could not open {tar_gz_path:?}: {err}"))?;
+    let tar_gz_file =
+        File::open(&tar_gz_path).map_err(|err| format!("Could not open {tar_gz_path:?}: {err}"))?;
 
     let reader = BufReader::new(tar_gz_file);
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
 
-    archive.unpack(docset_path)
+    archive
+        .unpack(docset_path)
         .map_err(|err| format!("Could not extract {tar_gz_path:?}: {err}"))?;
 
-    remove_file(&tar_gz_path)
-        .map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
+    remove_file(&tar_gz_path).map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
 
     Ok(())
 }
@@ -183,7 +191,7 @@ pub fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
 pub fn search_docset_in_filenames(
     docset_name: &String,
     query: &String,
-    case_insensitive: bool
+    case_insensitive: bool,
 ) -> Result<Vec<PathBuf>, String> {
     let docset_path = get_docset_path(docset_name)?;
 
@@ -195,19 +203,23 @@ pub fn search_docset_in_filenames(
 
     debug!(&query);
 
-    fn visit_dir_with_query(path: &PathBuf, _query: &String, case_insensitive: bool) -> Result<Vec<PathBuf>, String> {
+    fn visit_dir_with_query(
+        path: &PathBuf,
+        _query: &String,
+        case_insensitive: bool,
+    ) -> Result<Vec<PathBuf>, String> {
         let mut internal_paths = vec![];
 
-        let dir = read_dir(&path)
-            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+        let dir =
+            read_dir(&path).map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
 
         for entry in dir {
-            let entry = entry
-                .map_err(|err| format!("Could not read file: {err}"))?;
+            let entry = entry.map_err(|err| format!("Could not read file: {err}"))?;
 
             let _file_name = entry.file_name();
 
-            let file_type = entry.file_type()
+            let file_type = entry
+                .file_type()
                 .map_err(|err| format!("Could not read file type of {_file_name:?}: {err}"))?;
 
             if file_type.is_dir() {
@@ -244,7 +256,7 @@ type VagueMatches = Vec<PathBuf>;
 pub fn search_docset_thoroughly(
     docset_name: &String,
     query: &String,
-    case_insensitive: bool
+    case_insensitive: bool,
 ) -> Result<(ExactMatches, VagueMatches), String> {
     let docset_path = get_docset_path(docset_name)?;
 
@@ -259,25 +271,26 @@ pub fn search_docset_thoroughly(
     fn visit_dir_with_query(
         path: &PathBuf,
         _query: &String,
-        case_insensitive: bool
-     ) -> Result<(ExactMatches, VagueMatches), String> {
+        case_insensitive: bool,
+    ) -> Result<(ExactMatches, VagueMatches), String> {
         let mut exact_paths = vec![];
         let mut vague_paths = vec![];
 
-        let dir = read_dir(&path)
-            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+        let dir =
+            read_dir(&path).map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
 
         for entry in dir {
-            let entry = entry
-                .map_err(|err| format!("Could not read file: {err}"))?;
+            let entry = entry.map_err(|err| format!("Could not read file: {err}"))?;
 
             let _file_name = entry.file_name();
 
-            let file_type = entry.file_type()
+            let file_type = entry
+                .file_type()
                 .map_err(|err| format!("Could not read file type of {_file_name:?}: {err}"))?;
 
             if file_type.is_dir() {
-                let (mut exact, mut vague) = visit_dir_with_query(&entry.path(), &_query, case_insensitive)?;
+                let (mut exact, mut vague) =
+                    visit_dir_with_query(&entry.path(), &_query, case_insensitive)?;
                 exact_paths.append(&mut exact);
                 vague_paths.append(&mut vague);
             }
@@ -327,20 +340,59 @@ pub fn search_docset_thoroughly(
 pub fn print_page_from_docset(docset_name: &String, page: &String) -> Result<(), String> {
     let docset_path = get_docset_path(docset_name)?;
 
-    let mut file_path = docset_path.join(page.to_owned() + ".html");
+    let file_path = docset_path.join(page.to_owned() + ".html");
 
     debug!(&file_path);
 
     if !file_path.is_file() {
-        let message = format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
+        let message =
+            format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
         return Err(message);
     }
 
-    let file = File::open(&file_path)
-        .map_err(|err| format!("Could not open {file_path:?}: {err}"))?;
-    let mut reader = BufReader::new(file);
+    print_html_file(&file_path)
+}
 
-    let page = from_read(reader, 80);
+fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
+    match annotation {
+        Default => ("".into(), "".into()),
+        Link(_) => (
+            format!("{}", Color::Blue),
+            format!("{}", Color::Reset),
+        ),
+        Image(_) => (
+            format!("{}", Color::BrightBlue),
+            format!("{}", Color::Reset)
+        ),
+        Emphasis => (
+            format!("{}", Style::Italic),
+            format!("{}", Style::Reset),
+        ),
+        Strong => (
+            format!("{}", Style::Bold),
+            format!("{}", Style::Reset)
+        ),
+        Strikeout => (
+            format!("{}", Style::Strikethrough),
+            format!("{}", Style::Reset)
+        ),
+        Code => (
+            format!("{}", Color::White),
+            format!("{}", Color::Reset)
+        ),
+        Preformat(_) => (
+            format!("{}", Color::BrightBlack),
+            format!("{}", Color::Reset)
+        ),
+    }
+}
+
+pub fn print_html_file(path: &Path) -> Result<(), String> {
+    let file = File::open(&path).map_err(|err| format!("Could not open {path:?}: {err}"))?;
+    let reader = BufReader::new(file);
+
+    let page = from_read_coloured(reader, 80, default_colour_map)
+        .map_err(|err| err.to_string())?;
 
     println!("{}", page.trim());
 
@@ -371,8 +423,8 @@ mod tests {
 
     #[test]
     fn test_parse_docs() {
-        let json: Result<Vec<Docs>, _> = serde_json::from_str(TEST_STRING)
-            .map_err(|err| err.to_string());
+        let json: Result<Vec<Docs>, _> =
+            serde_json::from_str(TEST_STRING).map_err(|err| err.to_string());
 
         assert_eq!(json.unwrap()[0].slug, "angular");
     }
