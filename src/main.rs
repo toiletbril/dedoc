@@ -116,6 +116,8 @@ fn show_download_help() -> Result<(), String> {
 fn entry<Args>(program_name: &String, mut args: &mut Args) -> Result<(), String>
 where Args: Iterator<Item = String>
 {
+    debug!(VERSION);
+
     let mut flag_version;
     let mut flag_help;
 
@@ -187,7 +189,12 @@ where Args: Iterator<Item = String>
                     continue;
                 }
 
-                print!("{}", entry.slug);
+                if is_docset_downloaded(&entry.slug)? {
+                    print!("{GREEN}{} [downloaded]{RESET}", entry.slug);
+                } else {
+                    print!("{}", entry.slug);
+                }
+
                 if docs_iter.peek().is_some() {
                     print!(", ");
                 } else {

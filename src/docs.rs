@@ -12,7 +12,7 @@ extern crate tinyquest;
 use tar::Archive;
 use tinyquest::get;
 
-use crate::common::{VERSION, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, DEFAULT_DOWNLOADS_LINK, get_docset_path, write_to_logfile, create_program_directory};
+use crate::{common::{VERSION, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, DEFAULT_DOWNLOADS_LINK, get_docset_path, write_to_logfile, create_program_directory}, debug};
 use crate::common::{get_program_directory, is_docs_json_exists};
 
 #[inline(always)]
@@ -172,7 +172,7 @@ pub fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     let mut archive = Archive::new(tar);
 
     archive.unpack(docset_path)
-        .map_err(|err| format!("Could not unpack {tar_gz_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not extract {tar_gz_path:?}: {err}"))?;
 
     remove_file(&tar_gz_path)
         .map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
@@ -192,6 +192,8 @@ pub fn search_docset_in_filenames(
     } else {
         query.to_owned()
     };
+
+    debug!(&query);
 
     fn visit_dir_with_query(path: &PathBuf, _query: &String, case_insensitive: bool) -> Result<Vec<PathBuf>, String> {
         let mut internal_paths = vec![];
@@ -251,6 +253,8 @@ pub fn search_docset_thoroughly(
     } else {
         query.to_owned()
     };
+
+    debug!(&query);
 
     fn visit_dir_with_query(
         path: &PathBuf,
@@ -325,7 +329,7 @@ pub fn print_page_from_docset(docset_name: &String, page: &String) -> Result<(),
 
     let mut file_path = docset_path.join(page.to_owned() + ".html");
 
-    println!("path: {file_path:?}");
+    debug!(&file_path);
 
     if !file_path.is_file() {
         let message = format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
