@@ -19,6 +19,8 @@ Writing `docs.json`...
 Successfully updated `docs.json`.
 ```
 
+You can use `-f` flag to overwrite fetched document if you run into some trouble.
+
 2. To see available docsets, run:
 ```console
 $ dedoc ls
