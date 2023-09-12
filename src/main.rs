@@ -18,7 +18,7 @@ use common::{
     is_docs_json_exists, is_docs_json_old, is_docset_downloaded, is_docset_in_docs,
     print_search_results,
 };
-use common::{BOLD, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RED, RESET, VERSION, YELLOW};
+use common::{BOLD, UNDERLINE, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RED, RESET, VERSION, YELLOW};
 
 fn show_help() -> Result<(), String> {
     let help = format!(
@@ -48,7 +48,7 @@ fn show_version() -> Result<(), String> {
     let message = format!(
         "\
 dedoc {VERSION}
-(c) toiletbril <https://github.com/toiletbril>
+(c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
 
 Licensed under GPLv3.
 This is free software: you are free to change and redistribute it.
@@ -134,7 +134,7 @@ fn show_download_help() -> Result<(), String> {
     Ok(())
 }
 
-fn entry<Args>(program_name: &String, mut args: &mut Args) -> Result<(), String>
+fn entry<Args>(mut args: &mut Args) -> Result<(), String>
 where
     Args: Iterator<Item = String>,
 {
@@ -171,7 +171,7 @@ where
                 flag_force: BoolFlag, ["--force", "-f"]
             ];
 
-            let args = parse_flags(&mut args, &mut flags)?;
+            parse_flags(&mut args, &mut flags)?;
             if flag_help {
                 return show_fetch_help();
             }
@@ -203,7 +203,7 @@ where
                 flag_all: BoolFlag,  ["--all", "-a"]
             ];
 
-            let args = parse_flags(&mut args, &mut flags)?;
+            parse_flags(&mut args, &mut flags)?;
             if flag_help {
                 return show_list_help();
             }
@@ -411,9 +411,9 @@ where
 
 fn main() -> ExitCode {
     let mut args = std::env::args();
-    let program_name = name_from_path(&args.next().expect("Progran path is provided"));
+    let _program_name = name_from_path(&args.next().expect("Progran path is provided"));
 
-    match entry(&program_name, &mut args) {
+    match entry(&mut args) {
         Err(err) => {
             eprintln!("{RED}ERROR{RESET}: {err}");
             ExitCode::FAILURE
