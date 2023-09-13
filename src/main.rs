@@ -312,7 +312,7 @@ where
 
             if success > 1 {
                 println!("{BOLD}{} items were successfully installed{RESET}.", success);
-            } else {
+            } else if success == 1 {
                 println!("{BOLD}Install successfully finished{RESET}.");
             }
         }
