@@ -17,7 +17,7 @@ use docs::{
 mod common;
 use common::{
     is_docs_json_exists, is_docs_json_old, is_docset_downloaded, is_docset_in_docs,
-    print_search_results, get_local_docsets, get_docset_path
+    print_search_results, get_local_docsets, get_docset_path, is_name_allowed
 };
 use common::{BOLD, UNDERLINE, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RED, RESET, VERSION, YELLOW};
 
@@ -227,8 +227,10 @@ where
             ];
 
             parse_flags(&mut args, &mut flags)?;
-            if flag_help {
-                return show_list_help();
+            if flag_help { return show_list_help(); }
+
+            if !is_docs_json_exists()? {
+                return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
             }
 
             let docs_names = if !flag_local {
@@ -272,11 +274,7 @@ where
             ];
 
             let args = parse_flags(&mut args, &mut flags)?;
-            if flag_help { return show_download_help(); }
-
-            if args.is_empty() {
-                return Err("No arguments were provided. Try `download --help` for more information".to_string());
-            }
+            if flag_help || args.is_empty() { return show_download_help(); }
 
             if !is_docs_json_exists()? {
                 return Err("`docs.json` does not exist. Please run `fetch` first".to_string());
@@ -326,18 +324,10 @@ where
             ];
 
             let args = parse_flags(&mut args, &mut flags)?;
-            if flag_help { return show_remove_help(); }
+            if flag_help || args.is_empty() { return show_remove_help(); }
 
             for docset in args.iter() {
-                let is_disallowed = {
-                    #[cfg(target_family = "windows")]
-                    { docset.find("\\").is_some() || docset.find("/").is_some() }
-
-                    #[cfg(target_family = "unix")]
-                    { docset.find("/").is_some() }
-                };
-
-                if is_disallowed {
+                if !is_name_allowed(docset) {
                     println!("{YELLOW}WARNING{RESET}: `{docset}` contains forbidden characters.");
                     continue;
                 }
@@ -370,16 +360,24 @@ where
             let args = parse_flags(&mut args, &mut flags)?;
             if flag_help { return show_search_help(); }
 
+            if !is_docs_json_exists()? {
+                return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
+            }
+
             let mut args = args.iter();
 
             let docset = if let Some(_docset) = args.next() {
                 _docset
             } else {
-                return Err("No docset was provided. Try `search --help` for more information".to_string());
+                return show_search_help();
             };
 
             if !is_docset_downloaded(docset)? {
-                let message = format!("`{docset}` docset is not downloaded. Try using `download`.");
+                let message = if is_docset_in_docs(docset, &deserealize_docs_json()?) {
+                    format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
+                } else {
+                    format!("`{docset}` does not exist. Try using `list` or `fetch`.")
+                };
                 return Err(message);
             }
 
@@ -450,14 +448,18 @@ where
 
             let mut args = args.iter();
 
-            let docset = if let Some(_docset) = args.next() {
-                _docset
+            let docset = if let Some(docset_name) = args.next() {
+                docset_name
             } else {
-                return Err("No docset was provided. Try `open --help` for more information.".to_string());
+                return show_open_help();
             };
 
             if !is_docset_downloaded(docset)? {
-                let message = format!("`{docset}` docset is not downloaded. Try using `download`.");
+                let message = if is_docset_in_docs(docset, &deserealize_docs_json()?) {
+                    format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
+                } else {
+                    format!("`{docset}` does not exist. Try using `list` or `fetch`.")
+                };
                 return Err(message);
             }
 

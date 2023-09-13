@@ -18,7 +18,7 @@ use tinyquest::get;
 use toiletcli::colors::{Color, Style};
 
 use crate::debug;
-use crate::common::{get_program_directory, is_docs_json_exists};
+use crate::common::get_program_directory;
 use crate::common::{create_program_directory, get_docset_path, write_to_logfile};
 use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, VERSION};
 
@@ -111,10 +111,6 @@ pub fn serialize_and_overwrite_docs_json(docs: Vec<Docs>) -> Result<(), String> 
 }
 
 pub fn deserealize_docs_json() -> Result<Vec<Docs>, String> {
-    if !is_docs_json_exists()? {
-        return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
-    }
-
     let docs_json_path = get_program_directory()?.join("docs.json");
     let file = File::open(&docs_json_path)
         .map_err(|err| format!("Could not open {docs_json_path:?}: {err}"))?;
@@ -365,7 +361,7 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
             format!("{}", Color::Reset)
         ),
         Emphasis => (
-            format!("{}", Style::Italic),
+            format!("{}", Style::Bold),
             format!("{}", Style::Reset),
         ),
         Strong => (
@@ -377,7 +373,7 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
             format!("{}", Style::Reset)
         ),
         Code => (
-            format!("{}", Color::White),
+            format!("{}", Color::BrightBlack),
             format!("{}", Color::Reset)
         ),
         Preformat(_) => (

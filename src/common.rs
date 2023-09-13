@@ -193,11 +193,58 @@ pub fn is_docs_json_exists() -> Result<bool, String> {
     Ok(docs_json_path.exists())
 }
 
+// so yesterday i deleted a folder i was not meant to
+pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
+    let docset = docset_name.to_string();
+    let test_path = PathBuf::from(&docset);
+
+    let has_slashes = {
+        #[cfg(target_family = "windows")]
+        { docset.find("\\").is_some() || docset.find("/").is_some() }
+
+        #[cfg(target_family = "unix")]
+        { docset.find("/").is_some() }
+    };
+    let starts_with_tilde = docset.starts_with('~');
+    let has_dollars = docset.find('$').is_some();
+    let is_simple = test_path.canonicalize()
+        .map(|path| path == test_path)
+        .unwrap_or(true);
+    let is_absolute = test_path.is_absolute();
+
+    debug!(has_slashes, has_dollars, is_absolute, is_simple);
+
+    !(has_slashes || starts_with_tilde || has_dollars || is_absolute || !is_simple)
+}
+
 #[inline(always)]
 pub fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
-    if PathBuf::from(docset_name).is_absolute() {
-        return Err("Absolute paths are not allowed".to_string());
-    }
     Ok(docsets_path.join(docset_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanitize_names() {
+         let bad_name_path = "/what";
+         let bad_name_home = "~";
+         let bad_name_dots = "..";
+         let bad_name_env  = "$HOME";
+
+         let good_name_simple = "hello";
+         let good_name_version = "qt~6.1";
+         let good_name_long   = "scala~2.13_reflection";
+
+        assert!(!is_name_allowed(bad_name_path));
+        assert!(!is_name_allowed(bad_name_home));
+        assert!(!is_name_allowed(bad_name_dots));
+        assert!(!is_name_allowed(bad_name_env));
+
+        assert!(is_name_allowed(good_name_simple));
+        assert!(is_name_allowed(good_name_version));
+        assert!(is_name_allowed(good_name_long));
+    }
 }
