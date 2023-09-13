@@ -17,7 +17,7 @@ use tar::Archive;
 use tinyquest::get;
 use toiletcli::colors::{Color, Style};
 
-use crate::debug;
+use crate::{debug, common::convert_paths_to_items};
 use crate::common::get_program_directory;
 use crate::common::{create_program_directory, get_docset_path, write_to_logfile};
 use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, VERSION};
@@ -210,7 +210,7 @@ pub fn search_docset_in_filenames(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
-) -> Result<Vec<PathBuf>, String> {
+) -> Result<Vec<String>, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let _query = if case_insensitive {
@@ -223,29 +223,30 @@ pub fn search_docset_in_filenames(
 
     fn visit_dir_with_query(
         path: &PathBuf,
-        _query: &String,
+        query: &String,
         case_insensitive: bool,
     ) -> Result<Vec<PathBuf>, String> {
         let mut internal_paths = vec![];
 
-        let dir =
-            read_dir(&path).map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+        let dir = read_dir(&path)
+            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
 
         for entry in dir {
-            let entry = entry.map_err(|err| format!("Could not read file: {err}"))?;
+            let entry = entry
+                .map_err(|err| format!("Could not read file: {err}"))?;
 
-            let _file_name = entry.file_name();
+            let os_file_name = entry.file_name();
 
             let file_type = entry
                 .file_type()
-                .map_err(|err| format!("Could not read file type of {_file_name:?}: {err}"))?;
+                .map_err(|err| format!("Could not read file type of {os_file_name:?}: {err}"))?;
 
             if file_type.is_dir() {
-                let mut visited = visit_dir_with_query(&entry.path(), &_query, case_insensitive)?;
+                let mut visited = visit_dir_with_query(&entry.path(), &query, case_insensitive)?;
                 internal_paths.append(&mut visited);
             }
 
-            let mut file_name = _file_name.to_string_lossy().to_string();
+            let mut file_name = os_file_name.to_string_lossy().to_string();
 
             if file_name.rfind(".html").is_none() {
                 continue;
@@ -255,27 +256,30 @@ pub fn search_docset_in_filenames(
                 file_name.make_ascii_lowercase();
             }
 
-            if file_name.find(_query).is_some() {
+            if file_name.find(query).is_some() {
                 internal_paths.push(entry.path());
             }
         }
         Ok(internal_paths)
     }
 
-    let result = visit_dir_with_query(&docset_path, &_query, case_insensitive)?;
+    let paths = visit_dir_with_query(&docset_path, &_query, case_insensitive)?;
+    let mut items = convert_paths_to_items(paths, docset_name)?;
 
-    Ok(result)
+    items.sort_unstable();
+
+    Ok(items)
 }
 
-type ExactMatches = Vec<PathBuf>;
-type VagueMatches = Vec<PathBuf>;
+type ExactMatches = Vec<String>;
+type VagueMatches = Vec<String>;
+type ThoroughSearch = (ExactMatches, VagueMatches);
 
-// @@@
 pub fn search_docset_thoroughly(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
-) -> Result<(ExactMatches, VagueMatches), String> {
+) -> Result<ThoroughSearch, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let _query = if case_insensitive {
@@ -288,32 +292,33 @@ pub fn search_docset_thoroughly(
 
     fn visit_dir_with_query(
         path: &PathBuf,
-        _query: &String,
+        internal_query: &String,
         case_insensitive: bool,
-    ) -> Result<(ExactMatches, VagueMatches), String> {
+    ) -> Result<(Vec<PathBuf>, Vec<PathBuf>), String> {
         let mut exact_paths = vec![];
         let mut vague_paths = vec![];
 
-        let dir =
-            read_dir(&path).map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+        let dir = read_dir(&path)
+            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
 
         for entry in dir {
-            let entry = entry.map_err(|err| format!("Could not read file: {err}"))?;
+            let entry = entry
+                .map_err(|err| format!("Could not read file: {err}"))?;
 
-            let _file_name = entry.file_name();
+            let os_file_name = entry.file_name();
 
             let file_type = entry
                 .file_type()
-                .map_err(|err| format!("Could not read file type of {_file_name:?}: {err}"))?;
+                .map_err(|err| format!("Could not read file type of {os_file_name:?}: {err}"))?;
 
             if file_type.is_dir() {
                 let (mut exact, mut vague) =
-                    visit_dir_with_query(&entry.path(), &_query, case_insensitive)?;
+                    visit_dir_with_query(&entry.path(), &internal_query, case_insensitive)?;
                 exact_paths.append(&mut exact);
                 vague_paths.append(&mut vague);
             }
 
-            let mut file_name = _file_name.to_string_lossy().to_string();
+            let mut file_name = os_file_name.to_string_lossy().to_string();
 
             if file_name.rfind(".html").is_none() {
                 continue;
@@ -325,7 +330,7 @@ pub fn search_docset_thoroughly(
 
             let file_path = entry.path();
 
-            if file_name.find(_query).is_some() {
+            if file_name.find(internal_query).is_some() {
                 exact_paths.push(file_path);
             } else {
                 let file = File::open(&file_path)
@@ -338,7 +343,7 @@ pub fn search_docset_thoroughly(
                         break;
                     }
 
-                    if string_buffer.find(_query).is_some() {
+                    if string_buffer.find(internal_query).is_some() {
                         vague_paths.push(entry.path());
                         break;
                     }
@@ -350,9 +355,17 @@ pub fn search_docset_thoroughly(
         Ok((exact_paths, vague_paths))
     }
 
-    let result = visit_dir_with_query(&docset_path, &_query, case_insensitive)?;
+    let (exact_paths, vague_paths) = visit_dir_with_query(&docset_path, &_query, case_insensitive)?;
 
-    Ok(result)
+    let mut items = (
+        convert_paths_to_items(exact_paths, docset_name)?,
+        convert_paths_to_items(vague_paths, docset_name)?
+    );
+
+    items.0.sort_unstable();
+    items.1.sort_unstable();
+
+    Ok(items)
 }
 
 fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {

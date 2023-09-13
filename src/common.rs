@@ -170,17 +170,10 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
     Ok(items)
 }
 
-pub fn print_search_results(items: Vec<String>, indexed: bool) -> Result<(), String> {
-    if indexed {
-        let mut index = 1;
-        for item in items {
-            println!("{GRAY}{index:>2}{RESET}  {}", item);
-            index += 1;
-        }
-    } else {
-        for item in items {
-            println!("    {}", item);
-        }
+pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> Result<(), String> {
+    for item in items {
+        println!("{GRAY}{start_index:>2}{RESET}  {}", item);
+        start_index += 1;
     }
 
     Ok(())

@@ -21,8 +21,6 @@ use common::{
 };
 use common::{BOLD, UNDERLINE, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RED, RESET, VERSION, YELLOW};
 
-use crate::common::convert_paths_to_items;
-
 fn show_version() -> Result<(), String> {
     let message = format!(
         "\
@@ -73,7 +71,7 @@ fn show_search_help() -> Result<(), String> {
 {GREEN}OPTIONS{RESET}
     -i, --ignore-case           Ignore character case.
     -p, --precise               Search more thoroughly and look for mentions in other files.
-    -o, --open <n>              Open n-th exact match.
+    -o, --open <number>         Open n-th search result.
         --help                  Display help message."
     );
     println!("{}", help);
@@ -175,8 +173,8 @@ where
 
     if !flag_color.is_empty() {
         match flag_color.as_str() {
-            "yes"  | "on"  | "always" => unsafe { overwrite_should_use_colors(true) }
-            "no"   | "off" | "never"  => unsafe { overwrite_should_use_colors(false) }
+            "y" |"yes"  | "on"  | "always" => unsafe { overwrite_should_use_colors(true) }
+            "n" | "no"  | "off" | "never"  => unsafe { overwrite_should_use_colors(false) }
             "auto" | "tty" => {}
             other => {
                 return Err(format!("Argument `{other}` for `--color` is invalid."));
@@ -202,8 +200,8 @@ where
             if !flag_force && is_docs_json_exists()? && !is_docs_json_old()? {
                 let message = format!(
                     "\
-{YELLOW}WARNING{RESET}: It seems that your `docs.json` was updated less than a week ago.
-{YELLOW}WARNING{RESET}: If you still want to update it, re-run this command with `--force`."
+{YELLOW}WARNING{RESET}: It seems that your `docs.json` was updated less than a week ago. \
+Run `fetch --force` to ignore this warning."
                 );
                 println!("{}", message);
                 return Ok(());
@@ -368,8 +366,8 @@ where
 
             let mut args = args.iter();
 
-            let docset = if let Some(_docset) = args.next() {
-                _docset
+            let docset = if let Some(docset_name) = args.next() {
+                docset_name
             } else {
                 return show_search_help();
             };
@@ -378,7 +376,7 @@ where
                 let message = if is_docset_in_docs(docset, &deserealize_docs_json()?) {
                     format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
                 } else {
-                    format!("`{docset}` does not exist. Try using `list` or `fetch`.")
+                    format!("`{docset}` does not exist. Try `list` or `fetch`.")
                 };
                 return Err(message);
             }
@@ -387,60 +385,62 @@ where
             query.pop(); // last space
 
             if flag_precise {
-                let (exact_paths, vague_paths) =
+                let (exact_results, vague_results) =
                     search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
 
-                let mut exact = convert_paths_to_items(exact_paths, docset)?;
-                let mut vague = convert_paths_to_items(vague_paths, docset)?;
-
-                exact.sort_unstable();
-                vague.sort_unstable();
+                let exact_results_offset = exact_results.len();
 
                 if !flag_open.is_empty() {
-                    let n = flag_open.parse::<usize>()
-                        .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
+                    let n = flag_open.parse::<usize>();
 
-                    if n <= exact.len() && n > 0 {
-                        print_page_from_docset(docset, &exact[n - 1])?;
-                        return Ok(());
+
+                    if let Ok(n) = n {
+                        if n <= exact_results_offset && n > 0 {
+                            print_page_from_docset(docset, &exact_results[n - 1])?;
+                            return Ok(());
+                        } else if n - exact_results_offset <= vague_results.len() {
+                            print_page_from_docset(docset, &vague_results[n - exact_results_offset - 1])?;
+                            return Ok(());
+                        } else {
+                            println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
+                        }
                     } else {
-                        println!("{YELLOW}WARNING{RESET}: --open {n} is larger than search result.");
+                        println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
                     }
                 }
 
-                if !exact.is_empty() {
+
+                if !exact_results.is_empty() {
                     println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-                    print_search_results(exact, true)?;
+                    print_search_results(exact_results, 1)?;
                 } else {
                     println!("{BOLD}No exact matches in `{docset}`{RESET}.");
                 }
 
-                if !vague.is_empty() {
+                if !vague_results.is_empty() {
                     println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
-                    print_search_results(vague, false)?;
+                    print_search_results(vague_results, exact_results_offset + 1)?;
                 } else {
                     println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
                 }
             } else {
-                let result_paths = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
-                let mut result = convert_paths_to_items(result_paths, docset)?;
-                result.sort_unstable();
+                let results = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
 
                 if !flag_open.is_empty() {
                     let n = flag_open.parse::<usize>()
                         .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
 
-                    if n <= result.len() && n > 0 {
-                        print_page_from_docset(docset, &result[n - 1])?;
+                    if n <= results.len() && n > 0 {
+                        print_page_from_docset(docset, &results[n - 1])?;
                         return Ok(());
                     } else {
                         println!("{YELLOW}WARNING{RESET}: --open {n} is invalid.");
                     }
                 }
 
-                if !result.is_empty() {
+                if !results.is_empty() {
                     println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-                    print_search_results(result, true)?;
+                    print_search_results(results, 1)?;
                 } else {
                     println!("{BOLD}No exact matches in `{docset}`{RESET}.");
                 }
