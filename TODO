@@ -1,6 +1,8 @@
 - fix downloads failing every second time
-- refactor each command to own file
+- cache search result for cli
 - option to literally open a manpage out of html with own pager
+- interactive search
+- refactor each command to own file
 - check other devdocs browsers docsets
 - zeal docsets support
 - download docsets from dash too
