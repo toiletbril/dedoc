@@ -3,7 +3,7 @@ use std::fs::remove_dir_all;
 
 extern crate toiletcli;
 
-use toiletcli::common::{name_from_path, overwrite_should_use_colors};
+use toiletcli::common::overwrite_should_use_colors;
 use toiletcli::flags::*;
 use toiletcli::flags;
 
@@ -480,7 +480,7 @@ where
 
 fn main() -> ExitCode {
     let mut args = std::env::args();
-    let _program_name = name_from_path(&args.next().expect("Program path is provided"));
+    let _ = &args.next().expect("Program path is provided");
 
     match entry(&mut args) {
         Err(err) => {
