@@ -1,13 +1,14 @@
 # dedoc
 
-Search [DevDocs](https://devdocs.io/) from your terminal. Offline. Without browser.
-**No need for Python, Javascript or other inconveniences**. Not even desktop environment.
+Search [DevDocs](https://devdocs.io/) from your terminal. Offline. **Without
+browser**. Without Python, Javascript or other inconveniences. Even without
+desktop environment.
 
 App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`.
 
-Pages are displayed as Markdown strings using amazing
-[html2text](https://github.com/jugglerchris/rust-html2text/) library, and can
-be piped to `less` or something alike.
+Pages are displayed as markdown documents, and can be piped to `less`,
+[`glow`](https://github.com/charmbracelet/glow) if you're fancy, or any other
+pager or markdown reader.
 
 ## Usage
 
@@ -28,8 +29,8 @@ angular, ansible, apache_http_server, astro, async, ...
 ```
 
 Which will list all docsets available to download from file which you
-previously fetched. If you need version-specific docs, use `-a` flag, which
-will list *everything*.
+previously fetched. If you need version-specific docs, like vue~3 or ~2, use
+`-a` flag, which will list *everything*.
 
 3. Download the documentation:
 ```console
