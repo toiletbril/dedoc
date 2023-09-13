@@ -1,4 +1,5 @@
-- literally make man pages out of html
-- own pager?
+- fix downloads failing every second time
+- option to literally open a manpage out of html with own pager
 - check other devdocs browsers docsets
-- zeal/dash docsets support
+- zeal docsets support
+- download docsets from dash too
