@@ -715,9 +715,9 @@ dependencies = [
 
 [[package]]
 name = "toiletcli"
-version = "0.9.2"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2663c4179709326d9de4ba7c122ec8b9298afc351f72290f15a8c7384a73def"
+checksum = "8e83e08abbe18998adffed0623c0f4c65a352fae854a39ab9ec2aeebea9f639e"
 dependencies = [
  "atty",
 ]
