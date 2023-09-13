@@ -10,7 +10,7 @@ use toiletcli::flags;
 mod docs;
 use docs::{
     deserealize_docs_json, download_docset_tar_gz, extract_docset_tar_gz, fetch_docs_json,
-    print_html_file, print_page_from_docset, search_docset_in_filenames, search_docset_thoroughly,
+    print_page_from_docset, search_docset_in_filenames, search_docset_thoroughly,
     serialize_and_overwrite_docs_json,
 };
 
@@ -20,6 +20,8 @@ use common::{
     print_search_results, get_local_docsets, get_docset_path, is_name_allowed
 };
 use common::{BOLD, UNDERLINE, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RED, RESET, VERSION, YELLOW};
+
+use crate::common::convert_paths_to_items;
 
 fn show_version() -> Result<(), String> {
     let message = format!(
@@ -382,18 +384,24 @@ where
             }
 
             let mut query = args.fold(String::new(), |base, next| base + next + " ");
-            query.pop(); // remove last space
+            query.pop(); // last space
 
             if flag_precise {
-                let (exact, vague) =
+                let (exact_paths, vague_paths) =
                     search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
+
+                let mut exact = convert_paths_to_items(exact_paths, docset)?;
+                let mut vague = convert_paths_to_items(vague_paths, docset)?;
+
+                exact.sort_unstable();
+                vague.sort_unstable();
 
                 if !flag_open.is_empty() {
                     let n = flag_open.parse::<usize>()
                         .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
 
                     if n <= exact.len() && n > 0 {
-                        print_html_file(&exact[n - 1])?;
+                        print_page_from_docset(docset, &exact[n - 1])?;
                         return Ok(());
                     } else {
                         println!("{YELLOW}WARNING{RESET}: --open {n} is larger than search result.");
@@ -402,26 +410,28 @@ where
 
                 if !exact.is_empty() {
                     println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-                    print_search_results(exact, &docset)?;
+                    print_search_results(exact, true)?;
                 } else {
                     println!("{BOLD}No exact matches in `{docset}`{RESET}.");
                 }
 
                 if !vague.is_empty() {
                     println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
-                    print_search_results(vague, &docset)?;
+                    print_search_results(vague, false)?;
                 } else {
                     println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
                 }
             } else {
-                let result = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
+                let result_paths = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
+                let mut result = convert_paths_to_items(result_paths, docset)?;
+                result.sort_unstable();
 
                 if !flag_open.is_empty() {
                     let n = flag_open.parse::<usize>()
                         .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
 
                     if n <= result.len() && n > 0 {
-                        print_html_file(&result[n - 1])?;
+                        print_page_from_docset(docset, &result[n - 1])?;
                         return Ok(());
                     } else {
                         println!("{YELLOW}WARNING{RESET}: --open {n} is invalid.");
@@ -430,7 +440,7 @@ where
 
                 if !result.is_empty() {
                     println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-                    print_search_results(result, &docset)?;
+                    print_search_results(result, true)?;
                 } else {
                     println!("{BOLD}No exact matches in `{docset}`{RESET}.");
                 }

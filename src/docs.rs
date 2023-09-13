@@ -1,6 +1,6 @@
 use std::fs::{File, create_dir_all, read_dir, remove_dir_all, remove_file};
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 extern crate serde;
 extern crate serde_json;
@@ -355,22 +355,6 @@ pub fn search_docset_thoroughly(
     Ok(result)
 }
 
-pub fn print_page_from_docset(docset_name: &String, page: &String) -> Result<(), String> {
-    let docset_path = get_docset_path(docset_name)?;
-
-    let file_path = docset_path.join(page.to_owned() + ".html");
-
-    debug!(&file_path);
-
-    if !file_path.is_file() {
-        let message =
-            format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
-        return Err(message);
-    }
-
-    print_html_file(&file_path)
-}
-
 fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
     match annotation {
         Default => ("".into(), "".into()),
@@ -405,8 +389,9 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
     }
 }
 
-pub fn print_html_file(path: &Path) -> Result<(), String> {
-    let file = File::open(&path).map_err(|err| format!("Could not open {path:?}: {err}"))?;
+pub fn print_html_file(path: PathBuf) -> Result<(), String> {
+    let file = File::open(&path)
+        .map_err(|err| format!("Could not open {path:?}: {err}"))?;
     let reader = BufReader::new(file);
 
     let page = from_read_coloured(reader, 80, default_colour_map)
@@ -415,6 +400,22 @@ pub fn print_html_file(path: &Path) -> Result<(), String> {
     println!("{}", page.trim());
 
     Ok(())
+}
+
+pub fn print_page_from_docset(docset_name: &String, page: &String) -> Result<(), String> {
+    let docset_path = get_docset_path(docset_name)?;
+
+    let file_path = docset_path.join(page.to_owned() + ".html");
+
+    debug!(&file_path);
+
+    if !file_path.is_file() {
+        let message =
+            format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
+        return Err(message);
+    }
+
+    print_html_file(file_path)
 }
 
 #[cfg(test)]

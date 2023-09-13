@@ -18,6 +18,7 @@ pub const DEFAULT_USER_AGENT: &str = "dedoc";
 pub const RED: Color = Color::Red;
 pub const GREEN: Color = Color::Green;
 pub const YELLOW: Color = Color::Yellow;
+pub const GRAY: Color = Color::BrightBlack;
 
 pub const BOLD: Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
@@ -153,16 +154,33 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> bool {
     found
 }
 
-#[inline(always)]
-pub fn print_search_results(paths: Vec<PathBuf>, docset_name: &String) -> Result<(), String> {
+pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
     let docset_path = get_docset_path(docset_name)?;
+
+    let mut items = vec![];
 
     for path in paths {
         let item = path
             .strip_prefix(&docset_path)
             .map_err(|err| err.to_string())?;
         let item = item.with_extension("");
-        println!("  {}", item.display());
+        items.push(item.display().to_string());
+    }
+
+    Ok(items)
+}
+
+pub fn print_search_results(items: Vec<String>, indexed: bool) -> Result<(), String> {
+    if indexed {
+        let mut index = 1;
+        for item in items {
+            println!("{GRAY}{index:>2}{RESET}  {}", item);
+            index += 1;
+        }
+    } else {
+        for item in items {
+            println!("    {}", item);
+        }
     }
 
     Ok(())
@@ -225,6 +243,37 @@ pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     debug!(has_slashes, has_dollars, is_absolute, is_simple);
 
     !(has_slashes || starts_with_tilde || has_dollars || is_absolute || !is_simple)
+}
+
+#[allow(dead_code)]
+pub fn get_zeal_docsets_directory() -> Result<PathBuf, String> {
+    let zeal_parent_dir = if cfg!(target_family = "windows") {
+        get_home_directory()?
+            .join("AppData")
+            .join("Local")
+    } else {
+        get_home_directory()?
+            .join(".local")
+            .join("share")
+    };
+
+    let zeal_docsets_dir = zeal_parent_dir
+        .join("Zeal")
+        .join("Zeal")
+        .join("docsets");
+
+    Ok(zeal_docsets_dir)
+}
+
+// win32: %LocalAppData%\Zeal\Zeal\docsets
+// unix:  .local/share/Zeal/Zeal/docsets
+#[allow(dead_code)]
+pub fn is_zeal_installed() -> Result<bool, String> {
+    let zeal_docsets_dir = get_zeal_docsets_directory()?;
+    let zeal_docsets_exists = zeal_docsets_dir.try_exists()
+        .map_err(|err| format!("Could not check if Zeal ({zeal_docsets_dir:?}) exists: {err}"))?;
+
+    Ok(zeal_docsets_exists)
 }
 
 #[inline(always)]
