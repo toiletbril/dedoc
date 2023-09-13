@@ -167,8 +167,8 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
                      Please re-run this command :("
                     );
 
-                remove_file(tar_gz_path)
-                    .map_err(|err| "Could not remove bad file ({tar_gz_path}): {err}")?;
+                remove_file(&tar_gz_path)
+                    .map_err(|err| format!("Could not remove bad file ({tar_gz_path:?}): {err}"))?;
 
                 return Err(message);
             }
