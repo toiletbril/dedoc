@@ -34,6 +34,16 @@ macro_rules! debug {
     }};
 }
 
+#[macro_export]
+macro_rules! debug_println {
+    ($($e:expr),+) => {{
+            #[cfg(debug_assertions)]
+            { println!($($e),+) }
+            #[cfg(not(debug_assertions))]
+            { () }
+    }};
+}
+
 // @@@: idk
 pub fn get_home_directory() -> Result<PathBuf, String> {
     fn internal() -> Result<String, String> {

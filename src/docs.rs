@@ -17,7 +17,7 @@ use tar::Archive;
 use tinyquest::get;
 use toiletcli::colors::{Color, Style};
 
-use crate::debug;
+use crate::{debug, debug_println};
 use crate::common::get_program_directory;
 use crate::common::{create_program_directory, get_docset_path, write_to_logfile};
 use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, VERSION};
@@ -150,6 +150,28 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
                 .map_err(|err| format!("Could not GET {download_link}: {err:?}"))?;
 
             let body = request.body();
+
+            let content_length = request.headers()
+                .get("content-length")
+                .map(|header| header.to_str().unwrap_or("0"))
+                .unwrap()
+                .parse::<u64>()
+                .unwrap_or(0);
+            let file_size = body.as_slice().len() as u64;
+
+            debug_println!("file_size: {file_size}, content_length: {content_length}");
+
+            if file_size != content_length {
+                let message = format!(
+                    "File size ({file_size}) is different than required size ({content_length}). \
+                     Please re-run this command :("
+                    );
+
+                remove_file(tar_gz_path)
+                    .map_err(|err| "Could not remove bad file ({tar_gz_path}): {err}")?;
+
+                return Err(message);
+            }
 
             file.write_all(body).map_err(|err| format!("{err:?}"))?;
         }
