@@ -1,4 +1,4 @@
-use std::fs::{File, create_dir_all, read_dir, remove_file};
+use std::fs::{File, create_dir_all, read_dir, remove_dir_all, remove_file};
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
@@ -17,7 +17,7 @@ use tar::Archive;
 use tinyquest::get;
 use toiletcli::colors::{Color, Style};
 
-use crate::{debug, debug_println};
+use crate::debug;
 use crate::common::get_program_directory;
 use crate::common::{create_program_directory, get_docset_path, write_to_logfile};
 use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, VERSION};
@@ -159,7 +159,7 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
                 .unwrap_or(0);
             let file_size = body.as_slice().len() as u64;
 
-            debug_println!("file_size: {file_size}, content_length: {content_length}");
+            debug!(file_size, content_length);
 
             if file_size != content_length {
                 let message = format!(
@@ -167,8 +167,8 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
                      Please re-run this command :("
                     );
 
-                remove_file(&tar_gz_path)
-                    .map_err(|err| format!("Could not remove bad file ({tar_gz_path:?}): {err}"))?;
+                remove_dir_all(&specific_docset_path)
+                    .map_err(|err| format!("Could not remove bad docset ({specific_docset_path:?}): {err}"))?;
 
                 return Err(message);
             }
