@@ -58,7 +58,7 @@ look inside of the files as well.
 $ dedoc open rust std/io/struct.bufreader
 ```
 
-Or use `-o <n>`, which will open n-th matched page:
+Or use `-o` flag, which will open n-th matched page:
 ```console
 $ dedoc search rust bufreader -o 1
 ```
