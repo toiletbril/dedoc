@@ -29,8 +29,8 @@ angular, ansible, apache_http_server, astro, async, ...
 ```
 
 Which will list all docsets available to download from file which you
-previously fetched. If you need version-specific docs, like vue~3 or ~2, use
-`-a` flag, which will list *everything*.
+previously fetched. If you need version-specific docs, like
+`vue~3`/`~2`, use `-a` flag, which will list *everything*.
 
 3. Download the documentation:
 ```console
