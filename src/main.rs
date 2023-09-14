@@ -48,12 +48,12 @@ fn show_help() -> ResultS {
     Search DevDocs pages from terminal.
 
 {GREEN}SUBCOMMANDS{RESET}
-    {GRAY}ft{RESET} {BOLD}fetch{RESET}                        Fetch available docsets.
-    {GRAY}ls{RESET} {BOLD}list{RESET}                         Show available docsets.
-    {GRAY}dl{RESET} {BOLD}download{RESET}                     Download docsets.
-    {GRAY}rm{RESET} {BOLD}remove{RESET}                       Delete docsets.
-    {GRAY}ss{RESET} {BOLD}search{RESET}                       List pages that match your query.
-    {GRAY}op{RESET} {BOLD}open{RESET}                         Display specified pages.
+    {BOLD}fetch{RESET}{GRAY}, ft{RESET}                       Fetch available docsets.
+    {BOLD}list{RESET}{GRAY}, ls{RESET}                        Show available docsets.
+    {BOLD}download{RESET}{GRAY}, dl{RESET}                    Download docsets.
+    {BOLD}remove{RESET}{GRAY}, rm{RESET}                      Delete docsets.
+    {BOLD}search{RESET}{GRAY}, ss{RESET}                      List pages that match your query.
+    {BOLD}open{RESET}{GRAY}, op{RESET}                        Display specified pages.
 
 {GREEN}OPTIONS{RESET}
     -c, --color <on/off/auto>       Use color when displaying output.
@@ -87,11 +87,11 @@ where
 
     if !flag_color.is_empty() {
         match flag_color.as_str() {
-            "y" |"yes"  | "on"  | "always" => unsafe { overwrite_should_use_colors(true) }
+            "y" | "yes" | "on"  | "always" => unsafe { overwrite_should_use_colors(true) }
             "n" | "no"  | "off" | "never"  => unsafe { overwrite_should_use_colors(false) }
             "auto" | "tty" => {}
             other => {
-                return Err(format!("Argument `{other}` for `--color` is invalid."));
+                return Err(format!("Argument `{other}` for `--color <on/off/auto>` is invalid."));
             }
         }
     }
