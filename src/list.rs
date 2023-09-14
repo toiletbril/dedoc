@@ -62,6 +62,7 @@ where
             continue;
         }
 
+        // @@@: reduce calls to fs
         if is_docset_downloaded(&entry)? {
             print!("{GREEN}{} [downloaded]{RESET}", entry);
         } else {

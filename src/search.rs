@@ -76,16 +76,15 @@ where
 
         let exact_results_offset = exact_results.len();
 
+        // @@@: cache search results for --open
         if !flag_open.is_empty() {
             let n = flag_open.parse::<usize>();
 
             if let Ok(n) = n {
                 if n <= exact_results_offset && n > 0 {
-                    print_page_from_docset(docset, &exact_results[n - 1])?;
-                    return Ok(());
+                    return print_page_from_docset(docset, &exact_results[n - 1])?;
                 } else if n - exact_results_offset <= vague_results.len() {
-                    print_page_from_docset(docset, &vague_results[n - exact_results_offset - 1])?;
-                    return Ok(());
+                    return print_page_from_docset(docset, &vague_results[n - exact_results_offset - 1])?;
                 } else {
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
@@ -115,8 +114,7 @@ where
                 .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
 
             if n <= results.len() && n > 0 {
-                print_page_from_docset(docset, &results[n - 1])?;
-                return Ok(());
+                return print_page_from_docset(docset, &results[n - 1])?;
             } else {
                 println!("{YELLOW}WARNING{RESET}: --open {n} is invalid.");
             }
