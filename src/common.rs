@@ -147,11 +147,11 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> bool {
 
     for entry in docs.iter() {
         if entry.slug == *docset_name {
-            found = true;
+            return true;
         }
     }
 
-    found
+    false
 }
 
 pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
@@ -172,7 +172,7 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
 
 pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> Result<(), String> {
     for item in items {
-        println!("{GRAY}{start_index:>2}{RESET}  {}", item);
+        println!("{GRAY}{start_index:>4}{RESET}  {}", item);
         start_index += 1;
     }
 
