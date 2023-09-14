@@ -49,6 +49,7 @@ where
     }
 
     let mut args = args.iter();
+    let flag_open_is_empty = flag_open.is_empty();
 
     let docset = if let Some(docset_name) = args.next() {
         docset_name
@@ -68,7 +69,9 @@ where
     let mut query = args.fold(String::new(), |base, next| base + next + " ");
     query.pop(); // last space
 
-    println!("Searching for `{query}`...");
+    if flag_open_is_empty {
+        println!("Searching for `{query}`...");
+    }
 
     if flag_precise {
         let (exact_results, vague_results) =
@@ -77,14 +80,14 @@ where
         let exact_results_offset = exact_results.len();
 
         // @@@: cache search results for --open
-        if !flag_open.is_empty() {
+        if !flag_open_is_empty {
             let n = flag_open.parse::<usize>();
 
             if let Ok(n) = n {
                 if n <= exact_results_offset && n > 0 {
-                    return print_page_from_docset(docset, &exact_results[n - 1])?;
+                    return print_page_from_docset(docset, &exact_results[n - 1]);
                 } else if n - exact_results_offset <= vague_results.len() {
-                    return print_page_from_docset(docset, &vague_results[n - exact_results_offset - 1])?;
+                    return print_page_from_docset(docset, &vague_results[n - exact_results_offset - 1]);
                 } else {
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
@@ -109,12 +112,12 @@ where
     } else {
         let results = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
 
-        if !flag_open.is_empty() {
+        if !flag_open_is_empty {
             let n = flag_open.parse::<usize>()
                 .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
 
             if n <= results.len() && n > 0 {
-                return print_page_from_docset(docset, &results[n - 1])?;
+                print_page_from_docset(docset, &results[n - 1])?;
             } else {
                 println!("{YELLOW}WARNING{RESET}: --open {n} is invalid.");
             }
