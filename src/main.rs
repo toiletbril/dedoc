@@ -9,6 +9,7 @@ use toiletcli::flags;
 mod docs;
 mod common;
 
+use common::ResultS;
 use common::{BOLD, UNDERLINE, GREEN, PROGRAM_NAME, RED, RESET, VERSION};
 
 mod open;
@@ -25,7 +26,7 @@ use search::search;
 use list::list;
 use fetch::fetch;
 
-fn show_version() -> Result<(), String> {
+fn show_version() -> ResultS {
     let message = format!(
         "\
 dedoc {VERSION}
@@ -39,7 +40,7 @@ There is NO WARRANTY, to the extent permitted by law."
     Ok(())
 }
 
-fn show_help() -> Result<(), String> {
+fn show_help() -> ResultS {
     let help = format!(
         "\
 {GREEN}USAGE{RESET}
@@ -65,7 +66,7 @@ The design is not final, and may be subject to change."
     Ok(())
 }
 
-fn entry<Args>(mut args: Args) -> Result<(), String>
+fn entry<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

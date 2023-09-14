@@ -3,10 +3,11 @@ use toiletcli::flags;
 
 use crate::docs::{deserealize_docs_json, print_page_from_docset};
 
+use crate::common::ResultS;
 use crate::common::{is_docset_downloaded, is_docset_in_docs};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
-fn show_open_help() -> Result<(), String> {
+fn show_open_help() -> ResultS {
     let help = format!(
         "\
 {GREEN}USAGE{RESET}
@@ -20,7 +21,7 @@ fn show_open_help() -> Result<(), String> {
     Ok(())
 }
 
-pub fn open<Args>(mut args: Args) -> Result<(), String>
+pub fn open<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

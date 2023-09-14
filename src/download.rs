@@ -3,10 +3,11 @@ use toiletcli::flags;
 
 use crate::docs::{deserealize_docs_json, download_docset_tar_gz, extract_docset_tar_gz};
 
+use crate::common::ResultS;
 use crate::common::{is_docs_json_exists, is_docset_downloaded, is_docset_in_docs, get_docset_path};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
-fn show_download_help() -> Result<(), String> {
+fn show_download_help() -> ResultS {
     let help = format!(
         "\
 {GREEN}USAGE{RESET}
@@ -21,7 +22,7 @@ fn show_download_help() -> Result<(), String> {
     Ok(())
 }
 
-pub fn download<Args>(mut args: Args) -> Result<(), String>
+pub fn download<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>, {
     let mut flag_help;

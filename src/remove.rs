@@ -3,10 +3,11 @@ use std::fs::remove_dir_all;
 use toiletcli::flags::*;
 use toiletcli::flags;
 
+use crate::common::ResultS;
 use crate::common::{is_docset_downloaded, get_docset_path, is_name_allowed};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
-fn show_remove_help() -> Result<(), String> {
+fn show_remove_help() -> ResultS {
     let help = format!(
         "\
 {GREEN}USAGE{RESET}
@@ -20,7 +21,7 @@ fn show_remove_help() -> Result<(), String> {
     Ok(())
 }
 
-pub fn remove<Args>(mut args: Args) -> Result<(), String>
+pub fn remove<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

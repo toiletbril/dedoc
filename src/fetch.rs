@@ -2,10 +2,12 @@ use toiletcli::flags::*;
 use toiletcli::flags;
 
 use crate::docs::{fetch_docs_json, serialize_and_overwrite_docs_json};
+
+use crate::common::ResultS;
 use crate::common::{is_docs_json_exists, is_docs_json_old};
 use crate::common::{BOLD, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
-fn show_fetch_help() -> Result<(), String> {
+fn show_fetch_help() -> ResultS {
     let help = format!(
         "\
 {GREEN}USAGE{RESET}
@@ -20,7 +22,7 @@ fn show_fetch_help() -> Result<(), String> {
     Ok(())
 }
 
-pub fn fetch<Args>(mut args: Args) -> Result<(), String>
+pub fn fetch<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

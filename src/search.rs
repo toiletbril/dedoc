@@ -4,10 +4,11 @@ use toiletcli::flags;
 use crate::docs::{deserealize_docs_json, print_page_from_docset, search_docset_in_filenames,
                   search_docset_thoroughly};
 
+use crate::common::ResultS;
 use crate::common::{is_docs_json_exists, is_docset_downloaded, is_docset_in_docs, print_search_results};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
-fn show_search_help() -> Result<(), String> {
+fn show_search_help() -> ResultS {
     let help = format!(
         "\
 {GREEN}USAGE{RESET}
@@ -24,7 +25,7 @@ fn show_search_help() -> Result<(), String> {
     Ok(())
 }
 
-pub fn search<Args>(mut args: Args) -> Result<(), String>
+pub fn search<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

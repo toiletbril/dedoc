@@ -17,9 +17,11 @@ use tar::Archive;
 use tinyquest::get;
 use toiletcli::colors::{Color, Style};
 
-use crate::{debug, common::convert_paths_to_items};
-use crate::common::get_program_directory;
-use crate::common::{create_program_directory, get_docset_path, write_to_logfile};
+use crate::debug;
+
+use crate::common::ResultS;
+use crate::common::{get_program_directory, create_program_directory, get_docset_path,
+                    write_to_logfile, convert_paths_to_items};
 use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, VERSION};
 
 #[inline(always)]
@@ -402,7 +404,7 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
     }
 }
 
-pub fn print_html_file(path: PathBuf) -> Result<(), String> {
+pub fn print_html_file(path: PathBuf) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open {path:?}: {err}"))?;
     let reader = BufReader::new(file);
@@ -415,7 +417,7 @@ pub fn print_html_file(path: PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-pub fn print_page_from_docset(docset_name: &String, page: &String) -> Result<(), String> {
+pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
     let docset_path = get_docset_path(docset_name)?;
 
     let file_path = docset_path.join(page.to_owned() + ".html");

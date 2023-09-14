@@ -7,6 +7,8 @@ use toiletcli::colors::{Color, Style};
 
 use crate::docs::Docs;
 
+pub type ResultS = Result<(), String>;
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 // @@@
 pub const PROGRAM_NAME: &str = "dedoc";
@@ -87,7 +89,7 @@ pub fn get_program_directory() -> Result<PathBuf, String> {
     Ok(program_path)
 }
 
-pub fn create_program_directory() -> Result<(), String> {
+pub fn create_program_directory() -> ResultS {
     let program_path = get_program_directory()?;
 
     if !program_path.exists() {
@@ -143,14 +145,11 @@ pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
 
 #[inline(always)]
 pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> bool {
-    let mut found = false;
-
     for entry in docs.iter() {
         if entry.slug == *docset_name {
             return true;
         }
     }
-
     false
 }
 
@@ -170,7 +169,7 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
     Ok(items)
 }
 
-pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> Result<(), String> {
+pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> ResultS {
     for item in items {
         println!("{GRAY}{start_index:>4}{RESET}  {}", item);
         start_index += 1;
