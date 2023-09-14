@@ -1,0 +1,63 @@
+use toiletcli::flags::*;
+use toiletcli::flags;
+
+use crate::docs::{deserealize_docs_json, print_page_from_docset};
+
+use crate::common::{is_docset_downloaded, is_docset_in_docs};
+use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
+
+fn show_open_help() -> Result<(), String> {
+    let help = format!(
+        "\
+{GREEN}USAGE{RESET}
+    {BOLD}{PROGRAM_NAME} open{RESET} [-i] <docset> <page>
+    Print a page. Pages can be searched using `search`.
+
+{GREEN}OPTIONS{RESET}
+        --help             Display help message."
+    );
+    println!("{}", help);
+    Ok(())
+}
+
+pub fn open<Args>(mut args: Args) -> Result<(), String>
+where
+    Args: Iterator<Item = String>,
+{
+    let mut flag_help;
+
+    let mut flags = flags![
+        flag_help: BoolFlag, ["--help"]
+    ];
+
+    let args = parse_flags(&mut args, &mut flags)?;
+    if flag_help { return show_open_help(); }
+
+    let mut args = args.iter();
+
+    let docset = if let Some(docset_name) = args.next() {
+        docset_name
+    } else {
+        return show_open_help();
+    };
+
+    if !is_docset_downloaded(docset)? {
+        let message = if is_docset_in_docs(docset, &deserealize_docs_json()?) {
+            format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
+        } else {
+            format!("`{docset}` does not exist. Try using `list` or `fetch`.")
+        };
+        return Err(message);
+    }
+
+    let mut query = args.fold(String::new(), |base, next| base + next + " ");
+    query.pop(); // remove last space
+
+    if query.is_empty() {
+        return Err("No page specified. Try `open --help` for more information.".to_string());
+    }
+
+    print_page_from_docset(docset, &query)?;
+
+    Ok(())
+}
