@@ -10,7 +10,7 @@ mod docs;
 mod common;
 
 use common::ResultS;
-use common::{BOLD, UNDERLINE, GREEN, PROGRAM_NAME, RED, RESET, VERSION};
+use common::{BOLD, UNDERLINE, GREEN, GRAY, PROGRAM_NAME, RED, RESET, VERSION};
 
 mod open;
 mod download;
@@ -48,12 +48,12 @@ fn show_help() -> ResultS {
     Search DevDocs pages from terminal.
 
 {GREEN}SUBCOMMANDS{RESET}
-    {BOLD}fetch{RESET}                           Fetch available docsets.
-    {BOLD}list{RESET}                            Show available docsets.
-    {BOLD}download{RESET}                        Download docsets.
-    {BOLD}remove{RESET}                          Delete docsets.
-    {BOLD}search{RESET}                          List pages that match your query.
-    {BOLD}open{RESET}                            Display specified pages.
+    {GRAY}ft{RESET} {BOLD}fetch{RESET}                        Fetch available docsets.
+    {GRAY}ls{RESET} {BOLD}list{RESET}                         Show available docsets.
+    {GRAY}dl{RESET} {BOLD}download{RESET}                     Download docsets.
+    {GRAY}rm{RESET} {BOLD}remove{RESET}                       Delete docsets.
+    {GRAY}ss{RESET} {BOLD}search{RESET}                       List pages that match your query.
+    {GRAY}op{RESET} {BOLD}open{RESET}                         Display specified pages.
 
 {GREEN}OPTIONS{RESET}
     -c, --color <on/off/auto>       Use color when displaying output.
@@ -99,12 +99,12 @@ where
     if flag_help || subcommand.is_empty() { return show_help(); }
 
     match subcommand.as_str() {
-        "f"  | "fetch" => fetch(args),
-        "l"  | "ls" | "list" => list(args),
-        "d"  | "dl" | "download" => download(args),
-        "rm" | "remove" => remove(args),
-        "s"  | "ss" | "search" => search(args),
-        "o"  | "open" => open(args),
+        "ft" | "fetch"    => fetch(args),
+        "ls" | "list"     => list(args),
+        "dl" | "download" => download(args),
+        "rm" | "remove"   => remove(args),
+        "ss" | "search"   => search(args),
+        "op" | "open"     => open(args),
         other => {
             Err(format!("Unknown subcommand `{other}`."))
         }
