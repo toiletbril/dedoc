@@ -58,15 +58,17 @@ where
 
     if !is_docset_downloaded(docset)? {
         let message = if is_docset_in_docs(docset, &deserealize_docs_json()?) {
-            format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
+            format!("Docset `{docset}` is not downloaded. Try using `download {docset}`.")
         } else {
-            format!("`{docset}` does not exist. Try `list` or `fetch`.")
+            format!("Docset `{docset}` does not exist. Try `list` or `fetch`.")
         };
         return Err(message);
     }
 
     let mut query = args.fold(String::new(), |base, next| base + next + " ");
     query.pop(); // last space
+
+    println!("Searching for `{query}`...");
 
     if flag_precise {
         let (exact_results, vague_results) =
@@ -76,7 +78,6 @@ where
 
         if !flag_open.is_empty() {
             let n = flag_open.parse::<usize>();
-
 
             if let Ok(n) = n {
                 if n <= exact_results_offset && n > 0 {
@@ -92,7 +93,6 @@ where
                 println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
             }
         }
-
 
         if !exact_results.is_empty() {
             println!("{BOLD}Exact matches in `{docset}`{RESET}:");
