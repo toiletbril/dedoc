@@ -5,6 +5,7 @@ use std::time::{Duration, SystemTime};
 
 use html2text::from_read_coloured;
 use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
+
 use toiletcli::colors::{Color, Style};
 
 use serde::{Deserialize, Serialize};
