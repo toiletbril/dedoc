@@ -1,10 +1,10 @@
 use std::fs::remove_dir_all;
 
-use toiletcli::flags::*;
 use toiletcli::flags;
+use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{is_docset_downloaded, get_docset_path, is_name_allowed};
+use crate::common::{get_docset_path, is_docset_downloaded, is_name_allowed};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
 fn show_remove_help() -> ResultS {

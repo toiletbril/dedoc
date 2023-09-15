@@ -1,11 +1,13 @@
 use std::fs::{create_dir_all, File, read_dir};
-use std::io::Write;
+use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use html2text::from_read_coloured;
+use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
 use toiletcli::colors::{Color, Style};
 
-use crate::docs::Docs;
+use serde::{Deserialize, Serialize};
 
 pub type ResultS = Result<(), String>;
 
@@ -16,15 +18,13 @@ pub const DEFAULT_DOWNLOADS_LINK: &str = "https://downloads.devdocs.io";
 pub const DEFAULT_DOCS_LINK: &str = "https://devdocs.io/docs.json";
 pub const DEFAULT_USER_AGENT: &str = "dedoc";
 
-pub const RED: Color = Color::Red;
-pub const GREEN: Color = Color::Green;
-pub const YELLOW: Color = Color::Yellow;
-pub const GRAY: Color = Color::BrightBlack;
-
-pub const BOLD: Style = Style::Bold;
+pub const RED:       Color = Color::Red;
+pub const GREEN:     Color = Color::Green;
+pub const YELLOW:    Color = Color::Yellow;
+pub const GRAY:      Color = Color::BrightBlack;
+pub const BOLD:      Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
-
-pub const RESET: Style = Style::Reset;
+pub const RESET:     Style = Style::Reset;
 
 #[macro_export]
 macro_rules! debug_println {
@@ -37,6 +37,130 @@ macro_rules! debug_println {
             #[cfg(not(debug_assertions))]
             { () }
     }};
+}
+
+#[inline(always)]
+fn unknown_version() -> String {
+    "unknown".to_string()
+}
+
+#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub struct Links {
+    home: String,
+    code: String,
+}
+
+#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Docs {
+    #[serde(skip)]
+    name: String,
+    pub slug: String,
+    #[serde(skip)]
+    doctype: String,
+    #[serde(skip)]
+    links: Links,
+    #[serde(default = "unknown_version")]
+    pub version: String,
+    #[serde(skip)]
+    release: String,
+    pub mtime: u64,
+    db_size: usize,
+    #[serde(skip)]
+    attribution: String,
+}
+
+/*
+Example item:
+    {
+        "name": "Angular",
+        "slug": "angular",
+        "type": "angular",
+        "links": {
+          "home": "https://google.com",
+          "code": "https://google.com"
+        },
+        "version": "",
+        "release": "16.1.3",
+        "mtime": 1688411876,
+        "db_size": 13128638,
+        "attribution": "whatever"
+    }
+*/
+
+pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
+    let docs_json_path = get_program_directory()?.join("docs.json");
+    let file = File::open(&docs_json_path)
+        .map_err(|err| format!("Could not open {docs_json_path:?}: {err}"))?;
+
+    let reader = BufReader::new(file);
+
+    let docs = serde_json::from_reader(reader)
+        .map_err(|err| format!("{err}. Maybe `docs.json` was modified?"))?;
+
+    Ok(docs)
+}
+
+fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
+    match annotation {
+        Default => ("".into(), "".into()),
+        Link(_) => (
+            format!("{}", Color::Blue),
+            format!("{}", Color::Reset),
+        ),
+        Image(_) => (
+            format!("{}", Color::BrightBlue),
+            format!("{}", Color::Reset)
+        ),
+        Emphasis => (
+            format!("{}", Style::Bold),
+            format!("{}", Style::Reset),
+        ),
+        Strong => (
+            format!("{}", Style::Bold),
+            format!("{}", Style::Reset)
+        ),
+        Strikeout => (
+            format!("{}", Style::Strikethrough),
+            format!("{}", Style::Reset)
+        ),
+        Code => (
+            format!("{}", Color::BrightBlack),
+            format!("{}", Color::Reset)
+        ),
+        Preformat(_) => (
+            format!("{}", Color::BrightBlack),
+            format!("{}", Color::Reset)
+        ),
+    }
+}
+
+pub fn print_html_file(path: PathBuf) -> ResultS {
+    let file = File::open(&path)
+        .map_err(|err| format!("Could not open {path:?}: {err}"))?;
+    let reader = BufReader::new(file);
+
+    let page = from_read_coloured(reader, 80, default_colour_map)
+        .map_err(|err| err.to_string())?;
+
+    println!("{}", page.trim());
+
+    Ok(())
+}
+
+pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
+    let docset_path = get_docset_path(docset_name)?;
+
+    let file_path = docset_path.join(page.to_owned() + ".html");
+
+    if !file_path.is_file() {
+        let message =
+            format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
+        return Err(message);
+    }
+
+    print_html_file(file_path)
 }
 
 // @@@: test on windows
@@ -172,11 +296,18 @@ pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> Resul
 
 pub fn get_local_docsets() -> Result<Vec<String>, String> {
     let docsets_path = get_program_directory()?.join("docsets");
+    let docsets_dir_exists = docsets_path.try_exists()
+        .map_err(|err| format!("Could not check {docsets_path:?}: {err}"))?;
+
+    let mut result = vec![];
+
+    // `/docsets` does not exist, return empty vector
+    if !docsets_dir_exists {
+        return Ok(result);
+    }
 
     let mut docsets_dir = read_dir(docsets_path)
         .map_err(|err| err.to_string())?;
-
-    let mut result = vec![];
 
     while let Some(entry) = docsets_dir.next() {
         let entry = entry

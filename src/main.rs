@@ -6,7 +6,6 @@ use toiletcli::common::overwrite_should_use_colors;
 use toiletcli::flags::*;
 use toiletcli::flags;
 
-mod docs;
 mod common;
 
 use common::ResultS;
@@ -119,7 +118,8 @@ fn main() -> ExitCode {
     let _ = &args.next().expect("Program path is provided");
 
     match entry(&mut args) {
-        Err(err) => {
+        Err(mut err) => {
+            if !err.ends_with('.') { err += ". Try `--help` for more information."; }
             eprintln!("{RED}ERROR{RESET}: {err}");
             ExitCode::FAILURE
         }

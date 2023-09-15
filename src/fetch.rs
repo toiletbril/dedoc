@@ -1,11 +1,61 @@
-use toiletcli::flags::*;
+use std::fs::File;
+use std::io::BufWriter;
+
+use attohttpc::get;
+
 use toiletcli::flags;
+use toiletcli::flags::*;
 
-use crate::docs::{fetch_docs_json, serialize_and_overwrite_docs_json};
+use crate::common::{
+    create_program_directory, get_program_directory, is_docs_json_exists, is_docs_json_old,
+    write_to_logfile,
+};
+use crate::common::{Docs, ResultS};
+use crate::common::{
+    BOLD, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
+};
 
-use crate::common::ResultS;
-use crate::common::{is_docs_json_exists, is_docs_json_old};
-use crate::common::{BOLD, DEFAULT_DOCS_LINK, GREEN, PROGRAM_NAME, RESET, YELLOW};
+pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
+    let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
+
+    let response = get(DEFAULT_DOCS_LINK)
+        .header_append("user-agent", user_agent)
+        .send()
+        .map_err(|err| format!("Could not GET `{DEFAULT_DOCS_LINK}`: {err:?}"))?;
+
+    let body = response
+        .text()
+        .map_err(|err| format!("Unable to read response body: {err}"))?;
+
+    let docs: Vec<Docs> = serde_json::from_str(body.as_str()).map_err(|err| {
+        let log_file_message = match write_to_logfile(format!("dasd")) {
+            Ok(path) => format!("Log file is saved at {path:?}."),
+            Err(err) => format!("Unable to write log file: {err}."),
+        };
+        format!("Serde error: {err}. {log_file_message}")
+    })?;
+
+    Ok(docs)
+}
+
+pub fn serialize_and_overwrite_docs_json(docs: Vec<Docs>) -> Result<(), String> {
+    let program_path = get_program_directory()?;
+
+    if !program_path.exists() {
+        create_program_directory()?;
+    }
+
+    let docs_json_path = program_path.join("docs.json");
+    let file = File::create(&docs_json_path)
+        .map_err(|err| format!("{docs_json_path:?}: {err}"))?;
+
+    let writer = BufWriter::new(file);
+
+    serde_json::to_writer(writer, &docs)
+        .map_err(|err| format!("Could not write {docs_json_path:?}: {err}"))?;
+
+    Ok(())
+}
 
 fn show_fetch_help() -> ResultS {
     let help = format!(
@@ -56,4 +106,35 @@ where
     println!("{BOLD}Fetching has successfully finished{RESET}.");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_STRING: &str = "\
+[
+    {
+        \"name\": \"Angular\",
+        \"slug\": \"angular\",
+        \"type\": \"angular\",
+        \"links\": {
+            \"home\": \"https://google.com\",
+            \"code\": \"https://google.com\"
+        },
+        \"version\": \"\",
+        \"release\": \"16.1.3\",
+        \"mtime\": 1688411876,
+        \"db_size\": 13128638,
+        \"attribution\": \"whatever\"
+    }
+]";
+
+    #[test]
+    fn test_parse_docs() {
+        let json: Result<Vec<Docs>, _> =
+            serde_json::from_str(TEST_STRING).map_err(|err| err.to_string());
+
+        assert_eq!(json.unwrap()[0].slug, "angular");
+    }
 }

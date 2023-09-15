@@ -1,10 +1,10 @@
-use toiletcli::flags::*;
 use toiletcli::flags;
-
-use crate::docs::{deserialize_docs_json, print_page_from_docset};
+use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{is_docset_downloaded, is_docset_in_docs};
+use crate::common::{
+    deserialize_docs_json, is_docset_downloaded, is_docset_in_docs, print_page_from_docset,
+};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
 fn show_open_help() -> ResultS {
