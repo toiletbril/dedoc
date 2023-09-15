@@ -1,5 +1,5 @@
-use std::fs::{File, create_dir_all, read_dir, remove_dir_all, remove_file};
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::fs::{File, read_dir};
+use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
 
 extern crate serde;
@@ -7,20 +7,18 @@ extern crate serde_json;
 extern crate flate2;
 extern crate html2text;
 extern crate tar;
-extern crate minreq;
+extern crate attohttpc;
 
 use serde::{Deserialize, Serialize};
-use flate2::bufread::GzDecoder;
 use html2text::from_read_coloured;
 use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
-use tar::Archive;
-use minreq::get;
+use attohttpc::get;
 use toiletcli::colors::{Color, Style};
 
 use crate::common::ResultS;
 use crate::common::{get_program_directory, create_program_directory, get_docset_path,
                     write_to_logfile, convert_paths_to_items};
-use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, VERSION};
+use crate::common::{DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, VERSION};
 
 #[inline(always)]
 fn unknown_version() -> String {
@@ -76,12 +74,12 @@ pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
     let response = get(DEFAULT_DOCS_LINK)
-        .with_header("user-agent", user_agent)
-        .with_timeout(10)
+        .header_append("user-agent", user_agent)
         .send()
         .map_err(|err| format!("Could not GET `{DEFAULT_DOCS_LINK}`: {err:?}"))?;
 
-    let body = String::from_utf8_lossy(response.as_bytes()).to_string();
+    let body = response.text()
+        .map_err(|err| format!("Unable to read response body: {err}"))?;
 
     let docs: Vec<Docs> = serde_json::from_str(body.as_str()).map_err(|err| {
         let log_file_message = match write_to_logfile(format!("dasd")) {
@@ -123,88 +121,6 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
         .map_err(|err| format!("{err}. Maybe `docs.json` was modified?"))?;
 
     Ok(docs)
-}
-
-pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<(), String> {
-    let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
-
-    for entry in docs.iter() {
-        if docset_name == &entry.slug {
-            let docsets_path = get_program_directory()?.join("docsets");
-            let specific_docset_path = docsets_path.join(&docset_name);
-
-            if !specific_docset_path.exists() {
-                create_dir_all(&specific_docset_path)
-                    .map_err(|err| format!("Cannot create `{docset_name}` directory: {err}"))?;
-            }
-
-            let tar_gz_path = specific_docset_path
-                .join(docset_name)
-                .with_extension("tar.gz");
-
-            let mut file = File::create(&tar_gz_path)
-                .map_err(|err| format!("Could not create `{tar_gz_path:?}`: {err}"))?;
-
-            let download_link = format!("{DEFAULT_DOWNLOADS_LINK}/{docset_name}.tar.gz");
-
-            let response = get(&download_link)
-                .with_header("user-agent", &user_agent)
-                .with_timeout(10)
-                .send()
-                .map_err(|err| format!("Could not GET {download_link}: {err:?}"))?;
-
-            let body = response.as_bytes();
-
-            let content_length = response.headers
-                .get("content-length")
-                .unwrap_or(&"0".into())
-                .parse::<usize>()
-                .unwrap_or(0);
-            let file_size = body.len();
-
-            if file_size != content_length {
-                let message = format!(
-                    "File size ({file_size}) is different than required size ({content_length}). \
-                     Please re-run this command :("
-                    );
-
-                remove_dir_all(&specific_docset_path)
-                    .map_err(|err| format!("Could not remove bad docset ({specific_docset_path:?}): {err}"))?;
-
-                return Err(message);
-            }
-
-            file.write_all(body).map_err(|err| format!("{err:?}"))?;
-        }
-    }
-
-    Ok(())
-}
-
-pub fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
-    let docset_path = get_docset_path(docset_name)?;
-
-    if !docset_path.exists() {
-        create_dir_all(&docset_path)
-            .map_err(|err| format!("Cannot create `{docset_name}` directory: {err}"))?;
-    }
-
-    let tar_gz_path = docset_path.join(docset_name).with_extension("tar.gz");
-
-    let tar_gz_file =
-        File::open(&tar_gz_path).map_err(|err| format!("Could not open {tar_gz_path:?}: {err}"))?;
-
-    let reader = BufReader::new(tar_gz_file);
-    let tar = GzDecoder::new(reader);
-    let mut archive = Archive::new(tar);
-
-    archive
-        .unpack(docset_path)
-        .map_err(|err| format!("Could not extract {tar_gz_path:?}: {err}"))?;
-
-    remove_file(&tar_gz_path).map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
-
-    Ok(())
 }
 
 pub fn search_docset_in_filenames(
