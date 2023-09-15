@@ -1,7 +1,7 @@
 use toiletcli::flags::*;
 use toiletcli::flags;
 
-use crate::docs::{deserealize_docs_json, download_docset_tar_gz, extract_docset_tar_gz};
+use crate::docs::{deserialize_docs_json, download_docset_tar_gz, extract_docset_tar_gz};
 
 use crate::common::ResultS;
 use crate::common::{is_docs_json_exists, is_docset_downloaded, is_docset_in_docs, get_docset_path};
@@ -40,7 +40,7 @@ where
         return Err("`docs.json` does not exist. Please run `fetch` first".to_string());
     }
 
-    let docs = deserealize_docs_json()?;
+    let docs = deserialize_docs_json()?;
     let mut args_iter = args.iter();
     let mut success = 0;
 

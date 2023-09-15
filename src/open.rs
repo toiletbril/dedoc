@@ -1,7 +1,7 @@
 use toiletcli::flags::*;
 use toiletcli::flags;
 
-use crate::docs::{deserealize_docs_json, print_page_from_docset};
+use crate::docs::{deserialize_docs_json, print_page_from_docset};
 
 use crate::common::ResultS;
 use crate::common::{is_docset_downloaded, is_docset_in_docs};
@@ -43,7 +43,7 @@ where
     };
 
     if !is_docset_downloaded(docset)? {
-        let message = if is_docset_in_docs(docset, &deserealize_docs_json()?) {
+        let message = if is_docset_in_docs(docset, &deserialize_docs_json()?) {
             format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
         } else {
             format!("`{docset}` does not exist. Try using `list` or `fetch`.")

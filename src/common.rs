@@ -10,7 +10,6 @@ use crate::docs::Docs;
 pub type ResultS = Result<(), String>;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-// @@@
 pub const PROGRAM_NAME: &str = "dedoc";
 
 pub const DEFAULT_DOWNLOADS_LINK: &str = "https://downloads.devdocs.io";
@@ -47,7 +46,7 @@ macro_rules! debug_println {
     }};
 }
 
-// @@@: idk
+// @@@: test on windows
 pub fn get_home_directory() -> Result<PathBuf, String> {
     fn internal() -> Result<String, String> {
         #[cfg(target_family = "unix")]
@@ -213,10 +212,8 @@ pub fn is_docs_json_exists() -> Result<bool, String> {
     Ok(docs_json_path.exists())
 }
 
-// so yesterday i deleted a folder i was not meant to
 pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     let docset = docset_name.to_string();
-    let test_path = PathBuf::from(&docset);
 
     let has_slashes = {
         #[cfg(target_family = "windows")]
@@ -227,14 +224,12 @@ pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     };
     let starts_with_tilde = docset.starts_with('~');
     let has_dollars = docset.find('$').is_some();
-    let is_simple = test_path.canonicalize()
-        .map(|path| path == test_path)
-        .unwrap_or(true);
-    let is_absolute = test_path.is_absolute();
+    let starts_with_dot = docset.starts_with('.');
+    let has_dots = docset.find("..").is_some();
 
-    debug!(has_slashes, has_dollars, is_absolute, is_simple);
+    debug!(has_slashes, has_dollars, has_dots);
 
-    !(has_slashes || starts_with_tilde || has_dollars || is_absolute || !is_simple)
+    !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
 
 #[allow(dead_code)]

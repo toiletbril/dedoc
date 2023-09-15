@@ -1,7 +1,7 @@
 use toiletcli::flags::*;
 use toiletcli::flags;
 
-use crate::docs::{deserealize_docs_json, print_page_from_docset, search_docset_in_filenames,
+use crate::docs::{deserialize_docs_json, print_page_from_docset, search_docset_in_filenames,
                   search_docset_thoroughly};
 
 use crate::common::ResultS;
@@ -48,7 +48,7 @@ where
         return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
     }
 
-    let mut args = args.iter();
+    let mut args = args.into_iter();
     let flag_open_is_empty = flag_open.is_empty();
 
     let docset = if let Some(docset_name) = args.next() {
@@ -57,8 +57,8 @@ where
         return show_search_help();
     };
 
-    if !is_docset_downloaded(docset)? {
-        let message = if is_docset_in_docs(docset, &deserealize_docs_json()?) {
+    if !is_docset_downloaded(&docset)? {
+        let message = if is_docset_in_docs(&docset, &deserialize_docs_json()?) {
             format!("Docset `{docset}` is not downloaded. Try using `download {docset}`.")
         } else {
             format!("Docset `{docset}` does not exist. Try `list` or `fetch`.")
@@ -66,8 +66,7 @@ where
         return Err(message);
     }
 
-    let mut query = args.fold(String::new(), |base, next| base + next + " ");
-    query.pop(); // last space
+    let query = args.collect::<Vec<String>>().join(" ");
 
     if flag_open_is_empty {
         println!("Searching for `{query}`...");
@@ -85,9 +84,9 @@ where
 
             if let Ok(n) = n {
                 if n <= exact_results_offset && n > 0 {
-                    return print_page_from_docset(docset, &exact_results[n - 1]);
+                    return print_page_from_docset(&docset, &exact_results[n - 1]);
                 } else if n - exact_results_offset <= vague_results.len() {
-                    return print_page_from_docset(docset, &vague_results[n - exact_results_offset - 1]);
+                    return print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1]);
                 } else {
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
@@ -117,7 +116,7 @@ where
                 .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
 
             if n <= results.len() && n > 0 {
-                print_page_from_docset(docset, &results[n - 1])?;
+                print_page_from_docset(&docset, &results[n - 1])?;
             } else {
                 println!("{YELLOW}WARNING{RESET}: --open {n} is invalid.");
             }
@@ -129,7 +128,7 @@ where
         } else {
             println!("{BOLD}No exact matches in `{docset}`{RESET}.");
         }
-    };
+    }
 
     Ok(())
 }

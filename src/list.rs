@@ -1,10 +1,10 @@
 use toiletcli::flags::*;
 use toiletcli::flags;
 
-use crate::docs::deserealize_docs_json;
+use crate::docs::deserialize_docs_json;
 
 use crate::common::ResultS;
-use crate::common::{is_docs_json_exists, is_docset_downloaded, get_local_docsets};
+use crate::common::{is_docs_json_exists, get_local_docsets};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
 fn show_list_help() -> ResultS {
@@ -44,15 +44,29 @@ where
         return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
     }
 
-    let docs_names = if !flag_local {
-        let docs = deserealize_docs_json()?;
-        docs
+    if flag_local {
+        let local_docsets = get_local_docsets()?;
+        let mut local_docsets_iter_peekable = local_docsets
+            .iter()
+            .peekable();
+
+        while let Some(entry) = local_docsets_iter_peekable.next() {
+            print!("{GREEN}{} [downloaded]{RESET}", entry);
+            if local_docsets_iter_peekable.peek().is_some() {
+                print!(", ");
+            } else {
+                println!();
+            }
+        }
+
+        return Ok(());
+    }
+
+    let docs = deserialize_docs_json()?;
+    let docs_names = docs
             .iter()
             .map(|entry| entry.slug.to_string())
-            .collect()
-    } else {
-        get_local_docsets()?
-    };
+            .collect::<Vec<String>>();
 
     let mut docs_names_peekable = docs_names.iter().peekable();
 
@@ -62,8 +76,9 @@ where
             continue;
         }
 
-        // @@@: reduce calls to fs
-        if is_docset_downloaded(&entry)? {
+        let local_docsets = get_local_docsets()?;
+
+        if local_docsets.contains(entry) {
             print!("{GREEN}{} [downloaded]{RESET}", entry);
         } else {
             print!("{}", entry);
