@@ -62,7 +62,7 @@ fn show_help() -> ResultS {
 {GREEN}OPTIONS{RESET}
     -c, --color <on/off/auto>       Use color when displaying output.
     -v, --version                   Display version.
-        --help                      Display help message. Can be used with subcommands."
+        --help                      Display help message."
     );
     println!("{}", help);
     Ok(())

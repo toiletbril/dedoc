@@ -17,7 +17,7 @@ pager or markdown reader.
 $ dedoc fetch
 Fetching `https://devdocs.io/docs.json`...
 Writing `docs.json`...
-Successfully updated `docs.json`.
+Fetching has successfully finished.
 ```
 
 You can use `-f` flag to overwrite the fetched document if you encounter any issues.
@@ -36,8 +36,9 @@ previously fetched. If you need version-specific docs, like
 ```console
 $ dedoc download rust
 Downloading `rust`...
-Extracting `rust`...
-Successfully installed `rust`.
+Received 9335861 of 9335861 bytes...
+Extracting to `/home/user/.dedoc/docsets/rust`...
+Install has successfully finished.
 ```
 
 This will make the documentation available locally as a bunch of HTML pages.
@@ -45,8 +46,9 @@ This will make the documentation available locally as a bunch of HTML pages.
 4. To search, for instance, for `BufReader` from `rust`, run:
 ```console
 $ dedoc search rust bufreader
+Searching for `bufreader`...
 Exact matches in `rust`:
-  std/io/struct.bufreader
+   1  std/io/struct.bufreader
 ```
 
 You will get search results which are pages with filenames that match your
@@ -63,11 +65,11 @@ Or use `-o` flag, which will open n-th matched page:
 $ dedoc search rust bufreader -o 1
 ```
 
-You would probably like to use `s` instead of `search`, pipe output to a pager,
-like `less` and forcefully enable colors if your pager supports it, which turns
-the final command into:
+You would probably like to use `ss` instead of `search`, pipe output to a pager,
+like `less` and forcefully enable colors with `-c y` if your pager supports it,
+which turns the final command into:
 ```console
-$ dedoc -c on s rust bufreader -o 1 | less
+$ dedoc -c y ss rust bufreader -o 1 | less -r
 ```
 
 ## Help
@@ -79,15 +81,15 @@ USAGE
     Search DevDocs pages from terminal.
 
 SUBCOMMANDS
-    fetch                           Fetch available docsets.
-    list                            Show available docsets.
-    download                        Download docsets.
-    remove                          Delete docsets.
-    search                          List pages that match your query.
-    open                            Display specified pages.
+    fetch, ft                       Fetch available docsets.
+    list, ls                        Show available docsets.
+    download, dl                    Download docsets.
+    remove, rm                      Delete docsets.
+    search, ss                      List pages that match your query.
+    open, op                        Display specified pages.
 
 OPTIONS
     -c, --color <on/off/auto>       Use color when displaying output.
     -v, --version                   Display version.
-        --help                      Display help message. Can be used with subcommands.
+        --help                      Display help message.
 ```
