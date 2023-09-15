@@ -218,7 +218,7 @@ pub fn search_docset_in_filenames(
 ) -> Result<Vec<String>, String> {
     let docset_path = get_docset_path(docset_name)?;
 
-    let _query = if case_insensitive {
+    let internal_query = if case_insensitive {
         query.to_lowercase()
     } else {
         query.to_owned()
@@ -268,7 +268,7 @@ pub fn search_docset_in_filenames(
         Ok(internal_paths)
     }
 
-    let paths = visit_dir_with_query(&docset_path, &_query, case_insensitive)?;
+    let paths = visit_dir_with_query(&docset_path, &internal_query, case_insensitive)?;
     let mut items = convert_paths_to_items(paths, docset_name)?;
 
     items.sort_unstable();
@@ -287,13 +287,13 @@ pub fn search_docset_thoroughly(
 ) -> Result<ThoroughSearch, String> {
     let docset_path = get_docset_path(docset_name)?;
 
-    let _query = if case_insensitive {
+    let internal_query = if case_insensitive {
         query.to_lowercase()
     } else {
         query.to_owned()
     };
 
-    debug!(&query);
+    debug!(&internal_query);
 
     fn visit_dir_with_query(
         path: &PathBuf,
@@ -360,7 +360,7 @@ pub fn search_docset_thoroughly(
         Ok((exact_paths, vague_paths))
     }
 
-    let (exact_paths, vague_paths) = visit_dir_with_query(&docset_path, &_query, case_insensitive)?;
+    let (exact_paths, vague_paths) = visit_dir_with_query(&docset_path, &internal_query, case_insensitive)?;
 
     let mut items = (
         convert_paths_to_items(exact_paths, docset_name)?,
