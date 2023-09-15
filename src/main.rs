@@ -36,7 +36,7 @@ fn show_version() -> ResultS {
 dedoc {version}
 (c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
 
-Licensed under GPLv3.
+License GPLv3: GNU GPL version 3.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law."
     );
