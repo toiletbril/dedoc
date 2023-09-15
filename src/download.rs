@@ -3,7 +3,7 @@ use std::io::{BufReader, BufWriter, Read, Write};
 
 use attohttpc::get;
 
-use flate2::read::GzDecoder;
+use flate2::bufread::GzDecoder;
 use tar::Archive;
 
 use toiletcli::flags;
