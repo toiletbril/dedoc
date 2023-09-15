@@ -70,7 +70,7 @@ fn entry<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    debug!(VERSION);
+    debug_println!("{RED}Using debug build of {PROGRAM_NAME} v{VERSION}.{RESET}");
 
     let mut flag_version;
     let mut flag_help;

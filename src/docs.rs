@@ -17,8 +17,6 @@ use tar::Archive;
 use minreq::get;
 use toiletcli::colors::{Color, Style};
 
-use crate::debug;
-
 use crate::common::ResultS;
 use crate::common::{get_program_directory, create_program_directory, get_docset_path,
                     write_to_logfile, convert_paths_to_items};
@@ -164,8 +162,6 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
                 .unwrap_or(0);
             let file_size = body.len();
 
-            debug!(file_size, content_length);
-
             if file_size != content_length {
                 let message = format!(
                     "File size ({file_size}) is different than required size ({content_length}). \
@@ -223,8 +219,6 @@ pub fn search_docset_in_filenames(
     } else {
         query.to_owned()
     };
-
-    debug!(&query);
 
     fn visit_dir_with_query(
         path: &PathBuf,
@@ -292,8 +286,6 @@ pub fn search_docset_thoroughly(
     } else {
         query.to_owned()
     };
-
-    debug!(&internal_query);
 
     fn visit_dir_with_query(
         path: &PathBuf,
@@ -424,8 +416,6 @@ pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
     let docset_path = get_docset_path(docset_name)?;
 
     let file_path = docset_path.join(page.to_owned() + ".html");
-
-    debug!(&file_path);
 
     if !file_path.is_file() {
         let message =

@@ -27,20 +27,13 @@ pub const UNDERLINE: Style = Style::Underlined;
 pub const RESET: Style = Style::Reset;
 
 #[macro_export]
-macro_rules! debug {
-    ($($e:expr),+) => {{
-            #[cfg(debug_assertions)]
-            { dbg!($($e),+) }
-            #[cfg(not(debug_assertions))]
-            { () }
-    }};
-}
-
-#[macro_export]
 macro_rules! debug_println {
     ($($e:expr),+) => {{
             #[cfg(debug_assertions)]
-            { println!($($e),+) }
+            {
+                print!("{}:{}: ", file!(), line!());
+                println!($($e),+)
+            }
             #[cfg(not(debug_assertions))]
             { () }
     }};
@@ -226,8 +219,6 @@ pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     let has_dollars = docset.find('$').is_some();
     let starts_with_dot = docset.starts_with('.');
     let has_dots = docset.find("..").is_some();
-
-    debug!(has_slashes, has_dollars, has_dots);
 
     !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
