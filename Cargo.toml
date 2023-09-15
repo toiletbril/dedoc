@@ -1,6 +1,6 @@
 [package]
 name = "dedoc"
-version = "0.0.9"
+version = "0.1.0"
 description = "Terminal-based viewer for DevDocs documentation"
 authors = ["toiletbril"]
 readme = "README.md"
@@ -20,7 +20,7 @@ lto = true
 flate2 = { version = "1.0.27", features = ["default", "rust_backend"] }
 html2text = { version = "0.6.0", features = ["ansi_colours"] }
 serde = { version = "1.0.188", features = ["derive"] }
+toiletcli = { version = "0.9.3", features = ["colors", "flags"] }
+attohttpc = { version = "0.26.1", features = ["tls-native"] }
 serde_json = "1.0.106"
 tar = "0.4.40"
-tinyquest = "0.4.1"
-toiletcli = "0.9.3"

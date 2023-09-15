@@ -1,51 +1,169 @@
 use std::fs::{create_dir_all, File, read_dir};
-use std::io::Write;
+use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use html2text::from_read_coloured;
+use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
 use toiletcli::colors::{Color, Style};
 
-use crate::docs::Docs;
+use serde::{Deserialize, Serialize};
+
+pub type ResultS = Result<(), String>;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-// @@@
 pub const PROGRAM_NAME: &str = "dedoc";
 
 pub const DEFAULT_DOWNLOADS_LINK: &str = "https://downloads.devdocs.io";
 pub const DEFAULT_DOCS_LINK: &str = "https://devdocs.io/docs.json";
 pub const DEFAULT_USER_AGENT: &str = "dedoc";
 
-pub const RED: Color = Color::Red;
-pub const GREEN: Color = Color::Green;
-pub const YELLOW: Color = Color::Yellow;
-pub const GRAY: Color = Color::BrightBlack;
-
-pub const BOLD: Style = Style::Bold;
+pub const RED:       Color = Color::Red;
+pub const GREEN:     Color = Color::Green;
+pub const YELLOW:    Color = Color::Yellow;
+pub const GRAY:      Color = Color::BrightBlack;
+pub const BOLD:      Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
-
-pub const RESET: Style = Style::Reset;
-
-#[macro_export]
-macro_rules! debug {
-    ($($e:expr),+) => {{
-            #[cfg(debug_assertions)]
-            { dbg!($($e),+) }
-            #[cfg(not(debug_assertions))]
-            { () }
-    }};
-}
+pub const RESET:     Style = Style::Reset;
 
 #[macro_export]
 macro_rules! debug_println {
     ($($e:expr),+) => {{
             #[cfg(debug_assertions)]
-            { println!($($e),+) }
+            {
+                eprint!("{}:{}: ", file!(), line!());
+                eprintln!($($e),+)
+            }
             #[cfg(not(debug_assertions))]
             { () }
     }};
 }
 
-// @@@: idk
+#[inline(always)]
+fn unknown_version() -> String {
+    "unknown".to_string()
+}
+
+#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub struct Links {
+    home: String,
+    code: String,
+}
+
+#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Docs {
+    #[serde(skip)]
+    name: String,
+    pub slug: String,
+    #[serde(skip)]
+    doctype: String,
+    #[serde(skip)]
+    links: Links,
+    #[serde(default = "unknown_version")]
+    pub version: String,
+    #[serde(skip)]
+    release: String,
+    pub mtime: u64,
+    db_size: usize,
+    #[serde(skip)]
+    attribution: String,
+}
+
+/*
+Example item:
+    {
+        "name": "Angular",
+        "slug": "angular",
+        "type": "angular",
+        "links": {
+          "home": "https://google.com",
+          "code": "https://google.com"
+        },
+        "version": "",
+        "release": "16.1.3",
+        "mtime": 1688411876,
+        "db_size": 13128638,
+        "attribution": "whatever"
+    }
+*/
+
+pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
+    let docs_json_path = get_program_directory()?.join("docs.json");
+    let file = File::open(&docs_json_path)
+        .map_err(|err| format!("Could not open {docs_json_path:?}: {err}"))?;
+
+    let reader = BufReader::new(file);
+
+    let docs = serde_json::from_reader(reader)
+        .map_err(|err| format!("{err}. Maybe `docs.json` was modified?"))?;
+
+    Ok(docs)
+}
+
+fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
+    match annotation {
+        Default => ("".into(), "".into()),
+        Link(_) => (
+            format!("{}", Color::Blue),
+            format!("{}", Color::Reset),
+        ),
+        Image(_) => (
+            format!("{}", Color::BrightBlue),
+            format!("{}", Color::Reset)
+        ),
+        Emphasis => (
+            format!("{}", Style::Bold),
+            format!("{}", Style::Reset),
+        ),
+        Strong => (
+            format!("{}", Style::Bold),
+            format!("{}", Style::Reset)
+        ),
+        Strikeout => (
+            format!("{}", Style::Strikethrough),
+            format!("{}", Style::Reset)
+        ),
+        Code => (
+            format!("{}", Color::BrightBlack),
+            format!("{}", Color::Reset)
+        ),
+        Preformat(_) => (
+            format!("{}", Color::BrightBlack),
+            format!("{}", Color::Reset)
+        ),
+    }
+}
+
+pub fn print_html_file(path: PathBuf) -> ResultS {
+    let file = File::open(&path)
+        .map_err(|err| format!("Could not open {path:?}: {err}"))?;
+    let reader = BufReader::new(file);
+
+    let page = from_read_coloured(reader, 80, default_colour_map)
+        .map_err(|err| err.to_string())?;
+
+    println!("{}", page.trim());
+
+    Ok(())
+}
+
+pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
+    let docset_path = get_docset_path(docset_name)?;
+
+    let file_path = docset_path.join(page.to_owned() + ".html");
+
+    if !file_path.is_file() {
+        let message =
+            format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
+        return Err(message);
+    }
+
+    print_html_file(file_path)
+}
+
+// @@@: test on windows
 pub fn get_home_directory() -> Result<PathBuf, String> {
     fn internal() -> Result<String, String> {
         #[cfg(target_family = "unix")]
@@ -87,7 +205,7 @@ pub fn get_program_directory() -> Result<PathBuf, String> {
     Ok(program_path)
 }
 
-pub fn create_program_directory() -> Result<(), String> {
+pub fn create_program_directory() -> ResultS {
     let program_path = get_program_directory()?;
 
     if !program_path.exists() {
@@ -129,7 +247,7 @@ pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
     let log_file_path = get_program_directory()?.join("logs.txt");
 
     let mut log_file = if log_file_path.exists() {
-        File::open(&log_file_path)
+        File::options().append(true).open(&log_file_path)
     } else {
         File::create(&log_file_path)
     }
@@ -143,15 +261,12 @@ pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
 
 #[inline(always)]
 pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> bool {
-    let mut found = false;
-
     for entry in docs.iter() {
         if entry.slug == *docset_name {
-            found = true;
+            return true;
         }
     }
-
-    found
+    false
 }
 
 pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
@@ -170,9 +285,9 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
     Ok(items)
 }
 
-pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> Result<(), String> {
+pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> ResultS {
     for item in items {
-        println!("{GRAY}{start_index:>2}{RESET}  {}", item);
+        println!("{GRAY}{start_index:>4}{RESET}  {}", item);
         start_index += 1;
     }
 
@@ -181,11 +296,18 @@ pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> Resul
 
 pub fn get_local_docsets() -> Result<Vec<String>, String> {
     let docsets_path = get_program_directory()?.join("docsets");
+    let docsets_dir_exists = docsets_path.try_exists()
+        .map_err(|err| format!("Could not check {docsets_path:?}: {err}"))?;
+
+    let mut result = vec![];
+
+    // `/docsets` does not exist, return empty vector
+    if !docsets_dir_exists {
+        return Ok(result);
+    }
 
     let mut docsets_dir = read_dir(docsets_path)
         .map_err(|err| err.to_string())?;
-
-    let mut result = vec![];
 
     while let Some(entry) = docsets_dir.next() {
         let entry = entry
@@ -214,10 +336,8 @@ pub fn is_docs_json_exists() -> Result<bool, String> {
     Ok(docs_json_path.exists())
 }
 
-// so yesterday i deleted a folder i was not meant to
 pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     let docset = docset_name.to_string();
-    let test_path = PathBuf::from(&docset);
 
     let has_slashes = {
         #[cfg(target_family = "windows")]
@@ -228,14 +348,10 @@ pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     };
     let starts_with_tilde = docset.starts_with('~');
     let has_dollars = docset.find('$').is_some();
-    let is_simple = test_path.canonicalize()
-        .map(|path| path == test_path)
-        .unwrap_or(true);
-    let is_absolute = test_path.is_absolute();
+    let starts_with_dot = docset.starts_with('.');
+    let has_dots = docset.find("..").is_some();
 
-    debug!(has_slashes, has_dollars, is_absolute, is_simple);
-
-    !(has_slashes || starts_with_tilde || has_dollars || is_absolute || !is_simple)
+    !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
 
 #[allow(dead_code)]
