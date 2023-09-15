@@ -260,14 +260,43 @@ pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
     Ok(log_file_path)
 }
 
-#[inline(always)]
-pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> bool {
-    for entry in docs.iter() {
-        if entry.slug == *docset_name {
-            return true;
+pub enum SearchMatch {
+    Found,
+    FoundVague(Vec<String>)
+}
+
+pub fn is_docset_exists_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
+    match is_docset_in_docs(docset_name, docs) {
+        Some(SearchMatch::Found) => return true,
+        Some(SearchMatch::FoundVague(mut vague_matches)) => {
+            vague_matches.truncate(3);
+            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run mean `{}`?", vague_matches.join("`/`"));
+        }
+        None => {
+            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
         }
     }
+
     false
+}
+
+pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<SearchMatch> {
+    let mut vague_matches = vec![];
+
+    for entry in docs.iter() {
+        if entry.slug.starts_with(docset_name) {
+            if entry.slug == *docset_name {
+                return Some(SearchMatch::Found);
+            }
+            vague_matches.push(entry.slug.clone());
+        }
+    }
+
+    if vague_matches.is_empty() {
+        None
+    } else {
+        Some(SearchMatch::FoundVague(vague_matches))
+    }
 }
 
 pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {

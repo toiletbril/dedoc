@@ -13,8 +13,8 @@ use crate::debug_println;
 use crate::common::ResultS;
 use crate::common::{
     convert_paths_to_items, deserialize_docs_json, get_docset_path, get_program_directory,
-    is_docs_json_exists, is_docset_downloaded, is_docset_in_docs, print_page_from_docset,
-    print_search_results,
+    is_docs_json_exists, is_docset_exists_or_print_warning, print_page_from_docset,
+    print_search_results, is_docset_downloaded
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
@@ -281,13 +281,15 @@ where
         return show_search_help();
     };
 
+    let docs = deserialize_docs_json()?;
+
     if !is_docset_downloaded(&docset)? {
-        let message = if is_docset_in_docs(&docset, &deserialize_docs_json()?) {
-            format!("Docset `{docset}` is not downloaded. Try using `download {docset}`.")
-        } else {
-            format!("Docset `{docset}` does not exist. Try `list` or `fetch`.")
-        };
-        return Err(message);
+        if is_docset_exists_or_print_warning(&docset, &docs) {
+            println!("\
+{YELLOW}WARNING{RESET}: Docset `{docset}` is not downloaded. Try running `download {docset}`."
+            );
+        }
+        return Ok(());
     }
 
     let query = args.collect::<Vec<String>>().join(" ");

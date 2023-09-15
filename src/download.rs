@@ -12,7 +12,7 @@ use toiletcli::flags::*;
 use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
-    is_docset_downloaded, is_docset_in_docs,
+    is_docset_downloaded, is_docset_exists_or_print_warning,
 };
 
 use crate::common::{
@@ -159,6 +159,7 @@ where
     }
 
     let docs = deserialize_docs_json()?;
+
     let mut args_iter = args.iter();
     let mut successful_downloads = 0;
 
@@ -169,22 +170,15 @@ where
             println!("{}", message);
             continue;
         } else {
-            if !is_docset_in_docs(docset, &docs) {
-                let message = format!(
-                    "\
-                    {YELLOW}WARNING{RESET}: Unknown docset `{docset}`. Did you run `fetch`?"
-                );
-                println!("{}", message);
-                continue;
+            if is_docset_exists_or_print_warning(docset, &docs) {
+                println!("Downloading `{docset}`...");
+                download_docset_tar_gz_with_progress(docset, &docs)?;
+
+                println!("Extracting to `{}`...", get_docset_path(docset)?.display());
+                extract_docset_tar_gz(docset)?;
+
+                successful_downloads += 1;
             }
-
-            println!("Downloading `{docset}`...");
-            download_docset_tar_gz_with_progress(docset, &docs)?;
-
-            println!("Extracting to `{}`...", get_docset_path(docset)?.display());
-            extract_docset_tar_gz(docset)?;
-
-            successful_downloads += 1;
         }
     }
 
