@@ -27,9 +27,14 @@ use list::list;
 use fetch::fetch;
 
 fn show_version() -> ResultS {
+    #[cfg(debug_assertions)]
+    let version = format!("{VERSION} debug build");
+    #[cfg(not(debug_assertions))]
+    let version = VERSION;
+
     let message = format!(
         "\
-dedoc {VERSION}
+dedoc {version}
 (c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
 
 Licensed under GPLv3.
@@ -58,10 +63,8 @@ fn show_help() -> ResultS {
 {GREEN}OPTIONS{RESET}
     -c, --color <on/off/auto>       Use color when displaying output.
     -v, --version                   Display version.
-        --help                      Display help message. Can be used with subcommands.
-
-The design is not final, and may be subject to change."
-);
+        --help                      Display help message. Can be used with subcommands."
+    );
     println!("{}", help);
     Ok(())
 }
