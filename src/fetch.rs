@@ -53,7 +53,7 @@ where
     println!("Writing `docs.json`...");
     serialize_and_overwrite_docs_json(docs)?;
 
-    println!("Successfully updated `docs.json`.");
+    println!("{BOLD}Fetching has successfully finished{RESET}.");
 
     Ok(())
 }
