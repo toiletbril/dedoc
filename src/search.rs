@@ -1,12 +1,83 @@
+use std::fs::File;
+use std::io::{BufWriter, BufReader, Read};
+
+use serde::{Serialize, Deserialize};
+use serde_json::{from_str, to_writer};
+
 use toiletcli::flags::*;
 use toiletcli::flags;
 
-use crate::docs::{deserialize_docs_json, print_page_from_docset, search_docset_in_filenames,
-                  search_docset_thoroughly};
+use crate::{docs::{deserialize_docs_json, print_page_from_docset, search_docset_in_filenames,
+                  search_docset_thoroughly}, debug_println};
 
 use crate::common::ResultS;
-use crate::common::{is_docs_json_exists, is_docset_downloaded, is_docset_in_docs, print_search_results};
+use crate::common::{is_docs_json_exists, is_docset_downloaded, is_docset_in_docs, print_search_results,
+                   get_program_directory};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
+
+#[derive(Serialize, Deserialize, Default, PartialEq, Clone)]
+struct SearchFlags {
+    case_insensitive: bool,
+    precise: bool
+}
+
+#[derive(Serialize, Deserialize)]
+struct SearchCache {
+    query: String,
+    docset: String,
+    exact_items: Vec<String>,
+    vague_items: Vec<String>,
+    flags: SearchFlags
+}
+
+fn try_use_cache(docset: &String, query: &String, flags: &SearchFlags) -> Option<SearchCache> {
+    let program_dir = get_program_directory().ok()?;
+    let cache_path = program_dir.join("search_cache.json");
+
+    let file = File::open(cache_path).ok()?;
+    let mut reader = BufReader::new(file);
+    let mut string_buffer = vec![];
+
+    reader.read_to_end(&mut string_buffer).ok()?;
+    let contents = String::from_utf8(string_buffer).ok()?;
+
+    let cache: SearchCache = from_str(&contents).ok()?;
+
+    if docset == &cache.docset && query == &cache.query && flags == &cache.flags {
+        Some(cache)
+    } else {
+        None
+    }
+}
+
+fn write_search_cache(
+    docset: &String,
+    query: &String,
+    flags: &SearchFlags,
+    exact_items: &Vec<String>,
+    vague_items: &Vec<String>) -> ResultS
+{
+    let program_dir = get_program_directory()?;
+    let cache_path = program_dir.join("search_cache.json");
+
+    let cache_file = File::create(&cache_path)
+        .map_err(|err| format!("Could not open {cache_path:?}: {err}"))?;
+
+    let writer = BufWriter::new(cache_file);
+
+    let cache = SearchCache {
+        docset:      docset.clone(),
+        query:       query.clone(),
+        flags:       flags.clone(),
+        exact_items: exact_items.clone(),
+        vague_items: vague_items.clone()
+    };
+
+    to_writer(writer, &cache)
+        .map_err(|err| format!("Could not write cache: {err}"))?;
+
+    Ok(())
+}
 
 fn show_search_help() -> ResultS {
     let help = format!(
@@ -49,7 +120,6 @@ where
     }
 
     let mut args = args.into_iter();
-    let flag_open_is_empty = flag_open.is_empty();
 
     let docset = if let Some(docset_name) = args.next() {
         docset_name
@@ -67,31 +137,45 @@ where
     }
 
     let query = args.collect::<Vec<String>>().join(" ");
+    let flag_open_is_empty = flag_open.is_empty();
+    let open_number = flag_open.parse::<usize>().ok();
+
+    let flags = SearchFlags { precise: flag_precise, case_insensitive: flag_case_insensitive };
 
     if flag_open_is_empty {
+        // Printing query is needed to let you know if you messed up any flags
         println!("Searching for `{query}`...");
     }
 
     if flag_precise {
         let (exact_results, vague_results) =
-            search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
+        if let Some(cache) = try_use_cache(&docset, &query, &flags) {
+            debug_println!("Using cache");
+            (cache.exact_items, cache.vague_items)
+        } else {
+            let (exact, vague) = search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
+            if let Err(err) = write_search_cache(&docset, &query, &flags, &exact, &vague) {
+                println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}.");
+            }
+            (exact, vague)
+        };
 
         let exact_results_offset = exact_results.len();
 
-        // @@@: cache search results for --open
         if !flag_open_is_empty {
-            let n = flag_open.parse::<usize>();
-
-            if let Ok(n) = n {
-                if n <= exact_results_offset && n > 0 {
-                    return print_page_from_docset(&docset, &exact_results[n - 1]);
-                } else if n - exact_results_offset <= vague_results.len() {
-                    return print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1]);
-                } else {
+            match open_number {
+                Some(n) if n < 1 || n > exact_results_offset + vague_results.len() => {
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
-            } else {
-                println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
+                Some(n) if n <= exact_results_offset => {
+                    print_page_from_docset(&docset, &exact_results[n - 1])?;
+                }
+                Some(n) => {
+                    print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1])?;
+                }
+                _ => {
+                    println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
+                }
             }
         }
 
@@ -109,16 +193,27 @@ where
             println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
         }
     } else {
-        let results = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
+        let results =
+        if let Some(cache) = try_use_cache(&docset, &query, &flags) {
+            debug_println!("Using cache");
+            cache.exact_items
+        } else {
+            let exact = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
+            if let Err(err) = write_search_cache(&docset, &query, &flags, &exact, &vec![]) {
+                println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}.");
+            }
+            exact
+        };
 
         if !flag_open_is_empty {
-            let n = flag_open.parse::<usize>()
-                .map_err(|err| format!("Unable to parse --open value as number: {err}"))?;
-
-            if n <= results.len() && n > 0 {
-                print_page_from_docset(&docset, &results[n - 1])?;
+            if let Some(n) = open_number {
+                if n <= results.len() && n > 0 {
+                    print_page_from_docset(&docset, &results[n - 1])?;
+                } else {
+                    println!("{YELLOW}WARNING{RESET}: --open {n} is out of bounds.");
+                }
             } else {
-                println!("{YELLOW}WARNING{RESET}: --open {n} is invalid.");
+                println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
             }
         }
 
