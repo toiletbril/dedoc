@@ -150,7 +150,7 @@ where
     if flag_precise {
         let (exact_results, vague_results) =
         if let Some(cache) = try_use_cache(&docset, &query, &flags) {
-            debug_println!("Using cache");
+            debug_println!("Search used cache.");
             (cache.exact_items, cache.vague_items)
         } else {
             let (exact, vague) = search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
@@ -168,10 +168,10 @@ where
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
                 Some(n) if n <= exact_results_offset => {
-                    print_page_from_docset(&docset, &exact_results[n - 1])?;
+                    return print_page_from_docset(&docset, &exact_results[n - 1]);
                 }
                 Some(n) => {
-                    print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1])?;
+                    return print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1]);
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
@@ -192,6 +192,8 @@ where
         } else {
             println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
         }
+
+        return Ok(());
     } else {
         let results =
         if let Some(cache) = try_use_cache(&docset, &query, &flags) {
@@ -208,7 +210,7 @@ where
         if !flag_open_is_empty {
             if let Some(n) = open_number {
                 if n <= results.len() && n > 0 {
-                    print_page_from_docset(&docset, &results[n - 1])?;
+                    return print_page_from_docset(&docset, &results[n - 1]);
                 } else {
                     println!("{YELLOW}WARNING{RESET}: --open {n} is out of bounds.");
                 }
@@ -219,7 +221,7 @@ where
 
         if !results.is_empty() {
             println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-            print_search_results(results, 1)?;
+            return print_search_results(results, 1);
         } else {
             println!("{BOLD}No exact matches in `{docset}`{RESET}.");
         }
