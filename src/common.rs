@@ -31,8 +31,8 @@ macro_rules! debug_println {
     ($($e:expr),+) => {{
             #[cfg(debug_assertions)]
             {
-                print!("{}:{}: ", file!(), line!());
-                println!($($e),+)
+                eprint!("{}:{}: ", file!(), line!());
+                eprintln!($($e),+)
             }
             #[cfg(not(debug_assertions))]
             { () }
