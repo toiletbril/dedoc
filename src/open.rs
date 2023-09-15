@@ -44,9 +44,9 @@ where
 
     if !is_docset_downloaded(docset)? {
         let message = if is_docset_in_docs(docset, &deserialize_docs_json()?) {
-            format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
+            format!("Docset `{docset}` is not downloaded. Try using `download {docset}`.")
         } else {
-            format!("`{docset}` does not exist. Try using `list` or `fetch`.")
+            format!("Docset `{docset}` does not exist. Try using `list` or `fetch`.")
         };
         return Err(message);
     }
