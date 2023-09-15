@@ -355,37 +355,6 @@ pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
 
-#[allow(dead_code)]
-pub fn get_zeal_docsets_directory() -> Result<PathBuf, String> {
-    let zeal_parent_dir = if cfg!(target_family = "windows") {
-        get_home_directory()?
-            .join("AppData")
-            .join("Local")
-    } else {
-        get_home_directory()?
-            .join(".local")
-            .join("share")
-    };
-
-    let zeal_docsets_dir = zeal_parent_dir
-        .join("Zeal")
-        .join("Zeal")
-        .join("docsets");
-
-    Ok(zeal_docsets_dir)
-}
-
-// win32: %LocalAppData%\Zeal\Zeal\docsets
-// unix:  .local/share/Zeal/Zeal/docsets
-#[allow(dead_code)]
-pub fn is_zeal_installed() -> Result<bool, String> {
-    let zeal_docsets_dir = get_zeal_docsets_directory()?;
-    let zeal_docsets_exists = zeal_docsets_dir.try_exists()
-        .map_err(|err| format!("Could not check if Zeal ({zeal_docsets_dir:?}) exists: {err}"))?;
-
-    Ok(zeal_docsets_exists)
-}
-
 #[inline(always)]
 pub fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
