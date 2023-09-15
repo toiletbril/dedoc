@@ -130,7 +130,7 @@ pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
     let log_file_path = get_program_directory()?.join("logs.txt");
 
     let mut log_file = if log_file_path.exists() {
-        File::open(&log_file_path)
+        File::options().append(true).open(&log_file_path)
     } else {
         File::create(&log_file_path)
     }
