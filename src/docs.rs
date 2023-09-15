@@ -7,14 +7,14 @@ extern crate serde_json;
 extern crate flate2;
 extern crate html2text;
 extern crate tar;
-extern crate tinyquest;
+extern crate minreq;
 
 use serde::{Deserialize, Serialize};
 use flate2::bufread::GzDecoder;
 use html2text::from_read_coloured;
 use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
 use tar::Archive;
-use tinyquest::get;
+use minreq::get;
 use toiletcli::colors::{Color, Style};
 
 use crate::debug;
@@ -77,11 +77,13 @@ Example item:
 pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
-    let request = get(DEFAULT_DOCS_LINK, &user_agent)
-        .and_then(|mut r| r.follow_redirects())
+    let response = get(DEFAULT_DOCS_LINK)
+        .with_header("user-agent", user_agent)
+        .with_timeout(10)
+        .send()
         .map_err(|err| format!("Could not GET `{DEFAULT_DOCS_LINK}`: {err:?}"))?;
 
-    let body = String::from_utf8_lossy(request.body()).to_string();
+    let body = String::from_utf8_lossy(response.as_bytes()).to_string();
 
     let docs: Vec<Docs> = serde_json::from_str(body.as_str()).map_err(|err| {
         let log_file_message = match write_to_logfile(format!("dasd")) {
@@ -112,7 +114,7 @@ pub fn serialize_and_overwrite_docs_json(docs: Vec<Docs>) -> Result<(), String> 
     Ok(())
 }
 
-pub fn deserealize_docs_json() -> Result<Vec<Docs>, String> {
+pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     let file = File::open(&docs_json_path)
         .map_err(|err| format!("Could not open {docs_json_path:?}: {err}"))?;
@@ -147,19 +149,20 @@ pub fn download_docset_tar_gz(docset_name: &String, docs: &Vec<Docs>) -> Result<
 
             let download_link = format!("{DEFAULT_DOWNLOADS_LINK}/{docset_name}.tar.gz");
 
-            let request = get(&download_link, user_agent.as_str())
-                .and_then(|mut r| r.follow_redirects())
+            let response = get(&download_link)
+                .with_header("user-agent", &user_agent)
+                .with_timeout(10)
+                .send()
                 .map_err(|err| format!("Could not GET {download_link}: {err:?}"))?;
 
-            let body = request.body();
+            let body = response.as_bytes();
 
-            let content_length = request.headers()
+            let content_length = response.headers
                 .get("content-length")
-                .map(|header| header.to_str().unwrap_or("0"))
-                .unwrap()
-                .parse::<u64>()
+                .unwrap_or(&"0".into())
+                .parse::<usize>()
                 .unwrap_or(0);
-            let file_size = body.as_slice().len() as u64;
+            let file_size = body.len();
 
             debug!(file_size, content_length);
 

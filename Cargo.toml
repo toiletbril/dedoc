@@ -23,4 +23,4 @@ serde = { version = "1.0.188", features = ["derive"] }
 toiletcli = { version = "0.9.3", features = ["colors", "flags"] }
 serde_json = "1.0.106"
 tar = "0.4.40"
-tinyquest = "0.4.1"
+minreq = { version = "2.10.0", features = ["https"] }
