@@ -1,8 +1,10 @@
-- fix downloads failing every second time
-- cache search result for cli
-- cache local docsets for list
-- zeal docsets support
-- check other devdocs browsers docsets
-- interactive search
-- option to literally open a manpage out of html with own pager
-- support docsets from dash
+* test downloads
+
+* features for lowering binary size
+
+* interactive search:
+    * literally open a manpage out of html with own pager
+
+* check other devdocs browsers docsets
+    * support docsets from zeal
+    * download docsets from dash
