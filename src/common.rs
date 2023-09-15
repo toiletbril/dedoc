@@ -5,6 +5,7 @@ use std::time::{Duration, SystemTime};
 
 use html2text::from_read_coloured;
 use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
+
 use toiletcli::colors::{Color, Style};
 
 use serde::{Deserialize, Serialize};
@@ -402,9 +403,9 @@ mod tests {
          let bad_name_dots = "..";
          let bad_name_env  = "$HOME";
 
-         let good_name_simple = "hello";
+         let good_name_simple  = "hello";
          let good_name_version = "qt~6.1";
-         let good_name_long   = "scala~2.13_reflection";
+         let good_name_long    = "scala~2.13_reflection";
 
         assert!(!is_name_allowed(bad_name_path));
         assert!(!is_name_allowed(bad_name_home));

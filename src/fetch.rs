@@ -6,11 +6,11 @@ use attohttpc::get;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::{Docs, ResultS};
 use crate::common::{
     create_program_directory, get_program_directory, is_docs_json_exists, is_docs_json_old,
     write_to_logfile,
 };
-use crate::common::{Docs, ResultS};
 use crate::common::{
     BOLD, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
@@ -28,11 +28,12 @@ pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
         .map_err(|err| format!("Unable to read response body: {err}"))?;
 
     let docs: Vec<Docs> = serde_json::from_str(body.as_str()).map_err(|err| {
-        let log_file_message = match write_to_logfile(format!("dasd")) {
-            Ok(path) => format!("Log file is saved at {path:?}."),
-            Err(err) => format!("Unable to write log file: {err}."),
+        let result = write_to_logfile(format!("Error while parsing JSON body: {err}\n\n{body}"));
+        let log_file_message = match result {
+                Ok(path) => format!("Log file is saved at {path:?}."),
+                Err(err) => format!("Unable to write log file: {err}."),
         };
-        format!("Serde error: {err}. {log_file_message}")
+        format!("Error while parsing JSON body: {err}. {log_file_message}")
     })?;
 
     Ok(docs)

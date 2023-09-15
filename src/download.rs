@@ -3,17 +3,17 @@ use std::io::{BufReader, BufWriter, Read, Write};
 
 use attohttpc::get;
 
-use flate2::read::GzDecoder;
+use flate2::bufread::GzDecoder;
 use tar::Archive;
 
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
     is_docset_downloaded, is_docset_in_docs,
 };
-use crate::common::{Docs, ResultS};
 
 use crate::common::{
     BOLD, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
