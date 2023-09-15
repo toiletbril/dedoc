@@ -1,3 +1,4 @@
+* statically initialize frequent functions
 * features for lowering binary size
 
 * interactive search
