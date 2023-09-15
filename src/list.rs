@@ -65,6 +65,7 @@ where
         .collect::<Vec<String>>();
 
     let mut docs_names_peekable = docs_names.iter().peekable();
+    let local_docsets = get_local_docsets()?;
 
     while let Some(entry) = docs_names_peekable.next() {
         // slug has ~ if it's version-specific
@@ -72,7 +73,6 @@ where
             continue;
         }
 
-        let local_docsets = get_local_docsets()?;
 
         if local_docsets.contains(entry) {
             print!("{GREEN}{} [downloaded]{RESET}", entry);

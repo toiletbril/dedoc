@@ -165,9 +165,9 @@ where
 
     while let Some(docset) = args_iter.next() {
         if !flag_force && is_docset_downloaded(docset)? {
-            let message = format!("\
-                {YELLOW}WARNING{RESET}: `{docset}` is already downloaded. If you still want to update it, re-run this command with `--force`");
-            println!("{}", message);
+            println!("\
+{YELLOW}WARNING{RESET}: `{docset}` is already downloaded. If you still want to update it, re-run this command with `--force`"
+            );
             continue;
         } else {
             if is_docset_exists_or_print_warning(docset, &docs) {
