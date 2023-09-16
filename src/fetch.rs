@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::path::PathBuf;
 use std::io::BufWriter;
 
 use attohttpc::get;
@@ -29,7 +30,7 @@ fn show_fetch_help() -> ResultS {
     Ok(())
 }
 
-pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
+pub fn fetch_docs() -> Result<Vec<Docs>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
     let response = get(DEFAULT_DOCS_LINK)
@@ -53,21 +54,14 @@ pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-pub fn serialize_and_overwrite_docs_json(docs: Vec<Docs>) -> Result<(), String> {
-    let program_path = get_program_directory()?;
-
-    if !program_path.exists() {
-        create_program_directory()?;
-    }
-
-    let docs_json_path = program_path.join("docs.json");
-    let file = File::create(&docs_json_path)
-        .map_err(|err| format!("{docs_json_path:?}: {err}"))?;
+pub fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<Docs>) -> Result<(), String> {
+    let file = File::create(&path)
+        .map_err(|err| format!("{path:?}: {err}"))?;
 
     let writer = BufWriter::new(file);
 
     serde_json::to_writer(writer, &docs)
-        .map_err(|err| format!("Could not write {docs_json_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not write {path:?}: {err}"))?;
 
     Ok(())
 }
@@ -90,18 +84,25 @@ where
     if !flag_force && is_docs_json_exists()? && !is_docs_json_old()? {
         let message = format!(
             "\
-            {YELLOW}WARNING{RESET}: It seems that your `docs.json` was updated less than a week ago. \
-            Run `fetch --force` to ignore this warning."
+{YELLOW}WARNING{RESET}: It seems that your `docs.json` was updated less than a week ago. \
+Run `fetch --force` to ignore this warning."
         );
         println!("{}", message);
         return Ok(());
     }
 
     println!("Fetching `{DEFAULT_DOCS_LINK}`...");
-    let docs = fetch_docs_json()?;
+    let docs = fetch_docs()?;
 
-    println!("Writing `docs.json`...");
-    serialize_and_overwrite_docs_json(docs)?;
+    let program_path = get_program_directory()?;
+    let docs_json_path = program_path.join("docs.json");
+
+    if !program_path.exists() {
+        create_program_directory()?;
+    }
+
+    println!("Writing `{}`...", docs_json_path.display());
+    serialize_and_overwrite_docs(docs_json_path, docs)?;
 
     println!("{BOLD}Fetching has successfully finished{RESET}.");
 
