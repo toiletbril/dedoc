@@ -115,9 +115,6 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
 
-    let mut archive_files = archive.entries()
-        .map_err(|err| format!("Could not read archive {tar_gz_path:?}: {err}"))?;
-
     #[cfg(target_family = "unix")]
     {
         archive
@@ -130,6 +127,9 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     #[cfg(target_family = "windows")]
     {
         const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
+
+        let mut archive_files = archive.entries()
+            .map_err(|err| format!("Could not read archive {tar_gz_path:?}: {err}"))?;
 
         while let Some(file) = archive_files.next() {
             let mut file = file
