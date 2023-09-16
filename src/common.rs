@@ -1,4 +1,5 @@
 use std::fs::{create_dir_all, File, read_dir};
+use std::fmt::Display;
 use std::sync::Once;
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -239,14 +240,16 @@ pub fn create_program_directory() -> ResultS {
 const WEEK: Duration = Duration::from_secs(60 * 60 * 24 * 7);
 
 pub fn is_docs_json_old() -> Result<bool, String> {
-    let program_path = get_program_directory().map_err(|err| err.to_string())?;
+    let program_path = get_program_directory()
+        .map_err(|err| err.to_string())?;
 
     let metadata = program_path
         .join("docs.json")
         .metadata()
         .map_err(|err| err.to_string())?;
 
-    let modified_time = metadata.modified().map_err(|err| err.to_string())?;
+    let modified_time = metadata.modified()
+        .map_err(|err| err.to_string())?;
 
     let elapsed_time = SystemTime::now()
         .duration_since(modified_time)
@@ -259,7 +262,7 @@ pub fn is_docs_json_old() -> Result<bool, String> {
     }
 }
 
-pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
+pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
     let log_file_path = get_program_directory()?.join("logs.txt");
 
     let mut log_file = if log_file_path.exists() {
@@ -280,7 +283,7 @@ pub enum SearchMatch {
     FoundVague(Vec<String>)
 }
 
-pub fn is_docset_exists_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
+pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         Some(SearchMatch::Found) => return true,
         Some(SearchMatch::FoundVague(mut vague_matches)) => {
@@ -291,7 +294,6 @@ pub fn is_docset_exists_or_print_warning(docset_name: &String, docs: &Vec<Docs>)
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
         }
     }
-
     false
 }
 
@@ -330,12 +332,11 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
     Ok(items)
 }
 
-pub fn print_search_results(items: Vec<String>, mut start_index: usize) -> ResultS {
-    for item in items {
+pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
+    for item in search_results {
         println!("{GRAY}{start_index:>4}{RESET}  {}", item);
         start_index += 1;
     }
-
     Ok(())
 }
 
@@ -381,8 +382,8 @@ pub fn is_docs_json_exists() -> Result<bool, String> {
     Ok(docs_json_path.exists())
 }
 
-pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
-    let docset = docset_name.to_string();
+pub fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
+    let docset = docset_name.as_ref();
 
     let has_slashes = {
         #[cfg(target_family = "windows")]
@@ -420,13 +421,13 @@ mod tests {
          let good_name_version = "qt~6.1";
          let good_name_long    = "scala~2.13_reflection";
 
-        assert!(!is_name_allowed(bad_name_path));
-        assert!(!is_name_allowed(bad_name_home));
-        assert!(!is_name_allowed(bad_name_dots));
-        assert!(!is_name_allowed(bad_name_env));
+        assert!(!is_name_allowed(&bad_name_path));
+        assert!(!is_name_allowed(&bad_name_home));
+        assert!(!is_name_allowed(&bad_name_dots));
+        assert!(!is_name_allowed(&bad_name_env));
 
-        assert!(is_name_allowed(good_name_simple));
-        assert!(is_name_allowed(good_name_version));
-        assert!(is_name_allowed(good_name_long));
+        assert!(is_name_allowed(&good_name_simple));
+        assert!(is_name_allowed(&good_name_version));
+        assert!(is_name_allowed(&good_name_long));
     }
 }
