@@ -108,18 +108,55 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
 
     let tar_gz_path = docset_path.join(docset_name).with_extension("tar.gz");
 
-    let tar_gz_file =
-        File::open(&tar_gz_path).map_err(|err| format!("Could not open {tar_gz_path:?}: {err}"))?;
+    let tar_gz_file = File::open(&tar_gz_path)
+        .map_err(|err| format!("Could not open {tar_gz_path:?}: {err}"))?;
 
     let reader = BufReader::new(tar_gz_file);
     let tar = GzDecoder::new(reader);
     let mut archive = Archive::new(tar);
 
-    archive
-        .unpack(docset_path)
-        .map_err(|err| format!("Could not extract {tar_gz_path:?}: {err}"))?;
+    let mut archive_files = archive.entries()
+        .map_err(|err| format!("Could not read archive {tar_gz_path:?}: {err}"))?;
 
-    remove_file(&tar_gz_path).map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
+    #[cfg(target_family = "unix")]
+    {
+        archive
+            .unpack(docset_path)
+            .map_err(|err| format!("Could not extract {tar_gz_path:?}: {err}"))?;
+    }
+
+    // Sometimes .tar archives have files with disallowed characters in their name.
+    // Unpack them manually while replacing invalid characters.
+    #[cfg(target_family = "windows")]
+    {
+        const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
+
+        while let Some(file) = archive_files.next() {
+            let mut file = file
+                .map_err(|err| format!("Could not read archive {tar_gz_path:?}: {err}"))?;
+
+            let path_bytes = &file.header().path_bytes();
+            let path_unsanitized_str = String::from_utf8_lossy(&path_bytes);
+
+            let path = path_unsanitized_str
+                .chars()
+                .map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c })
+                .collect::<String>();
+
+            let path_sanitized = path
+                .strip_suffix(&['.', ' '])
+                .unwrap_or(path.as_str())
+                .trim();
+
+            let unpack_path = docset_path.join(path_sanitized);
+
+            file.unpack(&unpack_path)
+                .map_err(|err| format!("Could not extract file from {tar_gz_path:?} to {unpack_path:?}: {err}"))?;
+        }
+    }
+
+    remove_file(&tar_gz_path)
+        .map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
 
     Ok(())
 }
