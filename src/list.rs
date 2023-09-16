@@ -9,12 +9,13 @@ fn show_list_help() -> ResultS {
     println!(
         "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} list{RESET} [-la]
+    {BOLD}{PROGRAM_NAME} list{RESET} [-lan]
     Show available docsets.
 
 {GREEN}OPTIONS{RESET}
     -l, --local                     Only show local docsets.
     -a, --all                       Show all version-specific docsets.
+    -n, --newlines                  Print each docset on a separate line.
         --help                      Display help message."
     );
     Ok(())
@@ -27,11 +28,13 @@ where
     let mut flag_help;
     let mut flag_all;
     let mut flag_local;
+    let mut flag_newline;
 
     let mut flags = flags![
-        flag_help: BoolFlag,  ["--help"],
-        flag_all: BoolFlag,   ["--all", "-a"],
-        flag_local: BoolFlag, ["--local", "-l"]
+        flag_help: BoolFlag,    ["--help"],
+        flag_all: BoolFlag,     ["--all", "-a"],
+        flag_local: BoolFlag,   ["--local", "-l"],
+        flag_newline: BoolFlag, ["--newlines", "-n"]
     ];
 
     parse_flags(&mut args, &mut flags)?;
@@ -43,13 +46,16 @@ where
 
     let local_docsets = get_local_docsets()?;
 
+    let separator = if flag_newline { "\n" } else { ", " };
+
     if flag_local {
         let mut local_docsets_iter_peekable = local_docsets.iter().peekable();
 
         while let Some(entry) = local_docsets_iter_peekable.next() {
             print!("{GREEN}{} [downloaded]{RESET}", entry);
+
             if local_docsets_iter_peekable.peek().is_some() {
-                print!(", ");
+                print!("{}", separator);
             } else {
                 println!();
             }
@@ -79,7 +85,7 @@ where
         }
 
         if docs_names_peekable.peek().is_some() {
-            print!(", ");
+            print!("{}", separator);
         } else {
             println!();
         }
