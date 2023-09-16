@@ -169,7 +169,6 @@ pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
 static mut HOME_DIR: Option<PathBuf> = None;
 static HOME_DIR_INIT: Once = Once::new();
 
-// @@@: test on windows
 pub fn get_home_directory() -> Result<PathBuf, String> {
     unsafe {
         if let Some(home_dir) = HOME_DIR.as_ref() {
