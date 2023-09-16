@@ -1,4 +1,5 @@
 use std::fs::{create_dir_all, File, read_dir};
+use std::sync::Once;
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -164,8 +165,17 @@ pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
     print_html_file(file_path)
 }
 
+static mut HOME_DIR: Option<PathBuf> = None;
+static HOME_DIR_INIT: Once = Once::new();
+
 // @@@: test on windows
 pub fn get_home_directory() -> Result<PathBuf, String> {
+    unsafe {
+        if let Some(home_dir) = HOME_DIR.as_ref() {
+            return Ok(home_dir.clone());
+        }
+    }
+
     fn internal() -> Result<String, String> {
         #[cfg(target_family = "unix")]
         let home = std::env::var("HOME");
@@ -188,13 +198,18 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
         }
     }
 
-    let home = &internal()?;
-    let home_path = Path::new(home);
+    unsafe {
+        let home = &internal()?;
+        let home_path = Path::new(home);
 
-    if home_path.is_dir() {
-        Ok(PathBuf::from(home_path))
-    } else {
-        Err("Could not figure out home directory".to_string())
+        if home_path.is_dir() {
+            HOME_DIR_INIT.call_once(|| {
+                HOME_DIR = Some(PathBuf::from(home_path));
+            });
+            Ok(PathBuf::from(home_path))
+        } else {
+            Err("Could not figure out home directory".to_string())
+        }
     }
 }
 

@@ -42,8 +42,9 @@ where
         return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
     }
 
+    let local_docsets = get_local_docsets()?;
+
     if flag_local {
-        let local_docsets = get_local_docsets()?;
         let mut local_docsets_iter_peekable = local_docsets.iter().peekable();
 
         while let Some(entry) = local_docsets_iter_peekable.next() {
@@ -65,14 +66,12 @@ where
         .collect::<Vec<String>>();
 
     let mut docs_names_peekable = docs_names.iter().peekable();
-    let local_docsets = get_local_docsets()?;
 
     while let Some(entry) = docs_names_peekable.next() {
         // slug has ~ if it's version-specific
         if !flag_local && !flag_all && entry.find("~").is_some() {
             continue;
         }
-
 
         if local_docsets.contains(entry) {
             print!("{GREEN}{} [downloaded]{RESET}", entry);
