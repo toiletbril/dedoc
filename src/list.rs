@@ -28,13 +28,13 @@ where
     let mut flag_help;
     let mut flag_all;
     let mut flag_local;
-    let mut flag_newline;
+    let mut flag_newlines;
 
     let mut flags = flags![
-        flag_help: BoolFlag,    ["--help"],
-        flag_all: BoolFlag,     ["--all", "-a"],
-        flag_local: BoolFlag,   ["--local", "-l"],
-        flag_newline: BoolFlag, ["--newlines", "-n"]
+        flag_help: BoolFlag,     ["--help"],
+        flag_all: BoolFlag,      ["--all", "-a"],
+        flag_local: BoolFlag,    ["--local", "-l"],
+        flag_newlines: BoolFlag, ["--newlines", "-n"]
     ];
 
     parse_flags(&mut args, &mut flags)?;
@@ -46,7 +46,7 @@ where
 
     let local_docsets = get_local_docsets()?;
 
-    let separator = if flag_newline { "\n" } else { ", " };
+    let separator = if flag_newlines { "\n" } else { ", " };
 
     if flag_local {
         let mut local_docsets_iter_peekable = local_docsets.iter().peekable();
