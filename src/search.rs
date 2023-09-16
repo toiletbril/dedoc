@@ -9,8 +9,6 @@ use serde_json::{from_reader, to_writer};
 use toiletcli::flags;
 use toiletcli::flags::*;
 
-use crate::debug_println;
-
 use crate::common::ResultS;
 use crate::common::{
     convert_paths_to_items, deserialize_docs_json, get_docset_path, get_program_directory,
@@ -27,10 +25,10 @@ fn show_search_help() -> ResultS {
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
-    -i, --ignore-case           Ignore character case.
-    -p, --precise               Search more thoroughly and look for mentions in other files.
-    -o, --open <number>         Open n-th search result.
-        --help                  Display help message."
+    -i, --ignore-case               Ignore character case.
+    -p, --precise                   Search more thoroughly and look for mentions in other files.
+    -o, --open <number>             Open n-th search result.
+        --help                      Display help message."
     );
     Ok(())
 }
@@ -356,7 +354,6 @@ where
         return Ok(());
     } else {
         let results = if let Some(cache) = try_use_cache(&docset, &query, &flags) {
-            debug_println!("Search used cache.");
             cache.exact_items
         } else {
             let exact = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;

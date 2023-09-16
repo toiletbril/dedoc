@@ -15,7 +15,7 @@ fn show_open_help() -> ResultS {
     Print a page. Pages can be searched using `search`.
 
 {GREEN}OPTIONS{RESET}
-        --help             Display help message."
+        --help                      Display help message."
     );
     Ok(())
 }

@@ -23,8 +23,8 @@ fn show_fetch_help() -> ResultS {
     Fetch latest `docs.json` which lists available languages and frameworks.
 
 {GREEN}OPTIONS{RESET}
-    -f, --force                 Update even if `docs.json` is recent.
-        --help                  Display help message."
+    -f, --force                     Update even if `docs.json` is recent.
+        --help                      Display help message."
     );
     Ok(())
 }

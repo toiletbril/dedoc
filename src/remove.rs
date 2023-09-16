@@ -15,7 +15,7 @@ fn show_remove_help() -> ResultS {
     Delete a docset. Only docsets downloaded by {PROGRAM_NAME} can be removed.
 
 {GREEN}OPTIONS{RESET}
-        --help                  Display help message."
+        --help                      Display help message."
     );
     Ok(())
 }
