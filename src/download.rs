@@ -12,7 +12,7 @@ use toiletcli::flags::*;
 use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
-    is_docset_downloaded, is_docset_exists_or_print_warning,
+    is_docset_downloaded, is_docset_in_docs_or_print_warning,
 };
 
 use crate::common::{
@@ -170,7 +170,7 @@ where
             );
             continue;
         } else {
-            if is_docset_exists_or_print_warning(docset, &docs) {
+            if is_docset_in_docs_or_print_warning(docset, &docs) {
                 println!("Downloading `{docset}`...");
                 download_docset_tar_gz_with_progress(docset, &docs)?;
 

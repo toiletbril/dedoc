@@ -3,7 +3,7 @@ use toiletcli::flags::*;
 
 use crate::common::ResultS;
 use crate::common::{
-    deserialize_docs_json, is_docset_exists_or_print_warning, print_page_from_docset,
+    deserialize_docs_json, is_docset_in_docs_or_print_warning, print_page_from_docset,
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
@@ -44,7 +44,7 @@ where
 
     let docs = deserialize_docs_json()?;
 
-    if is_docset_exists_or_print_warning(&docset, &docs) {
+    if is_docset_in_docs_or_print_warning(&docset, &docs) {
         let query = args.collect::<Vec<String>>().join(" ");
 
         if query.is_empty() {
