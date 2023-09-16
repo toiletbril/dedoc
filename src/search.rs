@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fs::{read_dir, File};
 use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
@@ -13,7 +14,7 @@ use crate::debug_println;
 use crate::common::ResultS;
 use crate::common::{
     convert_paths_to_items, deserialize_docs_json, get_docset_path, get_program_directory,
-    is_docs_json_exists, is_docset_exists_or_print_warning, print_page_from_docset,
+    is_docs_json_exists, is_docset_in_docs_or_print_warning, print_page_from_docset,
     print_search_results, is_docset_downloaded
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
@@ -24,16 +25,16 @@ struct SearchFlags {
     precise: bool,
 }
 
-#[derive(Serialize, Deserialize)]
-struct SearchCache {
-    query: String,
-    docset: String,
-    exact_items: Vec<String>,
-    vague_items: Vec<String>,
-    flags: SearchFlags,
+#[derive(Serialize, Deserialize, PartialEq)]
+struct SearchCache<'a> {
+    query:       Cow<'a, str>,
+    docset:      Cow<'a, str>,
+    exact_items: Cow<'a, [String]>,
+    vague_items: Cow<'a, [String]>,
+    flags:       Cow<'a, SearchFlags>,
 }
 
-fn try_use_cache(docset: &String, query: &String, flags: &SearchFlags) -> Option<SearchCache> {
+fn try_use_cache<'a>(docset: &'a String, query: &'a String, flags: &'a SearchFlags) -> Option<SearchCache<'a>> {
     let program_dir = get_program_directory().ok()?;
     let cache_path = program_dir.join("search_cache.json");
 
@@ -42,7 +43,7 @@ fn try_use_cache(docset: &String, query: &String, flags: &SearchFlags) -> Option
 
     let cache: SearchCache = from_reader(reader).ok()?;
 
-    if docset == &cache.docset && query == &cache.query && flags == &cache.flags {
+    if docset == &cache.docset && query == &cache.query && *flags == *cache.flags {
         Some(cache)
     } else {
         None
@@ -51,28 +52,29 @@ fn try_use_cache(docset: &String, query: &String, flags: &SearchFlags) -> Option
 
 fn cache_search_results(
     docset: &String,
-    query: &String,
-    flags: &SearchFlags,
+    query:  &String,
+    flags:  &SearchFlags,
     exact_items: &Vec<String>,
     vague_items: &Vec<String>,
 ) -> ResultS {
     let program_dir = get_program_directory()?;
     let cache_path = program_dir.join("search_cache.json");
 
-    let cache_file =
-        File::create(&cache_path).map_err(|err| format!("Could not open {cache_path:?}: {err}"))?;
+    let cache_file = File::create(&cache_path)
+        .map_err(|err| format!("Could not open {cache_path:?}: {err}"))?;
 
     let writer = BufWriter::new(cache_file);
 
     let cache = SearchCache {
-        docset:      docset.clone(),
-        query:       query.clone(),
-        flags:       flags.clone(),
-        exact_items: exact_items.clone(),
-        vague_items: vague_items.clone(),
+        docset:      Cow::Borrowed(docset),
+        query:       Cow::Borrowed(query),
+        flags:       Cow::Borrowed(flags),
+        exact_items: Cow::Borrowed(exact_items),
+        vague_items: Cow::Borrowed(vague_items),
     };
 
-    to_writer(writer, &cache).map_err(|err| format!("Could not write cache: {err}"))?;
+    to_writer(writer, &cache)
+        .map_err(|err| format!("Could not write cache: {err}"))?;
 
     Ok(())
 }
@@ -97,11 +99,12 @@ pub fn search_docset_in_filenames(
     ) -> Result<Vec<PathBuf>, String> {
         let mut internal_paths = vec![];
 
-        let dir =
-            read_dir(&path).map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+        let dir = read_dir(&path)
+            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
 
         for entry in dir {
-            let entry = entry.map_err(|err| format!("Could not read file: {err}"))?;
+            let entry = entry
+                .map_err(|err| format!("Could not read file: {err}"))?;
 
             let os_file_name = entry.file_name();
 
@@ -163,11 +166,12 @@ pub fn search_docset_thoroughly(
         let mut exact_paths = vec![];
         let mut vague_paths = vec![];
 
-        let dir =
-            read_dir(&path).map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+        let dir = read_dir(&path)
+            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
 
         for entry in dir {
-            let entry = entry.map_err(|err| format!("Could not read file: {err}"))?;
+            let entry = entry
+                .map_err(|err| format!("Could not read file: {err}"))?;
 
             let os_file_name = entry.file_name();
 
@@ -284,7 +288,7 @@ where
     let docs = deserialize_docs_json()?;
 
     if !is_docset_downloaded(&docset)? {
-        if is_docset_exists_or_print_warning(&docset, &docs) {
+        if is_docset_in_docs_or_print_warning(&docset, &docs) {
             println!("\
 {YELLOW}WARNING{RESET}: Docset `{docset}` is not downloaded. Try running `download {docset}`."
             );
@@ -309,14 +313,12 @@ where
     if flag_precise {
         let (exact_results, vague_results) =
         if let Some(cache) = try_use_cache(&docset, &query, &flags) {
-            debug_println!("Search used cache.");
             (cache.exact_items, cache.vague_items)
         } else {
             let (exact, vague) = search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
-            if let Err(err) = cache_search_results(&docset, &query, &flags, &exact, &vague) {
-                println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}.");
-            }
-            (exact, vague)
+            let _ = cache_search_results(&docset, &query, &flags, &exact, &vague)
+                .map_err(|err| format!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+            (exact.into(), vague.into())
         };
 
         let exact_results_offset = exact_results.len();
@@ -340,14 +342,14 @@ where
 
         if !exact_results.is_empty() {
             println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-            print_search_results(exact_results, 1)?;
+            print_search_results(&exact_results, 1)?;
         } else {
             println!("{BOLD}No exact matches in `{docset}`{RESET}.");
         }
 
         if !vague_results.is_empty() {
             println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
-            print_search_results(vague_results, exact_results_offset + 1)?;
+            print_search_results(&vague_results, exact_results_offset + 1)?;
         } else {
             println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
         }
@@ -359,10 +361,9 @@ where
             cache.exact_items
         } else {
             let exact = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
-            if let Err(err) = cache_search_results(&docset, &query, &flags, &exact, &vec![]) {
-                println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}.");
-            }
-            exact
+            let _ = cache_search_results(&docset, &query, &flags, &exact, &vec![])
+                .map_err(|err| format!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+            exact.into()
         };
 
         if !flag_open_is_empty {
@@ -381,7 +382,7 @@ where
 
         if !results.is_empty() {
             println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-            return print_search_results(results, 1);
+            return print_search_results(&results, 1);
         } else {
             println!("{BOLD}No exact matches in `{docset}`{RESET}.");
         }
