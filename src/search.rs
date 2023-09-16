@@ -19,6 +19,22 @@ use crate::common::{
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
+fn show_search_help() -> ResultS {
+    println!(
+        "\
+{GREEN}USAGE{RESET}
+    {BOLD}{PROGRAM_NAME} search{RESET} [-ipo] <docset> <query>
+    List docset pages that match your query.
+
+{GREEN}OPTIONS{RESET}
+    -i, --ignore-case           Ignore character case.
+    -p, --precise               Search more thoroughly and look for mentions in other files.
+    -o, --open <number>         Open n-th search result.
+        --help                  Display help message."
+    );
+    Ok(())
+}
+
 #[derive(Serialize, Deserialize, Default, PartialEq, Clone)]
 struct SearchFlags {
     case_insensitive: bool,
@@ -235,23 +251,6 @@ pub fn search_docset_thoroughly(
     items.1.sort_unstable();
 
     Ok(items)
-}
-
-fn show_search_help() -> ResultS {
-    let help = format!(
-        "\
-{GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} search{RESET} [-ipo] <docset> <query>
-    List docset pages that match your query.
-
-{GREEN}OPTIONS{RESET}
-    -i, --ignore-case           Ignore character case.
-    -p, --precise               Search more thoroughly and look for mentions in other files.
-    -o, --open <number>         Open n-th search result.
-        --help                  Display help message."
-    );
-    println!("{}", help);
-    Ok(())
 }
 
 pub fn search<Args>(mut args: Args) -> ResultS

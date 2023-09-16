@@ -30,8 +30,7 @@ fn show_version() -> ResultS {
     let version = format!("{VERSION} debug build");
     #[cfg(not(debug_assertions))]
     let version = VERSION;
-
-    let message = format!(
+    println!(
         "\
 dedoc {version}
 (c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
@@ -40,12 +39,11 @@ License GPLv3: GNU GPL version 3.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law."
     );
-    println!("{}", message);
     Ok(())
 }
 
 fn show_help() -> ResultS {
-    let help = format!(
+    println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
@@ -64,7 +62,6 @@ fn show_help() -> ResultS {
     -v, --version                   Display version.
         --help                      Display help message."
     );
-    println!("{}", help);
     Ok(())
 }
 

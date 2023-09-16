@@ -6,7 +6,7 @@ use crate::common::{deserialize_docs_json, get_local_docsets, is_docs_json_exist
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
 fn show_list_help() -> ResultS {
-    let help = format!(
+    println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} list{RESET} [-la]
@@ -17,7 +17,6 @@ fn show_list_help() -> ResultS {
     -a, --all                       Show all version-specific docsets.
         --help                      Display help message."
     );
-    println!("{}", help);
     Ok(())
 }
 

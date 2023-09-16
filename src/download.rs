@@ -19,6 +19,20 @@ use crate::common::{
     BOLD, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
 
+fn show_download_help() -> ResultS {
+    println!(
+        "\
+{GREEN}USAGE{RESET}
+    {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
+    Download a docset. Available docsets can be displayed using `list`.
+
+{GREEN}OPTIONS{RESET}
+    -f, --force                 Overwrite downloaded docsets.
+        --help                  Display help message."
+    );
+    Ok(())
+}
+
 fn download_docset_tar_gz_with_progress(
     docset_name: &String,
     docs: &Vec<Docs>,
@@ -158,21 +172,6 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     remove_file(&tar_gz_path)
         .map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
 
-    Ok(())
-}
-
-fn show_download_help() -> ResultS {
-    let help = format!(
-        "\
-{GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
-    Download a docset. Available docsets can be displayed using `list`.
-
-{GREEN}OPTIONS{RESET}
-    -f, --force                 Overwrite downloaded docsets.
-        --help                  Display help message."
-    );
-    println!("{}", help);
     Ok(())
 }
 

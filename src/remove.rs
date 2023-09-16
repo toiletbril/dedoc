@@ -8,7 +8,7 @@ use crate::common::{get_docset_path, is_docset_downloaded, is_name_allowed};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
 fn show_remove_help() -> ResultS {
-    let help = format!(
+    println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} remove{RESET} <docset1> [docset2, ..]
@@ -17,7 +17,6 @@ fn show_remove_help() -> ResultS {
 {GREEN}OPTIONS{RESET}
         --help                  Display help message."
     );
-    println!("{}", help);
     Ok(())
 }
 

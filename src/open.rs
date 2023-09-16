@@ -8,7 +8,7 @@ use crate::common::{
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
 fn show_open_help() -> ResultS {
-    let help = format!(
+    println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} open{RESET} [-i] <docset> <page>
@@ -17,7 +17,6 @@ fn show_open_help() -> ResultS {
 {GREEN}OPTIONS{RESET}
         --help             Display help message."
     );
-    println!("{}", help);
     Ok(())
 }
 

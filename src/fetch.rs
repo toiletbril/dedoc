@@ -15,6 +15,20 @@ use crate::common::{
     BOLD, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
 
+fn show_fetch_help() -> ResultS {
+    println!(
+        "\
+{GREEN}USAGE{RESET}
+    {BOLD}{PROGRAM_NAME} fetch{RESET} [-f]
+    Fetch latest `docs.json` which lists available languages and frameworks.
+
+{GREEN}OPTIONS{RESET}
+    -f, --force                 Update even if `docs.json` is recent.
+        --help                  Display help message."
+    );
+    Ok(())
+}
+
 pub fn fetch_docs_json() -> Result<Vec<Docs>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
@@ -55,21 +69,6 @@ pub fn serialize_and_overwrite_docs_json(docs: Vec<Docs>) -> Result<(), String> 
     serde_json::to_writer(writer, &docs)
         .map_err(|err| format!("Could not write {docs_json_path:?}: {err}"))?;
 
-    Ok(())
-}
-
-fn show_fetch_help() -> ResultS {
-    let help = format!(
-        "\
-{GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} fetch{RESET} [-f]
-    Fetch latest `docs.json` which lists available languages and frameworks.
-
-{GREEN}OPTIONS{RESET}
-    -f, --force                 Update even if `docs.json` is recent.
-        --help                  Display help message."
-    );
-    println!("{}", help);
     Ok(())
 }
 
