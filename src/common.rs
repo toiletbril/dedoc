@@ -198,18 +198,18 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
         }
     }
 
-    unsafe {
-        let home = &internal()?;
-        let home_path = Path::new(home);
+    let home = &internal()?;
+    let home_path = Path::new(home);
 
-        if home_path.is_dir() {
+    if home_path.is_dir() {
+        unsafe {
             HOME_DIR_INIT.call_once(|| {
                 HOME_DIR = Some(PathBuf::from(home_path));
             });
-            Ok(PathBuf::from(home_path))
-        } else {
-            Err("Could not figure out home directory".to_string())
         }
+        Ok(PathBuf::from(home_path))
+    } else {
+        Err("Could not figure out home directory".to_string())
     }
 }
 
@@ -285,9 +285,9 @@ pub enum SearchMatch {
 pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         Some(SearchMatch::Found) => return true,
-        Some(SearchMatch::FoundVague(mut vague_matches)) => {
-            vague_matches.truncate(3);
-            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", vague_matches.join("`/`"));
+        Some(SearchMatch::FoundVague(vague_matches)) => {
+            let first_three = &vague_matches[..3];
+            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
         }
         None => {
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
