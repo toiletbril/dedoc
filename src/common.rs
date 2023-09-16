@@ -287,7 +287,7 @@ pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>
         Some(SearchMatch::Found) => return true,
         Some(SearchMatch::FoundVague(mut vague_matches)) => {
             vague_matches.truncate(3);
-            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run mean `{}`?", vague_matches.join("`/`"));
+            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", vague_matches.join("`/`"));
         }
         None => {
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
@@ -300,7 +300,7 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<Searc
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
-        if entry.slug.starts_with(docset_name) {
+        if entry.slug.contains(docset_name) {
             if entry.slug == *docset_name {
                 return Some(SearchMatch::Found);
             }
