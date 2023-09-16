@@ -1,8 +1,10 @@
+* statically initialize frequent functions
 * features for lowering binary size
 
-* interactive search:
+* interactive search
     * literally open a manpage out of html with own pager
 
 * check other devdocs browsers docsets
     * support docsets from zeal
+    * allow specifying other browsers' docsets path
     * download docsets from dash

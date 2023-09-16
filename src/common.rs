@@ -1,4 +1,5 @@
 use std::fs::{create_dir_all, File, read_dir};
+use std::sync::Once;
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -164,8 +165,17 @@ pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
     print_html_file(file_path)
 }
 
+static mut HOME_DIR: Option<PathBuf> = None;
+static HOME_DIR_INIT: Once = Once::new();
+
 // @@@: test on windows
 pub fn get_home_directory() -> Result<PathBuf, String> {
+    unsafe {
+        if let Some(home_dir) = HOME_DIR.as_ref() {
+            return Ok(home_dir.clone());
+        }
+    }
+
     fn internal() -> Result<String, String> {
         #[cfg(target_family = "unix")]
         let home = std::env::var("HOME");
@@ -188,13 +198,18 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
         }
     }
 
-    let home = &internal()?;
-    let home_path = Path::new(home);
+    unsafe {
+        let home = &internal()?;
+        let home_path = Path::new(home);
 
-    if home_path.is_dir() {
-        Ok(PathBuf::from(home_path))
-    } else {
-        Err("Could not figure out home directory".to_string())
+        if home_path.is_dir() {
+            HOME_DIR_INIT.call_once(|| {
+                HOME_DIR = Some(PathBuf::from(home_path));
+            });
+            Ok(PathBuf::from(home_path))
+        } else {
+            Err("Could not figure out home directory".to_string())
+        }
     }
 }
 
@@ -260,14 +275,43 @@ pub fn write_to_logfile(message: String) -> Result<PathBuf, String> {
     Ok(log_file_path)
 }
 
-#[inline(always)]
-pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> bool {
-    for entry in docs.iter() {
-        if entry.slug == *docset_name {
-            return true;
+pub enum SearchMatch {
+    Found,
+    FoundVague(Vec<String>)
+}
+
+pub fn is_docset_exists_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
+    match is_docset_in_docs(docset_name, docs) {
+        Some(SearchMatch::Found) => return true,
+        Some(SearchMatch::FoundVague(mut vague_matches)) => {
+            vague_matches.truncate(3);
+            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run mean `{}`?", vague_matches.join("`/`"));
+        }
+        None => {
+            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
         }
     }
+
     false
+}
+
+pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<SearchMatch> {
+    let mut vague_matches = vec![];
+
+    for entry in docs.iter() {
+        if entry.slug.starts_with(docset_name) {
+            if entry.slug == *docset_name {
+                return Some(SearchMatch::Found);
+            }
+            vague_matches.push(entry.slug.clone());
+        }
+    }
+
+    if vague_matches.is_empty() {
+        None
+    } else {
+        Some(SearchMatch::FoundVague(vague_matches))
+    }
 }
 
 pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
@@ -353,37 +397,6 @@ pub fn is_name_allowed<S: ToString>(docset_name: S) -> bool {
     let has_dots = docset.find("..").is_some();
 
     !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
-}
-
-#[allow(dead_code)]
-pub fn get_zeal_docsets_directory() -> Result<PathBuf, String> {
-    let zeal_parent_dir = if cfg!(target_family = "windows") {
-        get_home_directory()?
-            .join("AppData")
-            .join("Local")
-    } else {
-        get_home_directory()?
-            .join(".local")
-            .join("share")
-    };
-
-    let zeal_docsets_dir = zeal_parent_dir
-        .join("Zeal")
-        .join("Zeal")
-        .join("docsets");
-
-    Ok(zeal_docsets_dir)
-}
-
-// win32: %LocalAppData%\Zeal\Zeal\docsets
-// unix:  .local/share/Zeal/Zeal/docsets
-#[allow(dead_code)]
-pub fn is_zeal_installed() -> Result<bool, String> {
-    let zeal_docsets_dir = get_zeal_docsets_directory()?;
-    let zeal_docsets_exists = zeal_docsets_dir.try_exists()
-        .map_err(|err| format!("Could not check if Zeal ({zeal_docsets_dir:?}) exists: {err}"))?;
-
-    Ok(zeal_docsets_exists)
 }
 
 #[inline(always)]

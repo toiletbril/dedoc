@@ -3,7 +3,7 @@ use toiletcli::flags::*;
 
 use crate::common::ResultS;
 use crate::common::{
-    deserialize_docs_json, is_docset_downloaded, is_docset_in_docs, print_page_from_docset,
+    deserialize_docs_json, is_docset_exists_or_print_warning, print_page_from_docset,
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
@@ -34,7 +34,7 @@ where
     let args = parse_flags(&mut args, &mut flags)?;
     if flag_help { return show_open_help(); }
 
-    let mut args = args.iter();
+    let mut args = args.into_iter();
 
     let docset = if let Some(docset_name) = args.next() {
         docset_name
@@ -42,23 +42,17 @@ where
         return show_open_help();
     };
 
-    if !is_docset_downloaded(docset)? {
-        let message = if is_docset_in_docs(docset, &deserialize_docs_json()?) {
-            format!("`{docset}` docset is not downloaded. Try using `download {docset}`.")
-        } else {
-            format!("`{docset}` does not exist. Try using `list` or `fetch`.")
-        };
-        return Err(message);
+    let docs = deserialize_docs_json()?;
+
+    if is_docset_exists_or_print_warning(&docset, &docs) {
+        let query = args.collect::<Vec<String>>().join(" ");
+
+        if query.is_empty() {
+            return Err("No page specified. Try `open --help` for more information.".to_string());
+        }
+
+        print_page_from_docset(&docset, &query)?;
     }
-
-    let mut query = args.fold(String::new(), |base, next| base + next + " ");
-    query.pop(); // remove last space
-
-    if query.is_empty() {
-        return Err("No page specified. Try `open --help` for more information.".to_string());
-    }
-
-    print_page_from_docset(docset, &query)?;
 
     Ok(())
 }

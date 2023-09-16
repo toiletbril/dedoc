@@ -1,9 +1,9 @@
 use std::fs::{read_dir, File};
-use std::io::{BufRead, BufReader, BufWriter, Read};
+use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, to_writer};
+use serde_json::{from_reader, to_writer};
 
 use toiletcli::flags;
 use toiletcli::flags::*;
@@ -13,8 +13,8 @@ use crate::debug_println;
 use crate::common::ResultS;
 use crate::common::{
     convert_paths_to_items, deserialize_docs_json, get_docset_path, get_program_directory,
-    is_docs_json_exists, is_docset_downloaded, is_docset_in_docs, print_page_from_docset,
-    print_search_results,
+    is_docs_json_exists, is_docset_exists_or_print_warning, print_page_from_docset,
+    print_search_results, is_docset_downloaded
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
@@ -38,13 +38,9 @@ fn try_use_cache(docset: &String, query: &String, flags: &SearchFlags) -> Option
     let cache_path = program_dir.join("search_cache.json");
 
     let file = File::open(cache_path).ok()?;
-    let mut reader = BufReader::new(file);
-    let mut string_buffer = vec![];
+    let reader = BufReader::new(file);
 
-    reader.read_to_end(&mut string_buffer).ok()?;
-    let contents = String::from_utf8(string_buffer).ok()?;
-
-    let cache: SearchCache = from_str(&contents).ok()?;
+    let cache: SearchCache = from_reader(reader).ok()?;
 
     if docset == &cache.docset && query == &cache.query && flags == &cache.flags {
         Some(cache)
@@ -53,7 +49,7 @@ fn try_use_cache(docset: &String, query: &String, flags: &SearchFlags) -> Option
     }
 }
 
-fn write_search_cache(
+fn cache_search_results(
     docset: &String,
     query: &String,
     flags: &SearchFlags,
@@ -285,13 +281,15 @@ where
         return show_search_help();
     };
 
+    let docs = deserialize_docs_json()?;
+
     if !is_docset_downloaded(&docset)? {
-        let message = if is_docset_in_docs(&docset, &deserialize_docs_json()?) {
-            format!("Docset `{docset}` is not downloaded. Try using `download {docset}`.")
-        } else {
-            format!("Docset `{docset}` does not exist. Try `list` or `fetch`.")
-        };
-        return Err(message);
+        if is_docset_exists_or_print_warning(&docset, &docs) {
+            println!("\
+{YELLOW}WARNING{RESET}: Docset `{docset}` is not downloaded. Try running `download {docset}`."
+            );
+        }
+        return Ok(());
     }
 
     let query = args.collect::<Vec<String>>().join(" ");
@@ -315,7 +313,7 @@ where
             (cache.exact_items, cache.vague_items)
         } else {
             let (exact, vague) = search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
-            if let Err(err) = write_search_cache(&docset, &query, &flags, &exact, &vague) {
+            if let Err(err) = cache_search_results(&docset, &query, &flags, &exact, &vague) {
                 println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}.");
             }
             (exact, vague)
@@ -361,7 +359,7 @@ where
             cache.exact_items
         } else {
             let exact = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
-            if let Err(err) = write_search_cache(&docset, &query, &flags, &exact, &vec![]) {
+            if let Err(err) = cache_search_results(&docset, &query, &flags, &exact, &vec![]) {
                 println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}.");
             }
             exact

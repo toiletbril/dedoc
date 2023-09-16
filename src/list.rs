@@ -42,8 +42,9 @@ where
         return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
     }
 
+    let local_docsets = get_local_docsets()?;
+
     if flag_local {
-        let local_docsets = get_local_docsets()?;
         let mut local_docsets_iter_peekable = local_docsets.iter().peekable();
 
         while let Some(entry) = local_docsets_iter_peekable.next() {
@@ -71,8 +72,6 @@ where
         if !flag_local && !flag_all && entry.find("~").is_some() {
             continue;
         }
-
-        let local_docsets = get_local_docsets()?;
 
         if local_docsets.contains(entry) {
             print!("{GREEN}{} [downloaded]{RESET}", entry);
