@@ -116,7 +116,7 @@ fn main() -> ExitCode {
 
     match entry(&mut args) {
         Err(mut err) => {
-            if !err.ends_with(['.', '?']) { err += ". Try `--help` for more information."; }
+            if !err.ends_with(['.', '?', ')']) { err += ". Try `--help` for more information."; }
             eprintln!("{RED}ERROR{RESET}: {err}");
             ExitCode::FAILURE
         }

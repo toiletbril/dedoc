@@ -41,7 +41,7 @@ where
             let docset_path = get_docset_path(&docset)?;
             println!("Removing `{docset}` from `{}`...", docset_path.display());
             remove_dir_all(&docset_path)
-                .map_err(|err| format!("Unable to remove {docset_path:?}: {err}"))?;
+                .map_err(|err| format!("Unable to remove `{}`: {err}", docset_path.display()))?;
         }
         return Ok(());
     }
@@ -59,7 +59,7 @@ where
             if docset_path.exists() {
                 println!("Removing `{docset}` from `{}`...", docset_path.display());
                 remove_dir_all(&docset_path)
-                    .map_err(|err| format!("Unable to remove {docset_path:?}: {err}"))?;
+                    .map_err(|err| format!("Unable to remove `{}`: {err}", docset_path.display()))?;
             }
         } else {
             println!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");

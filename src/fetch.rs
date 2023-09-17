@@ -45,7 +45,7 @@ pub fn fetch_docs() -> Result<Vec<Docs>, String> {
     let docs: Vec<Docs> = serde_json::from_str(body.as_str()).map_err(|err| {
         let result = write_to_logfile(format!("Error while parsing JSON body: {err}\n\n{body}"));
         let log_file_message = match result {
-                Ok(path) => format!("Log file is saved at {path:?}."),
+                Ok(path) => format!("Log file is saved at `{}`.", path.display()),
                 Err(err) => format!("Unable to write log file: {err}."),
         };
         format!("Error while parsing JSON body: {err}. {log_file_message}")
@@ -56,12 +56,12 @@ pub fn fetch_docs() -> Result<Vec<Docs>, String> {
 
 pub fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<Docs>) -> Result<(), String> {
     let file = File::create(&path)
-        .map_err(|err| format!("{path:?}: {err}"))?;
+        .map_err(|err| format!("`{}`: {err}", path.display()))?;
 
     let writer = BufWriter::new(file);
 
     serde_json::to_writer(writer, &docs)
-        .map_err(|err| format!("Could not write {path:?}: {err}"))?;
+        .map_err(|err| format!("Could not write `{}`: {err}", path.display()))?;
 
     Ok(())
 }

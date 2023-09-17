@@ -41,7 +41,7 @@ where
     if flag_help { return show_list_help(); }
 
     if !is_docs_json_exists()? {
-        return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
+        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
     let local_docsets = get_local_docsets()?;

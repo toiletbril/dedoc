@@ -75,7 +75,7 @@ fn cache_search_results(
     let cache_path = program_dir.join("search_cache.json");
 
     let cache_file = File::create(&cache_path)
-        .map_err(|err| format!("Could not open {cache_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not open cache at `{}`: {err}", cache_path.display()))?;
 
     let writer = BufWriter::new(cache_file);
 
@@ -88,7 +88,7 @@ fn cache_search_results(
     };
 
     to_writer(writer, &cache)
-        .map_err(|err| format!("Could not write cache: {err}"))?;
+        .map_err(|err| format!("Could not write cache at `{}`: {err}", cache_path.display()))?;
 
     Ok(())
 }
@@ -114,7 +114,7 @@ pub fn search_docset_in_filenames(
         let mut internal_paths = vec![];
 
         let dir = read_dir(&path)
-            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+            .map_err(|err| format!("Could not read `{}` directory: {err}", path.display()))?;
 
         for entry in dir {
             let entry = entry
@@ -181,7 +181,7 @@ pub fn search_docset_thoroughly(
         let mut vague_paths = vec![];
 
         let dir = read_dir(&path)
-            .map_err(|err| format!("Could not read directory {path:?}: {err}"))?;
+            .map_err(|err| format!("Could not read `{}` directory: {err}", path.display()))?;
 
         for entry in dir {
             let entry = entry
@@ -216,7 +216,7 @@ pub fn search_docset_thoroughly(
                 exact_paths.push(file_path);
             } else {
                 let file = File::open(&file_path)
-                    .map_err(|err| format!("Could not open {file_path:?}: {err}"))?;
+                    .map_err(|err| format!("Could not open `{}`: {err}", file_path.display()))?;
                 let mut reader = BufReader::new(file);
                 let mut string_buffer = String::new();
 
