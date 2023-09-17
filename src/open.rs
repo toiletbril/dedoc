@@ -31,7 +31,7 @@ where
     let mut flag_html;
 
     let mut flags = flags![
-        flag_help: BoolFlag,   ["--help"],
+        flag_help: BoolFlag, ["--help"],
         flag_html: BoolFlag, ["--html", "-h"]
     ];
 
