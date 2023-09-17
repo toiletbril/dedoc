@@ -2,7 +2,7 @@ use std::fs::{create_dir_all, File, read_dir};
 use std::fmt::Display;
 use std::sync::Once;
 use std::io::{BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use html2text::from_read_coloured;
@@ -95,7 +95,7 @@ Example item:
 pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     let file = File::open(&docs_json_path)
-        .map_err(|err| format!("Could not open {docs_json_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not open `{}`: {err}", docs_json_path.display()))?;
 
     let reader = BufReader::new(file);
 
@@ -141,7 +141,7 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
 
 pub fn print_html_file(path: PathBuf) -> ResultS {
     let file = File::open(&path)
-        .map_err(|err| format!("Could not open {path:?}: {err}"))?;
+        .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
 
     let page = from_read_coloured(reader, 80, default_colour_map)
@@ -176,7 +176,7 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
         }
     }
 
-    fn internal() -> Result<String, String> {
+    fn internal() -> Result<PathBuf, String> {
         #[cfg(target_family = "unix")]
         let home = std::env::var("HOME");
 
@@ -184,7 +184,7 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
         let home = std::env::var("userprofile");
 
         if let Ok(home) = home {
-            Ok(home)
+            Ok(home.into())
         } else {
             let user = std::env::var("USER").map_err(|err| err.to_string())?;
 
@@ -194,22 +194,21 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
             #[cfg(target_family = "windows")]
             let home = format!("C:\\Users\\{user}");
 
-            Ok(home)
+            Ok(home.into())
         }
     }
 
-    unsafe {
-        let home = &internal()?;
-        let home_path = Path::new(home);
+    let home_path = internal()?;
 
-        if home_path.is_dir() {
+    if home_path.is_dir() {
+        unsafe {
             HOME_DIR_INIT.call_once(|| {
-                HOME_DIR = Some(PathBuf::from(home_path));
+                HOME_DIR = Some(home_path.clone());
             });
-            Ok(PathBuf::from(home_path))
-        } else {
-            Err("Could not figure out home directory".to_string())
         }
+        Ok(home_path)
+    } else {
+        Err("Could not figure out home directory".to_string())
     }
 }
 
@@ -226,7 +225,7 @@ pub fn create_program_directory() -> ResultS {
 
     if !program_path.exists() {
         create_dir_all(&program_path)
-            .map_err(|err| format!("Could not create {program_path:?}: {err}"))?;
+            .map_err(|err| format!("Could not create `{}`: {err}", program_path.display()))?;
     }
 
     if program_path.is_dir() {
@@ -269,10 +268,10 @@ pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
     } else {
         File::create(&log_file_path)
     }
-    .map_err(|err| format!("Could not open {log_file_path:?}: {err}"))?;
+    .map_err(|err| format!("Could not open `{}`: {err}", log_file_path.display()))?;
 
     writeln!(log_file, "{}", message)
-        .map_err(|err| format!("Could not write {log_file_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not write `{}`: {err}", log_file_path.display()))?;
 
     Ok(log_file_path)
 }
@@ -285,9 +284,9 @@ pub enum SearchMatch {
 pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         Some(SearchMatch::Found) => return true,
-        Some(SearchMatch::FoundVague(mut vague_matches)) => {
-            vague_matches.truncate(3);
-            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run mean `{}`?", vague_matches.join("`/`"));
+        Some(SearchMatch::FoundVague(vague_matches)) => {
+            let first_three = &vague_matches[..3];
+            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
         }
         None => {
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
@@ -300,7 +299,7 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<Searc
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
-        if entry.slug.starts_with(docset_name) {
+        if entry.slug.contains(docset_name) {
             if entry.slug == *docset_name {
                 return Some(SearchMatch::Found);
             }
@@ -342,7 +341,7 @@ pub fn print_search_results(search_results: &[String], mut start_index: usize) -
 pub fn get_local_docsets() -> Result<Vec<String>, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     let docsets_dir_exists = docsets_path.try_exists()
-        .map_err(|err| format!("Could not check {docsets_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not check `{}`: {err}", docsets_path.display()))?;
 
     let mut result = vec![];
 

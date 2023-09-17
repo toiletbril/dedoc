@@ -19,6 +19,20 @@ use crate::common::{
     BOLD, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
 
+fn show_download_help() -> ResultS {
+    println!(
+        "\
+{GREEN}USAGE{RESET}
+    {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
+    Download a docset. Available docsets can be displayed using `list`.
+
+{GREEN}OPTIONS{RESET}
+    -f, --force                     Overwrite downloaded docsets.
+        --help                      Display help message."
+    );
+    Ok(())
+}
+
 fn download_docset_tar_gz_with_progress(
     docset_name: &String,
     docs: &Vec<Docs>,
@@ -40,7 +54,7 @@ fn download_docset_tar_gz_with_progress(
                 .with_extension("tar.gz");
 
             let file = File::create(&tar_gz_path)
-                .map_err(|err| format!("Could not create `{tar_gz_path:?}`: {err}"))?;
+                .map_err(|err| format!("Could not create `{}`: {err}", tar_gz_path.display()))?;
 
             let download_link = format!("{DEFAULT_DOWNLOADS_LINK}/{docset_name}.tar.gz");
 
@@ -88,7 +102,7 @@ fn download_docset_tar_gz_with_progress(
                 );
 
                 remove_dir_all(&specific_docset_path)
-                    .map_err(|err| format!("Could not remove bad docset ({specific_docset_path:?}): {err}"))?;
+                    .map_err(|err| format!("Could not remove bad docset ({}): {err}", specific_docset_path.display()))?;
 
                 return Err(message);
             }
@@ -109,7 +123,7 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     let tar_gz_path = docset_path.join(docset_name).with_extension("tar.gz");
 
     let tar_gz_file = File::open(&tar_gz_path)
-        .map_err(|err| format!("Could not open {tar_gz_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not open `{}`: {err}", tar_gz_path.display()))?;
 
     let reader = BufReader::new(tar_gz_file);
     let tar = GzDecoder::new(reader);
@@ -119,7 +133,7 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     {
         archive
             .unpack(docset_path)
-            .map_err(|err| format!("Could not extract {tar_gz_path:?}: {err}"))?;
+            .map_err(|err| format!("Could not extract `{}`: {err}", tar_gz_path.display()))?;
     }
 
     // Sometimes .tar archives have files with disallowed characters in their name.
@@ -129,11 +143,11 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
         const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
 
         let mut archive_files = archive.entries()
-            .map_err(|err| format!("Could not read archive {tar_gz_path:?}: {err}"))?;
+            .map_err(|err| format!("Could not read archive `{}`: {err}", tar_gz_path.display()))?;
 
         while let Some(file) = archive_files.next() {
             let mut file = file
-                .map_err(|err| format!("Could not read archive {tar_gz_path:?}: {err}"))?;
+                .map_err(|err| format!("Could not read archive `{}`: {err}", tar_gz_path.display()))?;
 
             let path_bytes = &file.header().path_bytes();
             let path_unsanitized_str = String::from_utf8_lossy(&path_bytes);
@@ -151,28 +165,13 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
             let unpack_path = docset_path.join(path_sanitized);
 
             file.unpack(&unpack_path)
-                .map_err(|err| format!("Could not extract file from {tar_gz_path:?} to {unpack_path:?}: {err}"))?;
+                .map_err(|err| format!("Could not extract file from `{}` to {unpack_path:?}: {err}", tar_gz_path.display()))?;
         }
     }
 
     remove_file(&tar_gz_path)
-        .map_err(|err| format!("Could not remove {tar_gz_path:?}: {err}"))?;
+        .map_err(|err| format!("Could not remove `{}`: {err}", tar_gz_path.display()))?;
 
-    Ok(())
-}
-
-fn show_download_help() -> ResultS {
-    let help = format!(
-        "\
-{GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
-    Download a docset. Available docsets can be displayed using `list`.
-
-{GREEN}OPTIONS{RESET}
-    -f, --force                 Overwrite downloaded docsets.
-        --help                  Display help message."
-    );
-    println!("{}", help);
     Ok(())
 }
 
