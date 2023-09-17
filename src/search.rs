@@ -133,7 +133,7 @@ pub fn search_docset_in_filenames(
 
             let mut file_name = os_file_name.to_string_lossy().to_string();
 
-            if file_name.rfind(".html").is_none() {
+            if file_name.rfind(".md").is_none() {
                 continue;
             }
 
@@ -202,7 +202,7 @@ pub fn search_docset_thoroughly(
 
             let mut file_name = os_file_name.to_string_lossy().to_string();
 
-            if file_name.rfind(".html").is_none() {
+            if file_name.rfind(".md").is_none() {
                 continue;
             }
 

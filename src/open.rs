@@ -5,7 +5,7 @@ use toiletcli::flags::*;
 
 use crate::common::ResultS;
 use crate::common::{
-    deserialize_docs_json, is_docset_in_docs_or_print_warning, print_page_from_docset, print_html_file
+    deserialize_docs_json, is_docset_in_docs_or_print_warning, print_page_from_docset, print_md_file
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
@@ -40,7 +40,7 @@ where
 
     if flag_html {
         let path = PathBuf::from(args.join(" "));
-        return print_html_file(path);
+        return print_md_file(path);
     }
 
     let mut args = args.into_iter();

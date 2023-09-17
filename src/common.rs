@@ -1,12 +1,9 @@
 use std::fs::{create_dir_all, File, read_dir};
 use std::fmt::Display;
 use std::sync::Once;
-use std::io::{BufReader, Write};
+use std::io::{BufReader, Write, Read};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
-
-use html2text::from_read_coloured;
-use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
 
 use toiletcli::colors::{Color, Style};
 
@@ -17,8 +14,9 @@ pub type ResultS = Result<(), String>;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const PROGRAM_NAME: &str = "dedoc";
 
-pub const DEFAULT_DOWNLOADS_LINK: &str = "https://downloads.devdocs.io";
-pub const DEFAULT_DOCS_LINK: &str = "https://devdocs.io/docs.json";
+pub const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
+pub const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
+
 pub const DEFAULT_USER_AGENT: &str = "dedoc";
 
 pub const RED:       Color = Color::Red;
@@ -105,57 +103,26 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
-    match annotation {
-        Default => ("".into(), "".into()),
-        Link(_) => (
-            format!("{}", Color::Blue),
-            format!("{}", Color::Reset),
-        ),
-        Image(_) => (
-            format!("{}", Color::BrightBlue),
-            format!("{}", Color::Reset)
-        ),
-        Emphasis => (
-            format!("{}", Style::Bold),
-            format!("{}", Style::Reset),
-        ),
-        Strong => (
-            format!("{}", Style::Bold),
-            format!("{}", Style::Reset)
-        ),
-        Strikeout => (
-            format!("{}", Style::Strikethrough),
-            format!("{}", Style::Reset)
-        ),
-        Code => (
-            format!("{}", Color::BrightBlack),
-            format!("{}", Color::Reset)
-        ),
-        Preformat(_) => (
-            format!("{}", Color::BrightBlack),
-            format!("{}", Color::Reset)
-        ),
-    }
-}
-
-pub fn print_html_file(path: PathBuf) -> ResultS {
+pub fn print_md_file(path: PathBuf) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
-    let reader = BufReader::new(file);
-
-    let page = from_read_coloured(reader, 80, default_colour_map)
-        .map_err(|err| err.to_string())?;
-
-    println!("{}", page.trim());
+    let mut reader = BufReader::new(file);
+    let mut stdout = std::io::stdout();
+    let mut buffer = [0; 2048];
+    while let Ok(size) = reader.read(&mut buffer) {
+        if size == 0 {
+            break;
+        }
+        stdout.write_all(&buffer[..size])
+            .map_err(|err| format!("Unable to print file contents: {err}"))?;
+    }
 
     Ok(())
 }
 
 pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
     let docset_path = get_docset_path(docset_name)?;
-
-    let file_path = docset_path.join(page.to_owned() + ".html");
+    let file_path = docset_path.join(page.to_owned() + ".md");
 
     if !file_path.is_file() {
         let message =
@@ -163,7 +130,7 @@ pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
         return Err(message);
     }
 
-    print_html_file(file_path)
+    print_md_file(file_path)
 }
 
 static mut HOME_DIR: Option<PathBuf> = None;
