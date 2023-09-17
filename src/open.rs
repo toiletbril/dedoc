@@ -36,7 +36,7 @@ where
     ];
 
     let args = parse_flags(&mut args, &mut flags)?;
-    if flag_help { return show_open_help(); }
+    if flag_help || args.is_empty() { return show_open_help(); }
 
     if flag_html {
         let path = PathBuf::from(args.join(" "));
