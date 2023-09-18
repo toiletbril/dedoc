@@ -90,6 +90,15 @@ fn download_db_json_with_progress(
     Ok(())
 }
 
+// This should translate HTML files to something inbetween HTML and markdown,
+// so the program can choose column width and colors dynamically.
+//
+// For this to work, this needs to wrap words and do something magical with tables.
+fn translate_html_to_intermediate_markdown(html_contents: &str) -> String {
+    // @@@: replace this with own implementation
+    parse_html(html_contents)
+}
+
 fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
 where
     M: MapAccess<'de>,
@@ -97,13 +106,12 @@ where
     // Sometimes docshave files with disallowed characters in their name.
     #[cfg(target_family = "windows")]
     #[inline]
-    fn sanitize_filename_for_windows(filename: String) -> PathBuf {
+    fn sanitize_filename_for_windows(filename: String) -> String {
         const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
         filename
-        .chars()
-        .map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c })
-        .collect::<String>()
-        .into()
+            .chars()
+            .map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c })
+            .collect::<String>()
     }
 
     let docset_path = get_docset_path(docset_name)?;
@@ -114,6 +122,7 @@ where
     {
         #[cfg(target_family = "windows")]
         let file_path = sanitize_filename_for_windows(file_path);
+        let file_path = PathBuf::from(file_path);
 
         let mut file_name = file_path.file_name()
             .unwrap_or(file_path.as_os_str());
@@ -144,13 +153,7 @@ where
             .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
         let mut writer = BufWriter::new(file);
 
-        let mut html_reader = BufReader::new(contents.as_bytes());
-        let mut string_buffer = String::new();
-
-        html_reader.read_to_string(&mut string_buffer)
-            .map_err(|err| format!("Could not translate `{}`: {err}", file_path.display()))?;
-
-        let md_contents = parse_html(&string_buffer);
+        let md_contents = translate_html_to_intermediate_markdown(&contents);
 
         writer.write_all(md_contents.trim().as_bytes())
             .map_err(|err| format!("Could not write to `{}`: {err}", file_path.display()))?;
@@ -237,7 +240,8 @@ where
     while let Some(docset) = args_iter.next() {
         if !flag_force && is_docset_downloaded(docset)? {
             println!("\
-{YELLOW}WARNING{RESET}: `{docset}` is already downloaded. If you still want to update it, re-run this command with `--force`"
+{YELLOW}WARNING{RESET}: Docset `{docset}` is already downloaded. \
+If you still want to update it, re-run this command with `--force`"
             );
             continue;
         } else {

@@ -120,6 +120,8 @@ pub fn print_md_file(path: PathBuf) -> ResultS {
     Ok(())
 }
 
+// @@@: this should check current settings (terminal width and color flags)
+// and compile intermediate markdown to just markdown.
 pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
     let docset_path = get_docset_path(docset_name)?;
     let file_path = docset_path.join(page.to_owned() + ".md");
