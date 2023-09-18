@@ -1,5 +1,6 @@
 use std::fs::{create_dir_all, remove_dir_all, remove_file, File};
 use std::io::{BufReader, BufWriter, Read, Write};
+use std::path::Path;
 
 use attohttpc::get;
 
@@ -112,6 +113,18 @@ fn download_docset_tar_gz_with_progress(
     Ok(())
 }
 
+fn remove_if_exists(path: &Path) -> ResultS {
+    let path_exists = path.try_exists()
+        .map_err(|err| format!("Could not read `{}`: {err}", path.display()))?;
+
+    if path_exists {
+        remove_file(&path)
+            .map_err(|err| format!("Could not remove `{}`: {err}", path.display()))?;
+    }
+
+    Ok(())
+}
+
 fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     let docset_path = get_docset_path(docset_name)?;
 
@@ -132,7 +145,7 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
     #[cfg(target_family = "unix")]
     {
         archive
-            .unpack(docset_path)
+            .unpack(&docset_path)
             .map_err(|err| format!("Could not extract `{}`: {err}", tar_gz_path.display()))?;
     }
 
@@ -171,6 +184,12 @@ fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
 
     remove_file(&tar_gz_path)
         .map_err(|err| format!("Could not remove `{}`: {err}", tar_gz_path.display()))?;
+
+    // Remove these files, since this version does not make use of it
+    let db_json_path = docset_path.join("db").with_extension("json");
+    let index_json_path = docset_path.join("index").with_extension("json");
+    remove_if_exists(&db_json_path)?;
+    remove_if_exists(&index_json_path)?;
 
     Ok(())
 }
