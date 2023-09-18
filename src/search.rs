@@ -93,6 +93,7 @@ fn cache_search_results(
     Ok(())
 }
 
+// @@@: use index.json
 pub fn search_docset_in_filenames(
     docset_name: &String,
     query: &String,

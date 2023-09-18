@@ -107,15 +107,11 @@ pub fn print_md_file(path: PathBuf) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let mut reader = BufReader::new(file);
-    let mut stdout = std::io::stdout();
-    let mut buffer = [0; 2048];
-    while let Ok(size) = reader.read(&mut buffer) {
-        if size == 0 {
-            break;
-        }
-        stdout.write_all(&buffer[..size])
-            .map_err(|err| format!("Unable to print file contents: {err}"))?;
-    }
+
+    let mut buffer = String::new();
+    let _ = reader.read_to_string(&mut buffer);
+
+    termimad::print_text(&buffer);
 
     Ok(())
 }

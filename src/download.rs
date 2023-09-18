@@ -124,30 +124,15 @@ where
         let file_path = sanitize_filename_for_windows(file_path);
         let file_path = PathBuf::from(file_path);
 
-        let mut file_name = file_path.file_name()
-            .unwrap_or(file_path.as_os_str());
-
-        // Sometimes there's a weird file structure, that looks like
-        //      some_topic
-        //      └── index.html
-        //      another_topic
-        //      └── index.html
-        // I really don't like this, so this renames such "indexes" to their parent directory.
-        // If filename is not "index", just create the parent directories.
         if let Some(parent) = file_path.parent() {
-            if file_name == "index" && !parent.as_os_str().is_empty() {
-                file_name = parent.as_os_str();
-            }
-            if let Some(parent_of_parent) = parent.parent() {
-                create_dir_all(docset_path.join(parent_of_parent))
-                    .map_err(|err| format!("Could not create `{}`: {err}", parent.display()))?;
-            }
+            create_dir_all(docset_path.join(parent))
+                .map_err(|err| format!("Could not create `{}`: {err}", parent.display()))?;
         }
 
-        let mut file_name_html = file_name.to_owned();
-        file_name_html.push(".md");
+        let file_name_html = file_path.to_owned();
+        let file_name_md = file_name_html.with_extension("md");
 
-        let file_path = docset_path.join(file_name_html);
+        let file_path = docset_path.join(&file_name_md);
 
         let file = File::create(&file_path)
             .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
