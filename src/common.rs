@@ -350,7 +350,11 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
 
 pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
     for item in search_results {
-        println!("{GRAY}{start_index:>4}{RESET}  {}", item);
+        if let Some(header_index) = item.rfind('#') {
+            println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}", &item[..header_index], &item[header_index + 1..]);
+        } else {
+            println!("{GRAY}{start_index:>4}{RESET}  {}", item);
+        }
         start_index += 1;
     }
     Ok(())
