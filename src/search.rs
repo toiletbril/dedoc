@@ -25,6 +25,7 @@ fn show_search_help() -> ResultS {
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
+    -w, --whole                     Search for the whole sentence.
     -i, --ignore-case               Ignore character case.
     -p, --precise                   Look inside files (like 'grep').
     -o, --open <number>             Open n-th result.
@@ -260,12 +261,14 @@ where
     Args: Iterator<Item = String>,
 {
     let mut flag_help;
+    let mut flag_whole;
     let mut flag_precise;
     let mut flag_open;
     let mut flag_case_insensitive;
 
     let mut flags = flags![
         flag_help: BoolFlag,             ["--help"],
+        flag_whole: BoolFlag,            ["--whole", "-w"],
         flag_precise: BoolFlag,          ["--precise", "-p"],
         flag_open: StringFlag,           ["--open", "-o"],
         flag_case_insensitive: BoolFlag, ["--ignore-case", "-i"]
@@ -297,7 +300,17 @@ where
         return Ok(());
     }
 
-    let query = args.collect::<Vec<String>>().join(" ");
+    let query = {
+        let mut query = args.collect::<Vec<String>>().join(" ");
+        if flag_whole {
+            query.insert(0, ' ');
+            query.push(' ');
+            query
+        } else {
+            query
+        }
+    };
+
     let flag_open_is_empty = flag_open.is_empty();
     let open_number = flag_open.parse::<usize>().ok();
 
