@@ -105,7 +105,7 @@ where
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
         other => {
-            Err(format!("Unknown subcommand `{other}`."))
+            Err(format!("Unknown subcommand `{other}`"))
         }
     }
 }
