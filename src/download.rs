@@ -89,7 +89,8 @@ fn download_db_and_index_json_with_progress(
     Ok(())
 }
 
-fn sanitize_html<'a>(input: String) -> String {
+// Remove id="..." and class="..." attributes from HTML tags to reduce size.
+fn sanitize_html_line<'a>(input: String) -> String {
     enum State {
         Default,
         InTag,
@@ -147,6 +148,7 @@ fn sanitize_html<'a>(input: String) -> String {
     output
 }
 
+// serde was very confusing when I tried to understand how to stream a json map. This works by leaking a MapAccess.
 fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
 where
     M: MapAccess<'de>,
@@ -186,7 +188,7 @@ where
             .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
         let mut writer = BufWriter::new(file);
 
-        let sanitized_contents = sanitize_html(contents);
+        let sanitized_contents = sanitize_html_line(contents);
 
         writer.write_all(sanitized_contents.trim().as_bytes())
             .map_err(|err| format!("Could not write to `{}`: {err}", file_path.display()))?;
@@ -327,7 +329,7 @@ mod tests {
         </h1>
         "#;
 
-        let result = sanitize_html(html_text.to_owned());
+        let result = sanitize_html_line(html_text.to_owned());
 
         assert_eq!(result, should_be);
     }

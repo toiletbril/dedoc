@@ -34,6 +34,7 @@ fn show_search_help() -> ResultS {
     Ok(())
 }
 
+// Flags that change search result must be added here for cache to be updated.
 #[derive(Serialize, Deserialize, Default, PartialEq, Clone)]
 struct SearchFlags {
     case_insensitive: bool,

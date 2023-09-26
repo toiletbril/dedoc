@@ -32,6 +32,7 @@ pub const BOLD:      Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
 pub const RESET:     Style = Style::Reset;
 
+// Print only in debug builds.
 #[macro_export]
 macro_rules! debug_println {
     ($($e:expr),+) => {{
@@ -57,6 +58,7 @@ pub struct Links {
     code: String,
 }
 
+// docs.json
 #[allow(dead_code)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Docs {
@@ -142,6 +144,8 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
     }
 }
 
+// Ideally, this should skipp right to header when printing the page out.
+// This may not be possible without forking html2text ._.
 pub fn print_docset_file(path: PathBuf, _header: Option<&str>) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
@@ -187,6 +191,7 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
 static mut HOME_DIR: Option<PathBuf> = None;
 static HOME_DIR_INIT: Once = Once::new();
 
+// This is memoized, so every call after the first one is cheap.
 pub fn get_home_directory() -> Result<PathBuf, String> {
     unsafe {
         if let Some(home_dir) = HOME_DIR.as_ref() {
@@ -278,6 +283,7 @@ pub fn is_docs_json_old() -> Result<bool, String> {
     }
 }
 
+// This should be used to debug cryptic errors.
 pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
     let log_file_path = get_program_directory()?.join("logs.txt");
 
@@ -299,6 +305,7 @@ pub enum SearchMatch {
     FoundVague(Vec<String>)
 }
 
+// Returns `true` when docset exists in `docs.json`, otherwise it will print a warning.
 pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         Some(SearchMatch::Found) => return true,
@@ -313,6 +320,7 @@ pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>
     false
 }
 
+// `exact` is perfect match, `vague` are files that contain `docset_name` in their path.
 pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<SearchMatch> {
     let mut vague_matches = vec![];
 
@@ -332,6 +340,7 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<Searc
     }
 }
 
+// Item is page filename without file extension.
 pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
     let docset_path = get_docset_path(docset_name)?;
 
@@ -351,6 +360,7 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
 pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
     for item in search_results {
         if let Some(header_index) = item.rfind('#') {
+            // This may be wasteful, but it looks cool and trying to refactor cache made my head ache.
             println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}", &item[..header_index], &item[header_index + 1..]);
         } else {
             println!("{GRAY}{start_index:>4}{RESET}  {}", item);
