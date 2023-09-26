@@ -27,7 +27,7 @@ fn show_download_help() -> ResultS {
     Download a docset. Available docsets can be displayed using `list`.
 
 {GREEN}OPTIONS{RESET}
-    -f, --force                     Overwrite downloaded docsets.
+    -f, --force                     Force the download and overwrite files.
         --help                      Display help message."
     );
     Ok(())

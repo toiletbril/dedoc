@@ -26,8 +26,8 @@ fn show_search_help() -> ResultS {
 
 {GREEN}OPTIONS{RESET}
     -i, --ignore-case               Ignore character case.
-    -p, --precise                   Search more thoroughly and look for mentions in other files.
-    -o, --open <number>             Open n-th search result.
+    -p, --precise                   Look inside files (like 'grep').
+    -o, --open <number>             Open n-th result.
         --help                      Display help message."
     );
     Ok(())
