@@ -17,7 +17,7 @@ pub type ResultS = Result<(), String>;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const PROGRAM_NAME: &str = "dedoc";
 
-pub const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
+pub const DEFAULT_DB_JSON_LINK: &str   = "https://documents.devdocs.io";
 pub const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
 
 pub const DEFAULT_USER_AGENT: &str = "dedoc";
@@ -32,7 +32,6 @@ pub const BOLD:      Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
 pub const RESET:     Style = Style::Reset;
 
-// Print only in debug builds.
 #[macro_export]
 macro_rules! debug_println {
     ($($e:expr),+) => {{
@@ -46,7 +45,7 @@ macro_rules! debug_println {
     }};
 }
 
-#[inline(always)]
+#[inline]
 fn unknown_version() -> String {
     "unknown".to_string()
 }
@@ -79,23 +78,22 @@ pub struct Docs {
     attribution: String,
 }
 
-/*
-Example item:
-    {
-        "name": "Angular",
-        "slug": "angular",
-        "type": "angular",
-        "links": {
-          "home": "https://google.com",
-          "code": "https://google.com"
-        },
-        "version": "",
-        "release": "16.1.3",
-        "mtime": 1688411876,
-        "db_size": 13128638,
-        "attribution": "whatever"
-    }
-*/
+// Example entry:
+// {
+//     "name": "Angular",
+//     "slug": "angular",
+//     "type": "angular",
+//     "links": {
+//       "home": "https://google.com",
+//       "code": "https://google.com"
+//     },
+//     "version": "",
+//     "release": "16.1.3",
+//     "mtime": 1688411876,
+//     "db_size": 13128638,
+//     "attribution": "whatever"
+// }
+
 
 pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
@@ -144,9 +142,8 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
     }
 }
 
-// Ideally, this should skipp right to fragment when printing the page out.
-// This may not be possible without forking html2text ._.
-pub fn print_docset_file(path: PathBuf, _fragment: Option<&str>) -> ResultS {
+// @@@: skip right to the fragment.
+pub fn print_docset_file(path: PathBuf, _header: Option<&str>) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
@@ -191,7 +188,6 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
 static mut HOME_DIR: Option<PathBuf> = None;
 static HOME_DIR_INIT: Once = Once::new();
 
-// This is memoized, so every call after the first one is cheap.
 pub fn get_home_directory() -> Result<PathBuf, String> {
     unsafe {
         if let Some(home_dir) = HOME_DIR.as_ref() {
@@ -235,7 +231,7 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn get_program_directory() -> Result<PathBuf, String> {
     let path = get_home_directory()?;
     let dot_program = format!(".{PROGRAM_NAME}");
@@ -283,7 +279,6 @@ pub fn is_docs_json_old() -> Result<bool, String> {
     }
 }
 
-// This should be used to debug cryptic errors.
 pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
     let log_file_path = get_program_directory()?.join("logs.txt");
 
@@ -305,7 +300,7 @@ pub enum SearchMatch {
     FoundVague(Vec<String>)
 }
 
-// Returns `true` when docset exists in `docs.json`, otherwise it will print a warning.
+// Returns `true` when docset exists in `docs.json`, print a warning otherwise.
 pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         Some(SearchMatch::Found) => return true,
@@ -320,7 +315,7 @@ pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>
     false
 }
 
-// `exact` is perfect match, `vague` are files that contain `docset_name` in their path.
+// `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
 pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<SearchMatch> {
     let mut vague_matches = vec![];
 
@@ -340,7 +335,7 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<Searc
     }
 }
 
-// Item is page filename without file extension.
+// Item is a filename without file extension.
 pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
     let docset_path = get_docset_path(docset_name)?;
 
@@ -377,7 +372,6 @@ pub fn get_local_docsets() -> Result<Vec<String>, String> {
 
     let mut result = vec![];
 
-    // `/docsets` does not exist, return empty vector
     if !docsets_dir_exists {
         return Ok(result);
     }
@@ -399,14 +393,14 @@ pub fn get_local_docsets() -> Result<Vec<String>, String> {
     Ok(result)
 }
 
-#[inline(always)]
+#[inline]
 pub fn is_docset_downloaded(docset_name: &String) -> Result<bool, String> {
     get_docset_path(docset_name)?
         .try_exists()
         .map_err(|err| format!("Could not check if `{docset_name}` exists: {err}"))
 }
 
-#[inline(always)]
+#[inline]
 pub fn is_docs_json_exists() -> Result<bool, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     Ok(docs_json_path.exists())
@@ -430,7 +424,7 @@ pub fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
     !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
 
-#[inline(always)]
+#[inline]
 pub fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     Ok(docsets_path.join(docset_name))

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use attohttpc::get;
 
 use serde::Deserializer;
-use serde::de::MapAccess;
+use serde::de::{Visitor, Error, MapAccess};
 
 use toiletcli::flags;
 use toiletcli::flags::*;
@@ -148,12 +148,10 @@ fn sanitize_html_line<'a>(input: String) -> String {
     output
 }
 
-// serde was very confusing when I tried to understand how to stream a json map. This works by leaking a MapAccess.
 fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
 where
     M: MapAccess<'de>,
 {
-    // Sometimes docs have files with disallowed characters in their name.
     #[inline]
     #[cfg(target_family = "windows")]
     fn sanitize_filename_for_windows(filename: String) -> String {
@@ -206,7 +204,7 @@ struct FileVisitor {
     docset_name: String
 }
 
-impl<'de> serde::de::Visitor<'de> for FileVisitor {
+impl<'de> Visitor<'de> for FileVisitor {
     type Value = ();
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -218,7 +216,7 @@ impl<'de> serde::de::Visitor<'de> for FileVisitor {
         M: MapAccess<'de>,
     {
         build_docset_from_map_with_progress(&self.docset_name, map)
-            .map_err(|err| serde::de::Error::custom(format!("{err}")))?;
+            .map_err(|err| Error::custom(format!("{err}")))?;
         Ok(())
     }
 }
