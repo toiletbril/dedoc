@@ -144,9 +144,9 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
     }
 }
 
-// Ideally, this should skipp right to header when printing the page out.
+// Ideally, this should skipp right to fragment when printing the page out.
 // This may not be possible without forking html2text ._.
-pub fn print_docset_file(path: PathBuf, _header: Option<&str>) -> ResultS {
+pub fn print_docset_file(path: PathBuf, _fragment: Option<&str>) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
@@ -170,7 +170,7 @@ pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
         Err(format!("Invalid page: {page}"))
     }?;
 
-    let header = page_split.next();
+    let fragment = page_split.next();
 
     let page_path_string = docset_path.join(page_path)
         .display()
@@ -185,7 +185,7 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
         return Err(message);
     }
 
-    print_docset_file(page_path, header)
+    print_docset_file(page_path, fragment)
 }
 
 static mut HOME_DIR: Option<PathBuf> = None;
@@ -359,9 +359,9 @@ pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Resu
 
 pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
     for item in search_results {
-        if let Some(header_index) = item.rfind('#') {
+        if let Some(fragment_offset) = item.rfind('#') {
             // This may be wasteful, but it looks cool and trying to refactor cache made my head ache.
-            println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}", &item[..header_index], &item[header_index + 1..]);
+            println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}", &item[..fragment_offset], &item[fragment_offset + 1..]);
         } else {
             println!("{GRAY}{start_index:>4}{RESET}  {}", item);
         }
