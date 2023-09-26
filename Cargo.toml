@@ -18,8 +18,7 @@ lto = true
 
 [dependencies]
 toiletcli = { version = "0.9.4", features = ["colors", "flags"] }
+html2text = { version = "0.6.0", features = ["ansi_colours"] }
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.106"
 attohttpc = { version = "0.26.1", features = ["tls-native"] }
-html2md = "0.2.14"
-termimad = "0.25.2"
