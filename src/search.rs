@@ -15,7 +15,7 @@ use crate::common::{
     is_docs_json_exists, is_docset_in_docs_or_print_warning, print_page_from_docset,
     print_search_results, is_docset_downloaded
 };
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
+use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW, DOC_PAGE_EXTENSION};
 
 fn show_search_help() -> ResultS {
     println!(
@@ -93,64 +93,60 @@ fn cache_search_results(
     Ok(())
 }
 
-// @@@: use index.json
+#[allow(dead_code)]
+#[derive(Deserialize, Default)]
+struct IndexEntry {
+    name: String,
+    path: String,
+    #[serde(skip)]
+    r#type: String,
+}
+
+#[derive(Deserialize)]
+struct IndexJson {
+    entries: Vec<IndexEntry>
+}
+
 pub fn search_docset_in_filenames(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
 ) -> Result<Vec<String>, String> {
     let docset_path = get_docset_path(docset_name)?;
+    let index_json_path = docset_path.join("index.json");
 
-    let internal_query = if case_insensitive {
+    let index_exists = index_json_path.try_exists()
+        .map_err(|err| format!("Could not check `{}`: {err}", index_json_path.display()))?;
+
+    if !index_exists {
+        let message = format!("\
+Index file does not exist. Dedoc docsets that were downloaded prior to `0.3.0` version did not use them. \
+Please redownload the docset with `download {docset_name} --force`."
+        );
+        return Err(message);
+    }
+
+    let query = if case_insensitive {
         query.to_lowercase()
     } else {
         query.to_owned()
     };
 
-    fn visit_dir_with_query(
-        path: &PathBuf,
-        query: &String,
-        case_insensitive: bool,
-    ) -> Result<Vec<PathBuf>, String> {
-        let mut internal_paths = vec![];
+    let file = File::open(&index_json_path)
+        .map_err(|err| format!("Could not open `{}`: {err}", index_json_path.display()))?;
 
-        let dir = read_dir(&path)
-            .map_err(|err| format!("Could not read `{}` directory: {err}", path.display()))?;
+    let reader = BufReader::new(file);
 
-        for entry in dir {
-            let entry = entry
-                .map_err(|err| format!("Could not read file: {err}"))?;
+    let index: IndexJson = from_reader(reader)
+        .map_err(|err| format!("Could not deserialize `{}`: {err}", index_json_path.display()))?;
 
-            let os_file_name = entry.file_name();
+    let mut items = vec![];
 
-            let file_type = entry
-                .file_type()
-                .map_err(|err| format!("Could not read file type of {os_file_name:?}: {err}"))?;
-
-            if file_type.is_dir() {
-                let mut visited = visit_dir_with_query(&entry.path(), &query, case_insensitive)?;
-                internal_paths.append(&mut visited);
-            }
-
-            let mut file_name = os_file_name.to_string_lossy().to_string();
-
-            if file_name.rfind(".md").is_none() {
-                continue;
-            }
-
-            if case_insensitive {
-                file_name.make_ascii_lowercase();
-            }
-
-            if file_name.find(query).is_some() {
-                internal_paths.push(entry.path());
-            }
+    for entry in index.entries {
+        if entry.name.contains(&query) || entry.path.contains(&query) {
+            items.push(entry.path);
         }
-        Ok(internal_paths)
     }
-
-    let paths = visit_dir_with_query(&docset_path, &internal_query, case_insensitive)?;
-    let mut items = convert_paths_to_items(paths, docset_name)?;
 
     items.sort_unstable();
 
@@ -175,7 +171,7 @@ pub fn search_docset_thoroughly(
 
     fn visit_dir_with_query(
         path: &PathBuf,
-        internal_query: &String,
+        query: &String,
         case_insensitive: bool,
     ) -> Result<(Vec<PathBuf>, Vec<PathBuf>), String> {
         let mut exact_paths = vec![];
@@ -196,14 +192,14 @@ pub fn search_docset_thoroughly(
 
             if file_type.is_dir() {
                 let (mut exact, mut vague) =
-                    visit_dir_with_query(&entry.path(), &internal_query, case_insensitive)?;
+                    visit_dir_with_query(&entry.path(), &query, case_insensitive)?;
                 exact_paths.append(&mut exact);
                 vague_paths.append(&mut vague);
             }
 
             let mut file_name = os_file_name.to_string_lossy().to_string();
 
-            if file_name.rfind(".md").is_none() {
+            if !file_name.ends_with(DOC_PAGE_EXTENSION) {
                 continue;
             }
 
@@ -213,7 +209,7 @@ pub fn search_docset_thoroughly(
 
             let file_path = entry.path();
 
-            if file_name.find(internal_query).is_some() {
+            if file_name.contains(query) {
                 exact_paths.push(file_path);
             } else {
                 let file = File::open(&file_path)
@@ -226,7 +222,7 @@ pub fn search_docset_thoroughly(
                         break;
                     }
 
-                    if string_buffer.find(internal_query).is_some() {
+                    if string_buffer.contains(query) {
                         vague_paths.push(entry.path());
                         break;
                     }

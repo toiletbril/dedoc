@@ -1,9 +1,12 @@
 use std::fs::{create_dir_all, File, read_dir};
 use std::fmt::Display;
 use std::sync::Once;
-use std::io::{BufReader, Write, Read};
+use std::io::{BufReader, Write};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
+
+use html2text::from_read_coloured;
+use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
 
 use toiletcli::colors::{Color, Style};
 
@@ -18,6 +21,8 @@ pub const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
 pub const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
 
 pub const DEFAULT_USER_AGENT: &str = "dedoc";
+
+pub const DOC_PAGE_EXTENSION: &str = "html";
 
 pub const RED:       Color = Color::Red;
 pub const GREEN:     Color = Color::Green;
@@ -103,32 +108,80 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-pub fn print_md_file(path: PathBuf) -> ResultS {
+fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
+    match annotation {
+        Default => ("".into(), "".into()),
+        Link(_) => (
+            format!("{}", Color::Blue),
+            format!("{}", Color::Reset),
+        ),
+        Image(_) => (
+            format!("{}", Color::BrightBlue),
+            format!("{}", Color::Reset)
+        ),
+        Emphasis => (
+            format!("{}", Style::Bold),
+            format!("{}", Style::Reset),
+        ),
+        Strong => (
+            format!("{}", Style::Bold),
+            format!("{}", Style::Reset)
+        ),
+        Strikeout => (
+            format!("{}", Style::Strikethrough),
+            format!("{}", Style::Reset)
+        ),
+        Code => (
+            format!("{}", Color::BrightBlack),
+            format!("{}", Color::Reset)
+        ),
+        Preformat(_) => (
+            format!("{}", Color::BrightBlack),
+            format!("{}", Color::Reset)
+        ),
+    }
+}
+
+pub fn print_docset_file(path: PathBuf, _header: Option<&str>) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
 
-    let mut buffer = String::new();
-    let _ = reader.read_to_string(&mut buffer);
+    let page = from_read_coloured(reader, 80, default_colour_map)
+        .map_err(|err| err.to_string())?;
 
-    termimad::print_text(&buffer);
+    println!("{}", page.trim());
 
     Ok(())
 }
 
-// @@@: this should check current settings (terminal width and color flags)
-// and compile intermediate markdown to just markdown.
 pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
     let docset_path = get_docset_path(docset_name)?;
-    let file_path = docset_path.join(page.to_owned() + ".md");
 
-    if !file_path.is_file() {
-        let message =
-            format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
+    let mut page_split = page.split('#');
+
+    let page_path = if let Some(file) = page_split.next() {
+        Ok(file)
+    } else {
+        Err(format!("Invalid page: {page}"))
+    }?;
+
+    let header = page_split.next();
+
+    let page_path_string = docset_path.join(page_path)
+        .display()
+        .to_string() + "." + DOC_PAGE_EXTENSION;
+    let page_path = PathBuf::from(page_path_string);
+
+    if !page_path.is_file() {
+        let message = format!(
+            "\
+No page matching `{page}`. Did you specify the name from `search` correctly?"
+        );
         return Err(message);
     }
 
-    print_md_file(file_path)
+    print_docset_file(page_path, header)
 }
 
 static mut HOME_DIR: Option<PathBuf> = None;

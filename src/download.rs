@@ -10,8 +10,6 @@ use serde::de::MapAccess;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
-use html2md::parse_html;
-
 use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, is_docs_json_exists, is_docset_downloaded,
@@ -35,7 +33,7 @@ fn show_download_help() -> ResultS {
     Ok(())
 }
 
-fn download_db_json_with_progress(
+fn download_db_and_index_json_with_progress(
     docset_name: &String,
     docs: &Vec<Docs>,
 ) -> ResultS {
@@ -50,62 +48,112 @@ fn download_db_json_with_progress(
                     .map_err(|err| format!("Cannot create `{}` directory: {err}", docset_path.display()))?;
             }
 
-            let db_json_path = docset_path
-                .join("db")
-                .with_extension("json");
+            for (file_name, i) in [("db.json", 1), ("index.json", 2)] {
+                let file_path = docset_path
+                    .join(file_name);
 
-            let file = File::create(&db_json_path)
-                .map_err(|err| format!("Could not create `{}`: {err}", db_json_path.display()))?;
+                let file = File::create(&file_path)
+                    .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
 
-            let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/db.json?{}", entry.mtime);
+                let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}", file_name, entry.mtime);
 
-            let response = get(&download_link)
-                .header_append("user-agent", &user_agent)
-                .send()
-                .map_err(|err| format!("Could not GET {download_link}: {err}"))?;
+                let response = get(&download_link)
+                    .header_append("user-agent", &user_agent)
+                    .send()
+                    .map_err(|err| format!("Could not GET {download_link}: {err}"))?;
 
-            let mut file_writer = BufWriter::new(file);
-            let mut response_reader = BufReader::new(response);
+                let mut file_writer = BufWriter::new(file);
+                let mut response_reader = BufReader::new(response);
 
-            let mut buffer = [0; 1024 * 4];
-            let mut file_size = 0;
+                let mut buffer = [0; 1024 * 4];
+                let mut file_size = 0;
 
-            while let Ok(size) = response_reader.read(&mut buffer) {
-                if size == 0 {
-                    break;
+                while let Ok(size) = response_reader.read(&mut buffer) {
+                    if size == 0 {
+                        break;
+                    }
+
+                    file_writer
+                        .write(&buffer[..size])
+                        .map_err(|err| format!("Could not download file: {err}"))?;
+
+                    file_size += size;
+
+                    print!("\rReceived {file_size} bytes, file {i} of 2...");
                 }
-
-                file_writer
-                    .write(&buffer[..size])
-                    .map_err(|err| format!("Could not download file: {err}"))?;
-
-                file_size += size;
-
-                print!("\rReceived {file_size} bytes...");
+                println!();
             }
-            println!();
         }
     }
 
     Ok(())
 }
 
-// This should translate HTML files to something inbetween HTML and markdown,
-// so the program can choose column width and colors dynamically.
-//
-// For this to work, this needs to wrap words and do something magical with tables.
-fn translate_html_to_intermediate_markdown(html_contents: &str) -> String {
-    // @@@: replace this with own implementation
-    parse_html(html_contents)
+fn sanitize_html<'a>(input: String) -> String {
+    enum State {
+        Default,
+        InTag,
+        InKey,
+        InValue,
+    }
+
+    let length = input.len();
+
+    let mut output = String::new();
+    let mut state = State::Default;
+    let mut position = 0;
+
+    let mut chars = input.chars();
+
+    while let Some(ch) = chars.next() {
+        match state {
+            State::Default => {
+                if ch == '<' {
+                    state = State::InTag;
+                }
+                output.push(ch);
+            }
+            State::InTag => {
+                let bytes = input.as_bytes();
+                match ch {
+                    'i' if position + 4 < length && bytes[position..position + 4] == *b"id=\""
+                        => {
+                        state = State::InKey;
+                    }
+                    'c' if position + 7 < length && bytes[position..position + 7] == *b"class=\"" => {
+                        state = State::InKey;
+                    }
+                    '>' => {
+                        state = State::Default;
+                        output.push(ch);
+                    }
+                    _ => output.push(ch)
+                }
+            }
+            State::InKey => {
+                if ch == '\"' {
+                    state = State::InValue;
+                }
+            }
+            State::InValue => {
+                if ch == '\"' {
+                    state = State::InTag;
+                }
+            }
+        }
+        position += ch.len_utf8();
+    }
+
+    output
 }
 
 fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
 where
     M: MapAccess<'de>,
 {
-    // Sometimes docshave files with disallowed characters in their name.
-    #[cfg(target_family = "windows")]
+    // Sometimes docs have files with disallowed characters in their name.
     #[inline]
+    #[cfg(target_family = "windows")]
     fn sanitize_filename_for_windows(filename: String) -> String {
         const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
         filename
@@ -122,28 +170,28 @@ where
     {
         #[cfg(target_family = "windows")]
         let file_path = sanitize_filename_for_windows(file_path);
-        let file_path = PathBuf::from(file_path);
+        let mut file_path = PathBuf::from(file_path);
 
         if let Some(parent) = file_path.parent() {
             create_dir_all(docset_path.join(parent))
                 .map_err(|err| format!("Could not create `{}`: {err}", parent.display()))?;
         }
 
-        let file_name_html = file_path.to_owned();
-        let file_name_md = file_name_html.with_extension("md");
+        let mut file_name_html = file_path.as_mut_os_str().to_owned();
+        file_name_html.push(".html");
 
-        let file_path = docset_path.join(&file_name_md);
+        let file_path = docset_path.join(&file_name_html);
 
         let file = File::create(&file_path)
             .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
         let mut writer = BufWriter::new(file);
 
-        let md_contents = translate_html_to_intermediate_markdown(&contents);
+        let sanitized_contents = sanitize_html(contents);
 
-        writer.write_all(md_contents.trim().as_bytes())
+        writer.write_all(sanitized_contents.trim().as_bytes())
             .map_err(|err| format!("Could not write to `{}`: {err}", file_path.display()))?;
 
-        print!("Unpacked and translated {unpacked_amount} files...\r");
+        print!("Unpacked {unpacked_amount} files...\r");
 
         unpacked_amount += 1;
     }
@@ -232,7 +280,7 @@ If you still want to update it, re-run this command with `--force`"
         } else {
             if is_docset_in_docs_or_print_warning(docset, &docs) {
                 println!("Downloading `{docset}`...");
-                download_db_json_with_progress(docset, &docs)?;
+                download_db_and_index_json_with_progress(docset, &docs)?;
 
                 println!("Extracting to `{}`...", get_docset_path(docset)?.display());
                 build_docset_from_db_json(docset)?;
@@ -249,4 +297,38 @@ If you still want to update it, re-run this command with `--force`"
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanitize_html() {
+        let html_text = r#"
+        <p id="what" class="hello">
+            What
+        </p>
+        <h1 class="heading">
+            <h2 id="heading-in-a-heading">
+                What
+            </h2>
+        </h1>
+        "#;
+
+        let should_be = r#"
+        <p  >
+            What
+        </p>
+        <h1 >
+            <h2 >
+                What
+            </h2>
+        </h1>
+        "#;
+
+        let result = sanitize_html(html_text.to_owned());
+
+        assert_eq!(result, should_be);
+    }
 }
