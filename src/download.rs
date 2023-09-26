@@ -172,14 +172,14 @@ where
     {
         #[cfg(target_family = "windows")]
         let file_path = sanitize_filename_for_windows(file_path);
-        let mut file_path = PathBuf::from(file_path);
+        let file_path = PathBuf::from(file_path);
 
         if let Some(parent) = file_path.parent() {
             create_dir_all(docset_path.join(parent))
                 .map_err(|err| format!("Could not create `{}`: {err}", parent.display()))?;
         }
 
-        let mut file_name_html = file_path.as_mut_os_str().to_owned();
+        let mut file_name_html = file_path.as_os_str().to_owned();
         file_name_html.push(".html");
 
         let file_path = docset_path.join(&file_name_html);
