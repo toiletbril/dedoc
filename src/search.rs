@@ -38,6 +38,7 @@ fn show_search_help() -> ResultS {
 struct SearchFlags {
     case_insensitive: bool,
     precise: bool,
+    whole: bool
 }
 
 #[derive(Serialize, Deserialize, PartialEq)]
@@ -317,6 +318,7 @@ where
     let flags = SearchFlags {
         precise: flag_precise,
         case_insensitive: flag_case_insensitive,
+        whole: flag_whole,
     };
 
     if flag_open_is_empty {
