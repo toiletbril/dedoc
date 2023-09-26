@@ -120,7 +120,7 @@ pub fn search_docset_in_filenames(
 
     if !index_exists {
         let message = format!("\
-Index file does not exist. Dedoc docsets that were downloaded prior to `0.3.0` version did not use them. \
+Index file does not exist. Dedoc docsets that were downloaded prior to `0.2.0` version did not use them. \
 Please redownload the docset with `download {docset_name} --force`."
         );
         return Err(message);
