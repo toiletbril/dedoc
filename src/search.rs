@@ -21,7 +21,7 @@ fn show_search_help() -> ResultS {
     println!(
         "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} search{RESET} [-ipo] <docset> <query>
+    {BOLD}{PROGRAM_NAME} search{RESET} [-wipo] <docset> <query>
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
