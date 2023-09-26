@@ -126,12 +126,6 @@ Please redownload the docset with `download {docset_name} --force`."
         return Err(message);
     }
 
-    let query = if case_insensitive {
-        query.to_lowercase()
-    } else {
-        query.to_owned()
-    };
-
     let file = File::open(&index_json_path)
         .map_err(|err| format!("Could not open `{}`: {err}", index_json_path.display()))?;
 
@@ -142,9 +136,22 @@ Please redownload the docset with `download {docset_name} --force`."
 
     let mut items = vec![];
 
-    for entry in index.entries {
-        if entry.name.contains(&query) || entry.path.contains(&query) {
-            items.push(entry.path);
+    if case_insensitive {
+        let query = query.to_lowercase();
+
+        for entry in index.entries {
+            let name = entry.name.to_lowercase();
+            let path = entry.path.to_lowercase();
+
+            if name.contains(&query) || path.contains(&query) {
+                items.push(entry.path);
+            }
+        }
+    } else {
+        for entry in index.entries {
+            if entry.name.contains(query) || entry.path.contains(query) {
+                items.push(entry.path);
+            }
         }
     }
 
