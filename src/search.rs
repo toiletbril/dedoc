@@ -11,11 +11,11 @@ use toiletcli::flags::*;
 
 use crate::common::ResultS;
 use crate::common::{
-    convert_paths_to_items, deserialize_docs_json, get_docset_path, get_program_directory,
+    convert_path_to_item, deserialize_docs_json, get_docset_path, get_program_directory,
     is_docs_json_exists, is_docset_in_docs_or_print_warning, print_page_from_docset,
-    print_search_results, is_docset_downloaded
+    is_docset_downloaded
 };
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW, DOC_PAGE_EXTENSION};
+use crate::common::{BOLD, GREEN, PROGRAM_NAME, GRAY, RESET, YELLOW, DOC_PAGE_EXTENSION};
 
 fn show_search_help() -> ResultS {
     println!(
@@ -34,6 +34,13 @@ fn show_search_help() -> ResultS {
     Ok(())
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct VagueResult {
+    item: String,
+    context: String,
+}
+
 // Flags that change search result must be added here for cache to be updated.
 #[derive(Serialize, Deserialize, Default, PartialEq, Clone)]
 struct SearchFlags {
@@ -44,11 +51,11 @@ struct SearchFlags {
 
 #[derive(Serialize, Deserialize, PartialEq)]
 struct SearchCache<'a> {
-    query:       Cow<'a, str>,
-    docset:      Cow<'a, str>,
-    exact_items: Cow<'a, [String]>,
-    vague_items: Cow<'a, [String]>,
-    flags:       Cow<'a, SearchFlags>,
+    query:         Cow<'a, str>,
+    docset:        Cow<'a, str>,
+    exact_items:   Cow<'a, [String]>,
+    vague_matches: Cow<'a, [VagueResult]>,
+    flags:         Cow<'a, SearchFlags>,
 }
 
 fn try_use_cache<'a>(docset: &'a String, query: &'a String, flags: &'a SearchFlags) -> Option<SearchCache<'a>> {
@@ -72,7 +79,7 @@ fn cache_search_results(
     query:  &String,
     flags:  &SearchFlags,
     exact_items: &Vec<String>,
-    vague_items: &Vec<String>,
+    vague_matches: &Vec<VagueResult>,
 ) -> ResultS {
     let program_dir = get_program_directory()?;
     let cache_path = program_dir.join("search_cache.json");
@@ -83,11 +90,11 @@ fn cache_search_results(
     let writer = BufWriter::new(cache_file);
 
     let cache = SearchCache {
-        docset:      Cow::Borrowed(docset),
-        query:       Cow::Borrowed(query),
-        flags:       Cow::Borrowed(flags),
-        exact_items: Cow::Borrowed(exact_items),
-        vague_items: Cow::Borrowed(vague_items),
+        docset:        Cow::Borrowed(docset),
+        query:         Cow::Borrowed(query),
+        flags:         Cow::Borrowed(flags),
+        exact_items:   Cow::Borrowed(exact_items),
+        vague_matches: Cow::Borrowed(vague_matches),
     };
 
     to_writer(writer, &cache)
@@ -163,10 +170,31 @@ Please redownload the docset with `download {docset_name} --force`."
     Ok(items)
 }
 
-type ExactMatches = Vec<String>;
-type VagueMatches = Vec<String>;
+fn get_context(html_line: String, index: usize, word_len: usize) -> String {
+    const BOUND_OFFSET: usize = 37;
 
-pub fn search_docset_thoroughly(
+    let lower_bound = index.saturating_sub(BOUND_OFFSET);
+    let upper_bound = (index + word_len).saturating_add(BOUND_OFFSET);
+    let word_end_index = index + word_len;
+
+    let start_pos = html_line.char_indices()
+        .rev()
+        .find(|&(idx, _)| idx <= lower_bound)
+        .map_or(0, |(idx, _)| idx);
+
+    let end_pos = html_line.char_indices()
+        .skip_while(|&(idx, _)| idx < word_end_index)
+        .find(|&(idx, _)| idx >= upper_bound)
+        .map_or(html_line.len(), |(idx, _)| idx);
+
+
+    html_line[start_pos..end_pos].trim().to_owned()
+}
+
+type ExactMatches = Vec<String>;
+type VagueMatches = Vec<VagueResult>;
+
+pub fn search_docset_precisely(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
@@ -180,12 +208,13 @@ pub fn search_docset_thoroughly(
     };
 
     fn visit_dir_with_query(
+        original_path: &PathBuf,
         path: &PathBuf,
         query: &String,
         case_insensitive: bool,
-    ) -> Result<(Vec<PathBuf>, Vec<PathBuf>), String> {
-        let mut exact_paths = vec![];
-        let mut vague_paths = vec![];
+    ) -> Result<(Vec<String>, Vec<VagueResult>), String> {
+        let mut exact_files   = vec![];
+        let mut vague_results = vec![];
 
         let dir = read_dir(&path)
             .map_err(|err| format!("Could not read `{}` directory: {err}", path.display()))?;
@@ -202,9 +231,10 @@ pub fn search_docset_thoroughly(
 
             if file_type.is_dir() {
                 let (mut exact, mut vague) =
-                    visit_dir_with_query(&entry.path(), &query, case_insensitive)?;
-                exact_paths.append(&mut exact);
-                vague_paths.append(&mut vague);
+                    visit_dir_with_query(original_path, &entry.path(), &query, case_insensitive)?;
+
+                exact_files.append(&mut exact);
+                vague_results.append(&mut vague);
             }
 
             let mut file_name = os_file_name.to_string_lossy().to_string();
@@ -220,10 +250,12 @@ pub fn search_docset_thoroughly(
             let file_path = entry.path();
 
             if file_name.contains(query) {
-                exact_paths.push(file_path);
+                let item = convert_path_to_item(file_path, original_path)?;
+                exact_files.push(item);
             } else {
                 let file = File::open(&file_path)
                     .map_err(|err| format!("Could not open `{}`: {err}", file_path.display()))?;
+
                 let mut reader = BufReader::new(file);
                 let mut string_buffer = String::new();
 
@@ -232,8 +264,13 @@ pub fn search_docset_thoroughly(
                         break;
                     }
 
-                    if string_buffer.contains(query) {
-                        vague_paths.push(entry.path());
+                    if let Some(index) = string_buffer.find(query) {
+                        let vague_result = VagueResult {
+                            item: convert_path_to_item(file_path, original_path)?,
+                            context: get_context(string_buffer, index, query.len()),
+                        };
+
+                        vague_results.push(vague_result);
                         break;
                     }
 
@@ -241,21 +278,58 @@ pub fn search_docset_thoroughly(
                 }
             }
         }
-        Ok((exact_paths, vague_paths))
+        Ok((exact_files, vague_results))
     }
 
-    let (exact_paths, vague_paths) =
-        visit_dir_with_query(&docset_path, &internal_query, case_insensitive)?;
+    let (mut exact_files, mut vague_results) =
+        visit_dir_with_query(&docset_path, &docset_path, &internal_query, case_insensitive)?;
 
-    let mut items = (
-        convert_paths_to_items(exact_paths, docset_name)?,
-        convert_paths_to_items(vague_paths, docset_name)?,
+    exact_files.sort_unstable();
+    vague_results.sort_unstable();
+
+    let items = (
+        exact_files,
+        vague_results,
     );
 
-    items.0.sort_unstable();
-    items.1.sort_unstable();
-
     Ok(items)
+}
+
+pub fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
+    for result in search_results {
+        println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}", result.item);
+        println!("          {GRAY}...{}...{RESET}", result.context);
+
+        start_index += 1;
+    }
+
+    Ok(())
+}
+
+pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
+    let mut prev_item = "";
+
+    for result in search_results {
+        if let Some(fragment_offset) = result.rfind('#') {
+            // This may be wasteful, but it looks cool and trying to refactor cache made my head ache.
+            let item     = &result[..fragment_offset];
+            let fragment = &result[fragment_offset + 1..];
+
+            if item == prev_item {
+                println!("          {GRAY}#{}{RESET}", fragment);
+            } else {
+                println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}{RESET}", item, fragment);
+            }
+
+            prev_item = item;
+        } else {
+            println!("{GRAY}{start_index:>4}{RESET}  {}", result);
+            prev_item = result;
+        }
+
+        start_index += 1;
+    }
+    Ok(())
 }
 
 pub fn search<Args>(mut args: Args) -> ResultS
@@ -330,9 +404,9 @@ where
     if flag_precise {
         let (exact_results, vague_results) =
         if let Some(cache) = try_use_cache(&docset, &query, &flags) {
-            (cache.exact_items, cache.vague_items)
+            (cache.exact_items, cache.vague_matches)
         } else {
-            let (exact, vague) = search_docset_thoroughly(&docset, &query, flag_case_insensitive)?;
+            let (exact, vague) = search_docset_precisely(&docset, &query, flag_case_insensitive)?;
             let _ = cache_search_results(&docset, &query, &flags, &exact, &vague)
                 .map_err(|err| format!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
             (exact.into(), vague.into())
@@ -349,7 +423,7 @@ where
                     return print_page_from_docset(&docset, &exact_results[n - 1]);
                 }
                 Some(n) => {
-                    return print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1]);
+                    return print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1].item);
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
@@ -366,7 +440,7 @@ where
 
         if !vague_results.is_empty() {
             println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
-            print_search_results(&vague_results, exact_results_offset + 1)?;
+            print_vague_search_results(&vague_results, exact_results_offset + 1)?;
         } else {
             println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
         }

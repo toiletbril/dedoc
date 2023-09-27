@@ -336,33 +336,13 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch 
 }
 
 // Item is a filename without file extension.
-pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
-    let docset_path = get_docset_path(docset_name)?;
+pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
+    let item = path
+        .strip_prefix(&docset_path)
+        .map_err(|err| err.to_string())?;
+    let item = item.with_extension("");
 
-    let mut items = vec![];
-
-    for path in paths {
-        let item = path
-            .strip_prefix(&docset_path)
-            .map_err(|err| err.to_string())?;
-        let item = item.with_extension("");
-        items.push(item.display().to_string());
-    }
-
-    Ok(items)
-}
-
-pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
-    for item in search_results {
-        if let Some(fragment_offset) = item.rfind('#') {
-            // This may be wasteful, but it looks cool and trying to refactor cache made my head ache.
-            println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}", &item[..fragment_offset], &item[fragment_offset + 1..]);
-        } else {
-            println!("{GRAY}{start_index:>4}{RESET}  {}", item);
-        }
-        start_index += 1;
-    }
-    Ok(())
+    Ok(item.display().to_string())
 }
 
 pub fn get_local_docsets() -> Result<Vec<String>, String> {
