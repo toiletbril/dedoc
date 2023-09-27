@@ -491,7 +491,7 @@ where
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| format!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
 
             (exact.into(), vague.into())
         };
@@ -542,7 +542,7 @@ where
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| format!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
 
             exact.into()
         };
