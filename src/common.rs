@@ -94,7 +94,6 @@ pub struct Docs {
 //     "attribution": "whatever"
 // }
 
-
 pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     let file = File::open(&docs_json_path)
@@ -143,7 +142,7 @@ fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
 }
 
 // @@@: skip right to the fragment.
-pub fn print_docset_file(path: PathBuf, _header: Option<&str>) -> ResultS {
+pub fn print_docset_file(path: PathBuf, _fragment: Option<&str>) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
@@ -296,19 +295,20 @@ pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
 }
 
 pub enum SearchMatch {
-    Found,
-    FoundVague(Vec<String>)
+    Exact,
+    Vague(Vec<String>),
+    None
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
 pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
-        Some(SearchMatch::Found) => return true,
-        Some(SearchMatch::FoundVague(vague_matches)) => {
+        SearchMatch::Exact => return true,
+        SearchMatch::Vague(vague_matches) => {
             let first_three = &vague_matches[..3];
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
         }
-        None => {
+        SearchMatch::None => {
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
         }
     }
@@ -316,22 +316,22 @@ pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
-pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<SearchMatch> {
+pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch {
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
         if entry.slug.contains(docset_name) {
             if entry.slug == *docset_name {
-                return Some(SearchMatch::Found);
+                return SearchMatch::Exact;
             }
             vague_matches.push(entry.slug.clone());
         }
     }
 
     if vague_matches.is_empty() {
-        None
+        SearchMatch::None
     } else {
-        Some(SearchMatch::FoundVague(vague_matches))
+        SearchMatch::Vague(vague_matches)
     }
 }
 
