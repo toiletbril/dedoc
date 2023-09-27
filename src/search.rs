@@ -35,6 +35,13 @@ fn show_search_help() -> ResultS {
 
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct ExactResult {
+    item: String,
+    fragment: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct VagueResult {
     item: String,
     contexts: Vec<String>,
@@ -46,7 +53,7 @@ pub struct VagueResult {
 struct SearchFlags {
     case_insensitive: bool,
     precise: bool,
-    whole: bool
+    whole: bool,
 }
 
 // Sometimes search results are big, and it's cheaper to check a small file if current search
@@ -62,7 +69,7 @@ struct SearchOptions<'a> {
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq)]
 struct SearchCache<'a> {
-    exact_items:   Cow<'a, [String]>,
+    exact_items:   Cow<'a, [ExactResult]>,
     vague_matches: Cow<'a, [VagueResult]>,
 }
 
@@ -136,11 +143,14 @@ struct IndexJson {
     entries: Vec<IndexEntry>
 }
 
+type ExactMatches = Vec<ExactResult>;
+type VagueMatches = Vec<VagueResult>;
+
 pub fn search_docset_in_filenames(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
-) -> Result<Vec<String>, String> {
+) -> Result<ExactMatches, String> {
     let docset_path = get_docset_path(docset_name)?;
     let index_json_path = docset_path.join("index.json");
 
@@ -173,13 +183,41 @@ Please redownload the docset with `download {docset_name} --force`."
             let path = entry.path.to_lowercase();
 
             if name.contains(&query) || path.contains(&query) {
-                items.push(entry.path);
+                let mut path_split = path.split('#');
+
+                let item = if let Some(item) = path_split.next() {
+                    Ok(item)
+                } else {
+                    Err(format!("Invalid page path: {}", entry.path))
+                }?
+                .to_owned();
+
+                let fragment = path_split.next()
+                    .map(|s| s.to_owned());
+
+                let exact_match = ExactResult { item, fragment };
+
+                items.push(exact_match);
             }
         }
     } else {
         for entry in index.entries {
             if entry.name.contains(query) || entry.path.contains(query) {
-                items.push(entry.path);
+                let mut path_split = entry.path.split('#');
+
+                let item = if let Some(item) = path_split.next() {
+                    Ok(item)
+                } else {
+                    Err(format!("Invalid page path: {}", entry.path))
+                }?
+                .to_owned();
+
+                let fragment = path_split.next()
+                    .map(|s| s.to_owned());
+
+                let exact_match = ExactResult { item, fragment };
+
+                items.push(exact_match);
             }
         }
     }
@@ -219,9 +257,6 @@ pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<Stri
     Ok(item.display().to_string())
 }
 
-type ExactMatches = Vec<String>;
-type VagueMatches = Vec<VagueResult>;
-
 pub fn search_docset_precisely(
     docset_name: &String,
     query: &String,
@@ -240,7 +275,7 @@ pub fn search_docset_precisely(
         path: &PathBuf,
         query: &String,
         case_insensitive: bool,
-    ) -> Result<(Vec<String>, Vec<VagueResult>), String> {
+    ) -> Result<(ExactMatches, VagueMatches), String> {
         let mut exact_files   = vec![];
         let mut vague_results = vec![];
 
@@ -279,7 +314,8 @@ pub fn search_docset_precisely(
 
             if file_name.contains(query) {
                 let item = convert_path_to_item(file_path, original_path)?;
-                exact_files.push(item);
+                let exact_match = ExactResult { item, fragment: None };
+                exact_files.push(exact_match);
             } else {
                 let file = File::open(&file_path)
                     .map_err(|err| format!("Could not open `{}`: {err}", file_path.display()))?;
@@ -345,29 +381,25 @@ pub fn print_vague_search_results(search_results: &[VagueResult], mut start_inde
     Ok(())
 }
 
-pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
+pub fn print_search_results(search_results: &[ExactResult], mut start_index: usize) -> ResultS {
     let mut prev_item = "";
 
+    // Group fragments by an item.
     for result in search_results {
-        if let Some(fragment_offset) = result.rfind('#') {
-            // This may be wasteful, but it looks cool and trying to refactor cache made my head ache.
-            let item     = &result[..fragment_offset];
-            let fragment = &result[fragment_offset + 1..];
-
-            if item == prev_item {
+        if let Some(fragment) = &result.fragment {
+            if result.item == prev_item {
                 println!("          {GRAY}#{}{RESET}", fragment);
             } else {
-                println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}{RESET}", item, fragment);
+                println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}{RESET}", result.item, fragment);
             }
-
-            prev_item = item;
         } else {
-            println!("{GRAY}{start_index:>4}{RESET}  {}", result);
-            prev_item = result;
+            println!("{GRAY}{start_index:>4}{RESET}  {}", result.item);
         }
 
+        prev_item = &result.item;
         start_index += 1;
     }
+
     Ok(())
 }
 
@@ -472,7 +504,7 @@ where
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
                 Some(n) if n <= exact_results_offset => {
-                    return print_page_from_docset(&docset, &exact_results[n - 1]);
+                    return print_page_from_docset(&docset, &exact_results[n - 1].item);
                 }
                 Some(n) => {
                     return print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1].item);
@@ -521,7 +553,7 @@ where
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
                 Some(n) => {
-                    return print_page_from_docset(&docset, &results[n - 1]);
+                    return print_page_from_docset(&docset, &results[n - 1].item);
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
