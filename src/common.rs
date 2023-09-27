@@ -51,7 +51,8 @@ fn unknown_version() -> String {
 }
 
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Links {
     home: String,
     code: String,
@@ -59,7 +60,7 @@ pub struct Links {
 
 // docs.json
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Docs {
     #[serde(skip)]
     name: String,
@@ -335,16 +336,6 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch 
     }
 }
 
-// Item is a filename without file extension.
-pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
-    let item = path
-        .strip_prefix(&docset_path)
-        .map_err(|err| err.to_string())?;
-    let item = item.with_extension("");
-
-    Ok(item.display().to_string())
-}
-
 pub fn get_local_docsets() -> Result<Vec<String>, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     let docsets_dir_exists = docsets_path.try_exists()
@@ -386,52 +377,8 @@ pub fn is_docs_json_exists() -> Result<bool, String> {
     Ok(docs_json_path.exists())
 }
 
-pub fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
-    let docset = docset_name.as_ref();
-
-    let has_slashes = {
-        #[cfg(target_family = "windows")]
-        { docset.find("\\").is_some() || docset.find("/").is_some() }
-
-        #[cfg(target_family = "unix")]
-        { docset.find("/").is_some() }
-    };
-    let starts_with_tilde = docset.starts_with('~');
-    let has_dollars = docset.find('$').is_some();
-    let starts_with_dot = docset.starts_with('.');
-    let has_dots = docset.find("..").is_some();
-
-    !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
-}
-
 #[inline]
 pub fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     Ok(docsets_path.join(docset_name))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_sanitize_names() {
-         let bad_name_path = "/what";
-         let bad_name_home = "~";
-         let bad_name_dots = "..";
-         let bad_name_env  = "$HOME";
-
-         let good_name_simple  = "hello";
-         let good_name_version = "qt~6.1";
-         let good_name_long    = "scala~2.13_reflection";
-
-        assert!(!is_name_allowed(&bad_name_path));
-        assert!(!is_name_allowed(&bad_name_home));
-        assert!(!is_name_allowed(&bad_name_dots));
-        assert!(!is_name_allowed(&bad_name_env));
-
-        assert!(is_name_allowed(&good_name_simple));
-        assert!(is_name_allowed(&good_name_version));
-        assert!(is_name_allowed(&good_name_long));
-    }
 }

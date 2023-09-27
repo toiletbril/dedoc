@@ -11,9 +11,8 @@ use toiletcli::flags::*;
 
 use crate::common::ResultS;
 use crate::common::{
-    convert_path_to_item, deserialize_docs_json, get_docset_path, get_program_directory,
-    is_docs_json_exists, is_docset_in_docs_or_print_warning, print_page_from_docset,
-    is_docset_downloaded
+    deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
+    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, GRAY, RESET, YELLOW, DOC_PAGE_EXTENSION};
 
@@ -42,14 +41,16 @@ pub struct VagueResult {
 }
 
 // Flags that change search result must be added here for cache to be updated.
-#[derive(Serialize, Deserialize, Default, PartialEq, Clone)]
+#[derive(Serialize, Deserialize)]
+#[derive(Default, PartialEq, Clone)]
 struct SearchFlags {
     case_insensitive: bool,
     precise: bool,
     whole: bool
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize)]
+#[derive(PartialEq)]
 struct SearchCache<'a> {
     query:         Cow<'a, str>,
     docset:        Cow<'a, str>,
@@ -189,6 +190,16 @@ fn get_context(html_line: String, index: usize, word_len: usize) -> String {
 
 
     html_line[start_pos..end_pos].trim().to_owned()
+}
+
+// Item is a filename without file extension.
+pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
+    let item = path
+        .strip_prefix(&docset_path)
+        .map_err(|err| err.to_string())?;
+    let item = item.with_extension("");
+
+    Ok(item.display().to_string())
 }
 
 type ExactMatches = Vec<String>;
