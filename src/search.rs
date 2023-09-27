@@ -49,58 +49,75 @@ struct SearchFlags {
     whole: bool
 }
 
+// Sometimes search results are big, and it's cheaper to check a small file if current search
+// options match cached ones, to deserialize the whole search cache.
+#[derive(Serialize, Deserialize)]
+#[derive(PartialEq)]
+struct SearchOptions<'a> {
+    query:  Cow<'a, str>,
+    docset: Cow<'a, str>,
+    flags:  Cow<'a, SearchFlags>,
+}
+
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq)]
 struct SearchCache<'a> {
-    query:         Cow<'a, str>,
-    docset:        Cow<'a, str>,
     exact_items:   Cow<'a, [String]>,
     vague_matches: Cow<'a, [VagueResult]>,
-    flags:         Cow<'a, SearchFlags>,
 }
 
-// @@@: don't read the whole cache before checking query.
-fn try_use_cache<'a>(docset: &'a String, query: &'a String, flags: &'a SearchFlags) -> Option<SearchCache<'a>> {
+fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
     let program_dir = get_program_directory().ok()?;
+    let cache_header_path = program_dir.join("search_cache_header.json");
+
+    {
+        let cache_options_file = File::open(cache_header_path).ok()?;
+        let cache_options_reader = BufReader::new(cache_options_file);
+
+        let cached_search_options: SearchOptions = from_reader(cache_options_reader).ok()?;
+
+        if cached_search_options != *search_options {
+            return None;
+        }
+    }
+
     let cache_path = program_dir.join("search_cache.json");
 
-    let file = File::open(cache_path).ok()?;
-    let reader = BufReader::new(file);
+    let cache_file = File::open(cache_path).ok()?;
+    let cache_reader = BufReader::new(cache_file);
 
-    let cache: SearchCache = from_reader(reader).ok()?;
+    let cache: SearchCache = from_reader(cache_reader).ok()?;
 
-    if docset == &cache.docset && query == &cache.query && *flags == *cache.flags {
-        Some(cache)
-    } else {
-        None
-    }
+    Some(cache)
 }
 
 fn cache_search_results(
-    docset: &String,
-    query:  &String,
-    flags:  &SearchFlags,
-    exact_items: &Vec<String>,
-    vague_matches: &Vec<VagueResult>,
+    search_options: &SearchOptions,
+    search_cache:   &SearchCache,
 ) -> ResultS {
     let program_dir = get_program_directory()?;
-    let cache_path = program_dir.join("search_cache.json");
 
-    let cache_file = File::create(&cache_path)
-        .map_err(|err| format!("Could not open cache at `{}`: {err}", cache_path.display()))?;
+    {
+        let cache_options_path = program_dir.join("search_cache_header.json");
+        let cache_options_file = File::create(&cache_options_path)
+            .map_err(|err| format!("Could not open cache options at `{}`: {err}", cache_options_path.display()))?;
 
-    let writer = BufWriter::new(cache_file);
+        let cache_options_writer = BufWriter::new(cache_options_file);
 
-    let cache = SearchCache {
-        docset:        Cow::Borrowed(docset),
-        query:         Cow::Borrowed(query),
-        flags:         Cow::Borrowed(flags),
-        exact_items:   Cow::Borrowed(exact_items),
-        vague_matches: Cow::Borrowed(vague_matches),
-    };
+        to_writer(cache_options_writer, &search_options)
+            .map_err(|err| format!("Could not write cache options at `{}`: {err}", cache_options_path.display()))?;
+    }
 
-    to_writer(writer, &cache)
-        .map_err(|err| format!("Could not write cache at `{}`: {err}", cache_path.display()))?;
+    {
+        let cache_path = program_dir.join("search_cache.json");
+        let cache_file = File::create(&cache_path)
+            .map_err(|err| format!("Could not open cache at `{}`: {err}", cache_path.display()))?;
+
+        let cache_writer = BufWriter::new(cache_file);
+
+        to_writer(cache_writer, &search_cache)
+            .map_err(|err| format!("Could not write cache at `{}`: {err}", cache_path.display()))?;
+    }
 
     Ok(())
 }
@@ -172,12 +189,12 @@ Please redownload the docset with `download {docset_name} --force`."
     Ok(items)
 }
 
-fn get_context(html_line: &String, index: usize, word_len: usize) -> String {
+fn get_context_around_query(html_line: &String, index: usize, query_len: usize) -> String {
     const BOUND_OFFSET: usize = 37;
 
     let lower_bound = index.saturating_sub(BOUND_OFFSET);
-    let upper_bound = (index + word_len).saturating_add(BOUND_OFFSET);
-    let word_end_index = index + word_len;
+    let upper_bound = (index + query_len).saturating_add(BOUND_OFFSET);
+    let word_end_index = index + query_len;
 
     let start_pos = html_line.char_indices()
         .rev()
@@ -280,7 +297,7 @@ pub fn search_docset_precisely(
                     }
 
                     if let Some(index) = string_buffer.find(query) {
-                        let context = get_context(&string_buffer, index, query_len);
+                        let context = get_context_around_query(&string_buffer, index, query_len);
                         contexts.push(context);
                     }
 
@@ -412,10 +429,16 @@ where
     let flag_open_is_empty = flag_open.is_empty();
     let open_number = flag_open.parse::<usize>().ok();
 
-    let flags = SearchFlags {
+    let search_flags = SearchFlags {
         precise: flag_precise,
         case_insensitive: flag_case_insensitive,
         whole: flag_whole,
+    };
+
+    let search_options = SearchOptions {
+        query:  Cow::Borrowed(&query),
+        docset: Cow::Borrowed(&docset),
+        flags:  Cow::Borrowed(&search_flags),
     };
 
     if flag_open_is_empty {
@@ -425,12 +448,19 @@ where
 
     if flag_precise {
         let (exact_results, vague_results) =
-        if let Some(cache) = try_use_cache(&docset, &query, &flags) {
+        if let Some(cache) = try_use_cache(&search_options) {
             (cache.exact_items, cache.vague_matches)
         } else {
             let (exact, vague) = search_docset_precisely(&docset, &query, flag_case_insensitive)?;
-            let _ = cache_search_results(&docset, &query, &flags, &exact, &vague)
+
+            let search_cache = SearchCache {
+                exact_items:   Cow::Borrowed(&exact),
+                vague_matches: Cow::Borrowed(&vague),
+            };
+
+            let _ = cache_search_results(&search_options, &search_cache)
                 .map_err(|err| format!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+
             (exact.into(), vague.into())
         };
 
@@ -469,12 +499,19 @@ where
 
         return Ok(());
     } else {
-        let results = if let Some(cache) = try_use_cache(&docset, &query, &flags) {
+        let results = if let Some(cache) = try_use_cache(&search_options) {
             cache.exact_items
         } else {
-            let exact = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
-            let _ = cache_search_results(&docset, &query, &flags, &exact, &vec![])
+            let exact  = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
+
+            let search_cache = SearchCache {
+                exact_items:   Cow::Borrowed(&exact),
+                vague_matches: Cow::Owned(vec![]),
+            };
+
+            let _ = cache_search_results(&search_options, &search_cache)
                 .map_err(|err| format!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+
             exact.into()
         };
 
