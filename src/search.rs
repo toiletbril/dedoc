@@ -59,6 +59,7 @@ struct SearchCache<'a> {
     flags:         Cow<'a, SearchFlags>,
 }
 
+// @@@: don't read the whole cache before checking query.
 fn try_use_cache<'a>(docset: &'a String, query: &'a String, flags: &'a SearchFlags) -> Option<SearchCache<'a>> {
     let program_dir = get_program_directory().ok()?;
     let cache_path = program_dir.join("search_cache.json");
