@@ -271,6 +271,11 @@ where
     let mut successful_downloads = 0;
 
     while let Some(docset) = args_iter.next() {
+        // Don't print warnings when using with ls -n
+        if docset == "[downloaded]" {
+            continue;
+        }
+
         if !flag_force && is_docset_downloaded(docset)? {
             println!("\
 {YELLOW}WARNING{RESET}: Docset `{docset}` is already downloaded. \
