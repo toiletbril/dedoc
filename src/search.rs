@@ -75,10 +75,10 @@ struct SearchCache<'a> {
 
 fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
     let program_dir = get_program_directory().ok()?;
-    let cache_header_path = program_dir.join("search_cache_header.json");
+    let cache_options_path = program_dir.join("search_cache_options.json");
 
     {
-        let cache_options_file = File::open(cache_header_path).ok()?;
+        let cache_options_file = File::open(cache_options_path).ok()?;
         let cache_options_reader = BufReader::new(cache_options_file);
 
         let cached_search_options: SearchOptions = from_reader(cache_options_reader).ok()?;
@@ -105,7 +105,7 @@ fn cache_search_results(
     let program_dir = get_program_directory()?;
 
     {
-        let cache_options_path = program_dir.join("search_cache_header.json");
+        let cache_options_path = program_dir.join("search_cache_options.json");
         let cache_options_file = File::create(&cache_options_path)
             .map_err(|err| format!("Could not open cache options at `{}`: {err}", cache_options_path.display()))?;
 
