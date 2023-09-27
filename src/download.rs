@@ -309,22 +309,22 @@ mod tests {
         <p id="what" class="hello">
             What
         </p>
-        <h1 class="heading">
+        <h1 class="heading" href="hello world">
             <h2 id="heading-in-a-heading">
                 What
             </h2>
-        </h1>
+        </h1 something="lol">
         "#;
 
         let should_be = r#"
         <p  >
             What
         </p>
-        <h1 >
+        <h1  href="hello world">
             <h2 >
                 What
             </h2>
-        </h1>
+        </h1 something="lol">
         "#;
 
         let result = sanitize_html_line(html_text.to_owned());
