@@ -37,7 +37,7 @@ fn show_search_help() -> ResultS {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct VagueResult {
     item: String,
-    context: String,
+    contexts: Vec<String>,
 }
 
 // Flags that change search result must be added here for cache to be updated.
@@ -172,7 +172,7 @@ Please redownload the docset with `download {docset_name} --force`."
     Ok(items)
 }
 
-fn get_context(html_line: String, index: usize, word_len: usize) -> String {
+fn get_context(html_line: &String, index: usize, word_len: usize) -> String {
     const BOUND_OFFSET: usize = 37;
 
     let lower_bound = index.saturating_sub(BOUND_OFFSET);
@@ -189,11 +189,10 @@ fn get_context(html_line: String, index: usize, word_len: usize) -> String {
         .find(|&(idx, _)| idx >= upper_bound)
         .map_or(html_line.len(), |(idx, _)| idx);
 
-
     html_line[start_pos..end_pos].trim().to_owned()
 }
 
-// Item is a filename without file extension.
+// Item is a file path without a file extension which is relative to docset directory
 pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
     let item = path
         .strip_prefix(&docset_path)
@@ -268,6 +267,10 @@ pub fn search_docset_precisely(
                 let file = File::open(&file_path)
                     .map_err(|err| format!("Could not open `{}`: {err}", file_path.display()))?;
 
+                let query_len = query.len();
+
+                let mut contexts = vec![];
+
                 let mut reader = BufReader::new(file);
                 let mut string_buffer = String::new();
 
@@ -277,16 +280,20 @@ pub fn search_docset_precisely(
                     }
 
                     if let Some(index) = string_buffer.find(query) {
-                        let vague_result = VagueResult {
-                            item: convert_path_to_item(file_path, original_path)?,
-                            context: get_context(string_buffer, index, query.len()),
-                        };
-
-                        vague_results.push(vague_result);
-                        break;
+                        let context = get_context(&string_buffer, index, query_len);
+                        contexts.push(context);
                     }
 
                     string_buffer.clear();
+                }
+
+                if !contexts.is_empty() {
+                    let vague_result = VagueResult {
+                        item: convert_path_to_item(file_path, original_path)?,
+                        contexts: contexts,
+                    };
+
+                    vague_results.push(vague_result);
                 }
             }
         }
@@ -310,7 +317,10 @@ pub fn search_docset_precisely(
 pub fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
     for result in search_results {
         println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}", result.item);
-        println!("          {GRAY}...{}...{RESET}", result.context);
+
+        for context in &result.contexts {
+            println!("          {GRAY}...{}...{RESET}", context);
+        }
 
         start_index += 1;
     }
