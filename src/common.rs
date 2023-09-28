@@ -5,8 +5,8 @@ use std::io::{BufReader, Write};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
-use html2text::from_read_coloured;
-use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
+use html2text::from_read_rich;
+use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedLineElement::*};
 
 use toiletcli::colors::{Color, Style};
 
@@ -28,6 +28,8 @@ pub const RED:       Color = Color::Red;
 pub const GREEN:     Color = Color::Green;
 pub const YELLOW:    Color = Color::Yellow;
 pub const GRAY:      Color = Color::BrightBlack;
+pub const GRAYER:    Color = Color::Byte(240);
+pub const GRAYEST:   Color = Color::Byte(234);
 pub const BOLD:      Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
 pub const RESET:     Style = Style::Reset;
@@ -108,68 +110,129 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
-    match annotation {
-        Default => ("".into(), "".into()),
-        Link(_) => (
-            format!("{}", Color::Blue),
-            format!("{}", Color::Reset),
-        ),
-        Image(_) => (
-            format!("{}", Color::BrightBlue),
-            format!("{}", Color::Reset)
-        ),
-        Emphasis => (
-            format!("{}", Style::Bold),
-            format!("{}", Style::Reset),
-        ),
-        Strong => (
-            format!("{}", Style::Bold),
-            format!("{}", Style::Reset)
-        ),
-        Strikeout => (
-            format!("{}", Style::Strikethrough),
-            format!("{}", Style::Reset)
-        ),
-        Code => (
-            format!("{}", Color::BrightBlack),
-            format!("{}", Color::Reset)
-        ),
-        Preformat(_) => (
-            format!("{}", Color::BrightBlack),
-            format!("{}", Color::Reset)
-        ),
+fn get_style(tag: &Vec<RichAnnotation>) -> String {
+    let mut style = String::new();
+
+    for ann in tag {
+        match *ann {
+            RichAnnotation::Default => (),
+            RichAnnotation::Link(_) => {
+                style.push_str(&format!("{}", Color::Blue));
+            }
+            RichAnnotation::Image(_) => {
+                style.push_str(&format!("{}", Color::BrightBlue));
+            }
+            RichAnnotation::Emphasis => {
+                style.push_str(&format!("{}", Style::Bold));
+            }
+            RichAnnotation::Strong => {
+                style.push_str(&format!("{}", Style::Bold));
+            }
+            RichAnnotation::Strikeout => {
+                style.push_str(&format!("{}", Style::Strikethrough));
+            },
+            RichAnnotation::Code => {
+                style.push_str(&format!("{}", Color::BrightBlack));
+            }
+            RichAnnotation::Preformat(is_cont) => {
+                if is_cont {
+                    style.push_str(&format!("{}", GRAYER));
+                } else {
+                    style.push_str(&format!("{}{}", Color::BrightBlack, GRAYEST.bg()));
+                }
+            }
+        }
     }
+
+    style
 }
 
-// @@@: skip right to the fragment.
-pub fn print_docset_file(path: PathBuf, _fragment: Option<&str>) -> ResultS {
+fn find_fragments(lines: &Vec<TaggedLine<Vec<RichAnnotation>>>) -> Vec<(String, usize)> {
+    let mut fragments: Vec<(String, usize)> = vec![];
+    let mut y = 0;
+
+    for line in lines {
+        for tli in line.iter() {
+            match tli {
+                FragmentStart(fragname) => {
+                    fragments.push((fragname.to_string(), y));
+                }
+                Str(_) => {}
+            }
+        }
+        y += 1;
+    }
+
+    fragments
+}
+
+pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
 
-    let page = from_read_coloured(reader, 80, default_colour_map)
-        .map_err(|err| err.to_string())?;
+    let rich_page = from_read_rich(reader, 80);
+    let fragments = find_fragments(&rich_page);
 
-    println!("{}", page.trim());
+    let mut has_fragment_upper_bound = false;
+
+    let mut current_fragment_line_offset: usize = 0;
+    let mut line_offset_upper_bound: usize = 0;
+
+    // Determine current fragment offset and print everything until the next fragment.
+    if let Some(fragment) = fragment {
+        let mut found_current_element = false;
+
+        for fragment_entry in fragments {
+            if found_current_element {
+                line_offset_upper_bound = fragment_entry.1;
+                has_fragment_upper_bound = true;
+                break;
+            }
+
+            if *fragment == fragment_entry.0 {
+                current_fragment_line_offset = fragment_entry.1;
+                found_current_element = true;
+            }
+        }
+    }
+
+    if has_fragment_upper_bound {
+        println!("...")
+    }
+
+    for (i, rich_line) in rich_page.iter().enumerate() {
+        if i < current_fragment_line_offset { continue; }
+        if has_fragment_upper_bound && i > line_offset_upper_bound { break; }
+
+        let mut line_is_empty = true;
+
+        for tagged_string in rich_line.tagged_strings() {
+            let style = get_style(&tagged_string.tag);
+
+            if !tagged_string.s.is_empty() {
+                line_is_empty = false;
+            }
+
+            print!("{}{}{}", style, tagged_string.s, Style::Reset);
+        }
+
+        if !line_is_empty {
+            println!();
+        }
+    }
+
+    if has_fragment_upper_bound {
+        println!("...")
+    }
 
     Ok(())
 }
 
-pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
+pub fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> ResultS {
     let docset_path = get_docset_path(docset_name)?;
 
-    let mut page_split = page.split('#');
-
-    let page_path = if let Some(file) = page_split.next() {
-        Ok(file)
-    } else {
-        Err(format!("Invalid page: {page}"))
-    }?;
-
-    let fragment = page_split.next();
-
-    let page_path_string = docset_path.join(page_path)
+    let page_path_string = docset_path.join(page)
         .display()
         .to_string() + "." + DOC_PAGE_EXTENSION;
     let page_path = PathBuf::from(page_path_string);
