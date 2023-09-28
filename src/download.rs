@@ -245,12 +245,6 @@ fn build_docset_from_db_json(
     remove_file(&db_json_path)
         .map_err(|err| format!("Could not remove `{}` after building {docset_name}: {err}", db_json_path.display()))?;
 
-    // Remove these files, since this version does not make use of it
-    let db_json_path = docset_path.join("db").with_extension("json");
-    let index_json_path = docset_path.join("index").with_extension("json");
-    remove_if_exists(&db_json_path)?;
-    remove_if_exists(&index_json_path)?;
-
     Ok(())
 }
 
