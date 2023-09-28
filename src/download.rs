@@ -89,7 +89,7 @@ fn download_db_and_index_json_with_progress(
     Ok(())
 }
 
-// Remove id="..." and class="..." attributes from HTML tags to reduce size.
+// Remove class="...", title="...", data-language="..." attributes from HTML tags to reduce size.
 fn sanitize_html_line<'a>(input: String) -> String {
     enum State {
         Default,
@@ -117,8 +117,10 @@ fn sanitize_html_line<'a>(input: String) -> String {
             State::InTag => {
                 let bytes = input.as_bytes();
                 match ch {
-                    'i' if position + 4 < length && bytes[position..position + 4] == *b"id=\""
-                        => {
+                    'd' if position + 15 < length && bytes[position..position + 15] == *b"data-language=\"" => {
+                        state = State::InKey;
+                    }
+                    't' if position + 7 < length && bytes[position..position + 7] == *b"title=\"" => {
                         state = State::InKey;
                     }
                     'c' if position + 7 < length && bytes[position..position + 7] == *b"class=\"" => {
@@ -311,25 +313,35 @@ mod tests {
     #[test]
     fn test_sanitize_html() {
         let html_text = r#"
-        <p id="what" class="hello">
-            What
-        </p>
-        <h1 class="heading" href="hello world">
-            <h2 id="heading-in-a-heading">
-                What
-            </h2>
-        </h1 something="lol">
+<summary>
+    <section id="method.new" class="method">
+        <span class="rightside">
+            <a class="srclink" href="https://doc.rust-lang.org/src/alloc/vec/mod.rs.html#420">source</a>
+            <span class="since" title="const since 1.39.0">
+                const: 1.39.0
+            </span>
+        </span>
+        <pre class="code-header" data-language="rust">
+            pub const fn new() -> Vec<T, Global>;
+        </pre>
+    </section>
+</summary>
         "#;
 
         let should_be = r#"
-        <p  >
-            What
-        </p>
-        <h1  href="hello world">
-            <h2 >
-                What
-            </h2>
-        </h1 something="lol">
+<summary>
+    <section id="method.new" >
+        <span >
+            <a  href="https://doc.rust-lang.org/src/alloc/vec/mod.rs.html#420">source</a>
+            <span  >
+                const: 1.39.0
+            </span>
+        </span>
+        <pre  >
+            pub const fn new() -> Vec<T, Global>;
+        </pre>
+    </section>
+</summary>
         "#;
 
         let result = sanitize_html_line(html_text.to_owned());
