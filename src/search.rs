@@ -14,7 +14,7 @@ use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
     is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded
 };
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, GRAY, RESET, YELLOW, DOC_PAGE_EXTENSION};
+use crate::common::{BOLD, GREEN, PROGRAM_NAME, GRAY, GRAYER, GRAYEST, RESET, YELLOW, DOC_PAGE_EXTENSION};
 
 fn show_search_help() -> ResultS {
     println!(
@@ -228,7 +228,7 @@ Please redownload the docset with `download {docset_name} --force`."
 }
 
 fn get_context_around_query(html_line: &String, index: usize, query_len: usize) -> String {
-    const BOUND_OFFSET: usize = 37;
+    const BOUND_OFFSET: usize = (80 - 6 - 8) / 2; // (80 columns - ["...".len() * 2] - [TAB.len() * 2]) / 2 sides
 
     let lower_bound = index.saturating_sub(BOUND_OFFSET);
     let upper_bound = (index + query_len).saturating_add(BOUND_OFFSET);
@@ -367,12 +367,15 @@ pub fn search_docset_precisely(
     Ok(items)
 }
 
+const TAB: &str = "    ";
+const HALF_TAB: &str = "  ";
+
 pub fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
     for result in search_results {
-        println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}", result.item);
+        println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}", result.item);
 
         for context in &result.contexts {
-            println!("          {GRAY}...{}...{RESET}", context);
+            println!("{TAB}{TAB}{GRAYER}...{RESET}{GRAY}{}{}{RESET}{GRAYER}...{RESET}", GRAYEST.bg(), context);
         }
 
         start_index += 1;
@@ -388,12 +391,12 @@ pub fn print_search_results(search_results: &[ExactResult], mut start_index: usi
     for result in search_results {
         if let Some(fragment) = &result.fragment {
             if result.item == prev_item {
-                println!("          {GRAY}#{}{RESET}", fragment);
+                println!("{TAB}{HALF_TAB}{GRAYER}{start_index:>4}{HALF_TAB}{GRAY}#{}{RESET}", fragment);
             } else {
-                println!("{GRAY}{start_index:>4}{RESET}  {}{GRAY}, #{}{RESET}", result.item, fragment);
+                println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}, #{}{RESET}", result.item, fragment);
             }
         } else {
-            println!("{GRAY}{start_index:>4}{RESET}  {}", result.item);
+            println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}", result.item);
         }
 
         prev_item = &result.item;
@@ -504,10 +507,12 @@ where
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
                 Some(n) if n <= exact_results_offset => {
-                    return print_page_from_docset(&docset, &exact_results[n - 1].item);
+                    let result = &exact_results[n - 1];
+                    return print_page_from_docset(&docset, &result.item, result.fragment.as_ref());
                 }
                 Some(n) => {
-                    return print_page_from_docset(&docset, &vague_results[n - exact_results_offset - 1].item);
+                    let result = &vague_results[n - exact_results_offset - 1];
+                    return print_page_from_docset(&docset, &result.item, None);
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
@@ -553,7 +558,8 @@ where
                     println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
                 Some(n) => {
-                    return print_page_from_docset(&docset, &results[n - 1].item);
+                    let result = &results[n - 1];
+                    return print_page_from_docset(&docset, &result.item, result.fragment.as_ref());
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");

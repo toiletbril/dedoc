@@ -60,7 +60,7 @@ where
             return Err("No page specified. Try `open --help` for more information.".to_string());
         }
 
-        print_page_from_docset(&docset, &query)?;
+        print_page_from_docset(&docset, &query, None)?;
     }
 
     Ok(())
