@@ -397,7 +397,9 @@ pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>
     match is_docset_in_docs(docset_name, docs) {
         SearchMatch::Exact => return true,
         SearchMatch::Vague(vague_matches) => {
-            let first_three = &vague_matches[..3];
+            let end_index = std::cmp::min(3, vague_matches.len());
+            let first_three = &vague_matches[..end_index];
+
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
         }
         SearchMatch::None => {
