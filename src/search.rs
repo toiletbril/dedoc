@@ -69,8 +69,8 @@ struct SearchOptions<'a> {
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq)]
 struct SearchCache<'a> {
-    exact_items:   Cow<'a, [ExactResult]>,
-    vague_matches: Cow<'a, [VagueResult]>,
+    exact_results: Cow<'a, [ExactResult]>,
+    vague_results: Cow<'a, [VagueResult]>,
 }
 
 fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
@@ -484,13 +484,13 @@ where
     if flag_precise {
         let (exact_results, vague_results) =
         if let Some(cache) = try_use_cache(&search_options) {
-            (cache.exact_items, cache.vague_matches)
+            (cache.exact_results, cache.vague_results)
         } else {
             let (exact, vague) = search_docset_precisely(&docset, &query, flag_case_insensitive)?;
 
             let search_cache = SearchCache {
-                exact_items:   Cow::Borrowed(&exact),
-                vague_matches: Cow::Borrowed(&vague),
+                exact_results: Cow::Borrowed(&exact),
+                vague_results: Cow::Borrowed(&vague),
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
@@ -537,13 +537,13 @@ where
         return Ok(());
     } else {
         let results = if let Some(cache) = try_use_cache(&search_options) {
-            cache.exact_items
+            cache.exact_results
         } else {
             let exact  = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
 
             let search_cache = SearchCache {
-                exact_items:   Cow::Borrowed(&exact),
-                vague_matches: Cow::Owned(vec![]),
+                exact_results: Cow::Borrowed(&exact),
+                vague_results: Cow::Owned(vec![]),
             };
 
             let _ = cache_search_results(&search_options, &search_cache)

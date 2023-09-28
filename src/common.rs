@@ -110,11 +110,11 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-fn get_style(tag: &Vec<RichAnnotation>) -> String {
+fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
     let mut style = String::new();
 
-    for ann in tag {
-        match *ann {
+    for annotation in tagged_string_tags {
+        match *annotation {
             RichAnnotation::Default => (),
             RichAnnotation::Link(_) => {
                 style.push_str(&format!("{}", Color::Blue));
@@ -143,23 +143,24 @@ fn get_style(tag: &Vec<RichAnnotation>) -> String {
     style
 }
 
-fn find_fragments(lines: &Vec<TaggedLine<Vec<RichAnnotation>>>) -> Vec<(String, usize)> {
-    let mut fragments: Vec<(String, usize)> = vec![];
-    let mut y = 0;
+fn find_fragments(tagged_lines: &Vec<TaggedLine<Vec<RichAnnotation>>>) -> Vec<(String, usize)> {
+    // Not a HashMap because it needs to be in order.
+    let mut fragment_offsets: Vec<(String, usize)> = vec![];
+    let mut line_number = 0;
 
-    for line in lines {
-        for tli in line.iter() {
-            match tli {
-                FragmentStart(fragname) => {
-                    fragments.push((fragname.to_string(), y));
+    for tagged_line in tagged_lines {
+        for tagged_line_element in tagged_line.iter() {
+            match tagged_line_element {
+                FragmentStart(fragment) => {
+                    fragment_offsets.push((fragment.to_owned(), line_number));
                 }
                 Str(_) => {}
             }
         }
-        y += 1;
+        line_number += 1;
     }
 
-    fragments
+    fragment_offsets
 }
 
 pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
@@ -170,38 +171,39 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
     let rich_page = from_read_rich(reader, 80);
     let fragments = find_fragments(&rich_page);
 
-    let mut has_fragment_upper_bound = false;
+    let mut has_next_fragment = false;
 
-    let mut current_fragment_line_offset: usize = 0;
-    let mut line_offset_upper_bound: usize = 0;
+    let mut current_fragment_line: usize = 0;
+    let mut next_fragment_line: usize = 0;
 
-    // Determine current fragment offset and print everything until the next fragment.
+    // If there is a fragment, determine current fragment offset and print
+    // everything until the next fragment.
     if let Some(fragment) = fragment {
         let mut found_current_element = false;
 
         for fragment_entry in fragments {
             if found_current_element {
-                line_offset_upper_bound = fragment_entry.1;
-                has_fragment_upper_bound = true;
+                next_fragment_line = fragment_entry.1;
+                has_next_fragment = true;
                 break;
             }
 
             if *fragment == fragment_entry.0 {
-                current_fragment_line_offset = fragment_entry.1;
+                current_fragment_line = fragment_entry.1;
                 found_current_element = true;
             }
         }
     }
 
-    if has_fragment_upper_bound {
+    if has_next_fragment {
         println!("{GRAYER}...{RESET}")
     }
 
     let mut skipped_empty_lines = false;
 
     for (i, rich_line) in rich_page.iter().enumerate() {
-        if i < current_fragment_line_offset { continue; }
-        if has_fragment_upper_bound && i > line_offset_upper_bound { break; }
+        if i < current_fragment_line { continue; }
+        if has_next_fragment && i > next_fragment_line { break; }
 
         let tagged_strings: Vec<&TaggedString<Vec<RichAnnotation>>> = rich_line
             .tagged_strings()
@@ -213,7 +215,7 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
         let mut line_buffer = String::new();
 
         for tagged_string in tagged_strings {
-            let style = get_style(&tagged_string.tag);
+            let style = get_tag_style(&tagged_string.tag);
 
             if !tagged_string.s.is_empty() {
                 line_is_empty = false;
@@ -248,7 +250,7 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
         line_buffer.clear();
     }
 
-    if has_fragment_upper_bound {
+    if has_next_fragment {
         println!("{GRAYER}...{RESET}")
     }
 
