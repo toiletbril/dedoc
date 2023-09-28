@@ -5,8 +5,8 @@ use std::io::{BufReader, Write};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
+use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedString, TaggedLineElement::*};
 use html2text::from_read_rich;
-use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedLineElement::*};
 
 use toiletcli::colors::{Color, Style};
 
@@ -134,12 +134,8 @@ fn get_style(tag: &Vec<RichAnnotation>) -> String {
             RichAnnotation::Code => {
                 style.push_str(&format!("{}", Color::BrightBlack));
             }
-            RichAnnotation::Preformat(is_cont) => {
-                if is_cont {
-                    style.push_str(&format!("{}", GRAYER));
-                } else {
-                    style.push_str(&format!("{}{}", Color::BrightBlack, GRAYEST.bg()));
-                }
+            RichAnnotation::Preformat(_) => {
+                style.push_str(&format!("{}{}", Color::BrightBlack, GRAYEST.bg()));
             }
         }
     }
@@ -198,32 +194,62 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
     }
 
     if has_fragment_upper_bound {
-        println!("...")
+        println!("{GRAYER}...{RESET}")
     }
+
+    let mut skipped_empty_lines = false;
 
     for (i, rich_line) in rich_page.iter().enumerate() {
         if i < current_fragment_line_offset { continue; }
         if has_fragment_upper_bound && i > line_offset_upper_bound { break; }
 
-        let mut line_is_empty = true;
+        let tagged_strings: Vec<&TaggedString<Vec<RichAnnotation>>> = rich_line
+            .tagged_strings()
+            .collect();
 
-        for tagged_string in rich_line.tagged_strings() {
+        let mut line_is_empty = true;
+        let is_only_tag = tagged_strings.len() == 1;
+
+        let mut line_buffer = String::new();
+
+        for tagged_string in tagged_strings {
             let style = get_style(&tagged_string.tag);
 
             if !tagged_string.s.is_empty() {
                 line_is_empty = false;
             }
 
-            print!("{}{}{}", style, tagged_string.s, Style::Reset);
+            line_buffer += style.as_str();
+            line_buffer += &tagged_string.s;
+
+            if is_only_tag {
+                // Pad preformat to 80 characters for cool background.
+                if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
+                    let padding_amount = (80 as usize)
+                        .saturating_sub(tagged_string.s.len());
+
+                    for _ in 0..padding_amount {
+                        line_buffer += " ";
+                    }
+                }
+            }
+
+            line_buffer += &Style::Reset.to_string();
         }
 
         if !line_is_empty {
-            println!();
+            skipped_empty_lines = true;
         }
+
+        if skipped_empty_lines {
+            println!("{}", line_buffer);
+        }
+
+        line_buffer.clear();
     }
 
     if has_fragment_upper_bound {
-        println!("...")
+        println!("{GRAYER}...{RESET}")
     }
 
     Ok(())
