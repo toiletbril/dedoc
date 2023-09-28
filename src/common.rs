@@ -5,8 +5,8 @@ use std::io::{BufReader, Write};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
-use html2text::from_read_coloured;
-use html2text::render::text_renderer::{RichAnnotation, RichAnnotation::*};
+use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedString, TaggedLineElement::*};
+use html2text::from_read_rich;
 
 use toiletcli::colors::{Color, Style};
 
@@ -17,14 +17,19 @@ pub type ResultS = Result<(), String>;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const PROGRAM_NAME: &str = "dedoc";
 
-pub const DEFAULT_DOWNLOADS_LINK: &str = "https://downloads.devdocs.io";
-pub const DEFAULT_DOCS_LINK: &str = "https://devdocs.io/docs.json";
+pub const DEFAULT_DB_JSON_LINK: &str   = "https://documents.devdocs.io";
+pub const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
+
 pub const DEFAULT_USER_AGENT: &str = "dedoc";
+
+pub const DOC_PAGE_EXTENSION: &str = "html";
 
 pub const RED:       Color = Color::Red;
 pub const GREEN:     Color = Color::Green;
 pub const YELLOW:    Color = Color::Yellow;
 pub const GRAY:      Color = Color::BrightBlack;
+pub const GRAYER:    Color = Color::Byte(240);
+pub const GRAYEST:   Color = Color::Byte(234);
 pub const BOLD:      Style = Style::Bold;
 pub const UNDERLINE: Style = Style::Underlined;
 pub const RESET:     Style = Style::Reset;
@@ -42,20 +47,22 @@ macro_rules! debug_println {
     }};
 }
 
-#[inline(always)]
+#[inline]
 fn unknown_version() -> String {
     "unknown".to_string()
 }
 
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Links {
     home: String,
     code: String,
 }
 
+// docs.json
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct Docs {
     #[serde(skip)]
     name: String,
@@ -74,23 +81,21 @@ pub struct Docs {
     attribution: String,
 }
 
-/*
-Example item:
-    {
-        "name": "Angular",
-        "slug": "angular",
-        "type": "angular",
-        "links": {
-          "home": "https://google.com",
-          "code": "https://google.com"
-        },
-        "version": "",
-        "release": "16.1.3",
-        "mtime": 1688411876,
-        "db_size": 13128638,
-        "attribution": "whatever"
-    }
-*/
+// Example entry:
+// {
+//     "name": "Angular",
+//     "slug": "angular",
+//     "type": "angular",
+//     "links": {
+//       "home": "https://google.com",
+//       "code": "https://google.com"
+//     },
+//     "version": "",
+//     "release": "16.1.3",
+//     "mtime": 1688411876,
+//     "db_size": 13128638,
+//     "attribution": "whatever"
+// }
 
 pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
@@ -105,65 +110,168 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-fn default_colour_map(annotation: &RichAnnotation) -> (String, String) {
-    match annotation {
-        Default => ("".into(), "".into()),
-        Link(_) => (
-            format!("{}", Color::Blue),
-            format!("{}", Color::Reset),
-        ),
-        Image(_) => (
-            format!("{}", Color::BrightBlue),
-            format!("{}", Color::Reset)
-        ),
-        Emphasis => (
-            format!("{}", Style::Bold),
-            format!("{}", Style::Reset),
-        ),
-        Strong => (
-            format!("{}", Style::Bold),
-            format!("{}", Style::Reset)
-        ),
-        Strikeout => (
-            format!("{}", Style::Strikethrough),
-            format!("{}", Style::Reset)
-        ),
-        Code => (
-            format!("{}", Color::BrightBlack),
-            format!("{}", Color::Reset)
-        ),
-        Preformat(_) => (
-            format!("{}", Color::BrightBlack),
-            format!("{}", Color::Reset)
-        ),
+fn get_style(tag: &Vec<RichAnnotation>) -> String {
+    let mut style = String::new();
+
+    for ann in tag {
+        match *ann {
+            RichAnnotation::Default => (),
+            RichAnnotation::Link(_) => {
+                style.push_str(&format!("{}", Color::Blue));
+            }
+            RichAnnotation::Image(_) => {
+                style.push_str(&format!("{}", Color::BrightBlue));
+            }
+            RichAnnotation::Emphasis => {
+                style.push_str(&format!("{}", Style::Bold));
+            }
+            RichAnnotation::Strong => {
+                style.push_str(&format!("{}", Style::Bold));
+            }
+            RichAnnotation::Strikeout => {
+                style.push_str(&format!("{}", Style::Strikethrough));
+            },
+            RichAnnotation::Code => {
+                style.push_str(&format!("{}", Color::BrightBlack));
+            }
+            RichAnnotation::Preformat(_) => {
+                style.push_str(&format!("{}{}", Color::BrightBlack, GRAYEST.bg()));
+            }
+        }
     }
+
+    style
 }
 
-pub fn print_html_file(path: PathBuf) -> ResultS {
+fn find_fragments(lines: &Vec<TaggedLine<Vec<RichAnnotation>>>) -> Vec<(String, usize)> {
+    let mut fragments: Vec<(String, usize)> = vec![];
+    let mut y = 0;
+
+    for line in lines {
+        for tli in line.iter() {
+            match tli {
+                FragmentStart(fragname) => {
+                    fragments.push((fragname.to_string(), y));
+                }
+                Str(_) => {}
+            }
+        }
+        y += 1;
+    }
+
+    fragments
+}
+
+pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
 
-    let page = from_read_coloured(reader, 80, default_colour_map)
-        .map_err(|err| err.to_string())?;
+    let rich_page = from_read_rich(reader, 80);
+    let fragments = find_fragments(&rich_page);
 
-    println!("{}", page.trim());
+    let mut has_fragment_upper_bound = false;
+
+    let mut current_fragment_line_offset: usize = 0;
+    let mut line_offset_upper_bound: usize = 0;
+
+    // Determine current fragment offset and print everything until the next fragment.
+    if let Some(fragment) = fragment {
+        let mut found_current_element = false;
+
+        for fragment_entry in fragments {
+            if found_current_element {
+                line_offset_upper_bound = fragment_entry.1;
+                has_fragment_upper_bound = true;
+                break;
+            }
+
+            if *fragment == fragment_entry.0 {
+                current_fragment_line_offset = fragment_entry.1;
+                found_current_element = true;
+            }
+        }
+    }
+
+    if has_fragment_upper_bound {
+        println!("{GRAYER}...{RESET}")
+    }
+
+    let mut skipped_empty_lines = false;
+
+    for (i, rich_line) in rich_page.iter().enumerate() {
+        if i < current_fragment_line_offset { continue; }
+        if has_fragment_upper_bound && i > line_offset_upper_bound { break; }
+
+        let tagged_strings: Vec<&TaggedString<Vec<RichAnnotation>>> = rich_line
+            .tagged_strings()
+            .collect();
+
+        let mut line_is_empty = true;
+        let is_only_tag = tagged_strings.len() == 1;
+
+        let mut line_buffer = String::new();
+
+        for tagged_string in tagged_strings {
+            let style = get_style(&tagged_string.tag);
+
+            if !tagged_string.s.is_empty() {
+                line_is_empty = false;
+            }
+
+            line_buffer += style.as_str();
+            line_buffer += &tagged_string.s;
+
+            if is_only_tag {
+                // Pad preformat to 80 characters for cool background.
+                if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
+                    let padding_amount = (80 as usize)
+                        .saturating_sub(tagged_string.s.len());
+
+                    for _ in 0..padding_amount {
+                        line_buffer += " ";
+                    }
+                }
+            }
+
+            line_buffer += &Style::Reset.to_string();
+        }
+
+        if !line_is_empty {
+            skipped_empty_lines = true;
+        }
+
+        if skipped_empty_lines {
+            println!("{}", line_buffer);
+        }
+
+        line_buffer.clear();
+    }
+
+    if has_fragment_upper_bound {
+        println!("{GRAYER}...{RESET}")
+    }
 
     Ok(())
 }
 
-pub fn print_page_from_docset(docset_name: &String, page: &String) -> ResultS {
+pub fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> ResultS {
     let docset_path = get_docset_path(docset_name)?;
 
-    let file_path = docset_path.join(page.to_owned() + ".html");
+    let page_path_string = docset_path.join(page)
+        .display()
+        .to_string() + "." + DOC_PAGE_EXTENSION;
+    let page_path = PathBuf::from(page_path_string);
 
-    if !file_path.is_file() {
-        let message =
-            format!("No page matching `{page}`. Did you specify the name from `search` correctly?");
+    if !page_path.is_file() {
+        let message = format!(
+            "\
+No page matching `{page}`. Did you specify the name from `search` correctly?"
+        );
         return Err(message);
     }
 
-    print_html_file(file_path)
+    print_docset_file(page_path, fragment)
 }
 
 static mut HOME_DIR: Option<PathBuf> = None;
@@ -212,7 +320,7 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn get_program_directory() -> Result<PathBuf, String> {
     let path = get_home_directory()?;
     let dot_program = format!(".{PROGRAM_NAME}");
@@ -277,65 +385,44 @@ pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
 }
 
 pub enum SearchMatch {
-    Found,
-    FoundVague(Vec<String>)
+    Exact,
+    Vague(Vec<String>),
+    None
 }
 
+// Returns `true` when docset exists in `docs.json`, print a warning otherwise.
 pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
-        Some(SearchMatch::Found) => return true,
-        Some(SearchMatch::FoundVague(vague_matches)) => {
+        SearchMatch::Exact => return true,
+        SearchMatch::Vague(vague_matches) => {
             let first_three = &vague_matches[..3];
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
         }
-        None => {
+        SearchMatch::None => {
             println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
         }
     }
     false
 }
 
-pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> Option<SearchMatch> {
+// `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
+pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch {
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
         if entry.slug.contains(docset_name) {
             if entry.slug == *docset_name {
-                return Some(SearchMatch::Found);
+                return SearchMatch::Exact;
             }
             vague_matches.push(entry.slug.clone());
         }
     }
 
     if vague_matches.is_empty() {
-        None
+        SearchMatch::None
     } else {
-        Some(SearchMatch::FoundVague(vague_matches))
+        SearchMatch::Vague(vague_matches)
     }
-}
-
-pub fn convert_paths_to_items(paths: Vec<PathBuf>, docset_name: &String) -> Result<Vec<String>, String> {
-    let docset_path = get_docset_path(docset_name)?;
-
-    let mut items = vec![];
-
-    for path in paths {
-        let item = path
-            .strip_prefix(&docset_path)
-            .map_err(|err| err.to_string())?;
-        let item = item.with_extension("");
-        items.push(item.display().to_string());
-    }
-
-    Ok(items)
-}
-
-pub fn print_search_results(search_results: &[String], mut start_index: usize) -> ResultS {
-    for item in search_results {
-        println!("{GRAY}{start_index:>4}{RESET}  {}", item);
-        start_index += 1;
-    }
-    Ok(())
 }
 
 pub fn get_local_docsets() -> Result<Vec<String>, String> {
@@ -345,7 +432,6 @@ pub fn get_local_docsets() -> Result<Vec<String>, String> {
 
     let mut result = vec![];
 
-    // `/docsets` does not exist, return empty vector
     if !docsets_dir_exists {
         return Ok(result);
     }
@@ -367,65 +453,21 @@ pub fn get_local_docsets() -> Result<Vec<String>, String> {
     Ok(result)
 }
 
-#[inline(always)]
+#[inline]
 pub fn is_docset_downloaded(docset_name: &String) -> Result<bool, String> {
     get_docset_path(docset_name)?
         .try_exists()
         .map_err(|err| format!("Could not check if `{docset_name}` exists: {err}"))
 }
 
-#[inline(always)]
+#[inline]
 pub fn is_docs_json_exists() -> Result<bool, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     Ok(docs_json_path.exists())
 }
 
-pub fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
-    let docset = docset_name.as_ref();
-
-    let has_slashes = {
-        #[cfg(target_family = "windows")]
-        { docset.find("\\").is_some() || docset.find("/").is_some() }
-
-        #[cfg(target_family = "unix")]
-        { docset.find("/").is_some() }
-    };
-    let starts_with_tilde = docset.starts_with('~');
-    let has_dollars = docset.find('$').is_some();
-    let starts_with_dot = docset.starts_with('.');
-    let has_dots = docset.find("..").is_some();
-
-    !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
-}
-
-#[inline(always)]
+#[inline]
 pub fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     Ok(docsets_path.join(docset_name))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_sanitize_names() {
-         let bad_name_path = "/what";
-         let bad_name_home = "~";
-         let bad_name_dots = "..";
-         let bad_name_env  = "$HOME";
-
-         let good_name_simple  = "hello";
-         let good_name_version = "qt~6.1";
-         let good_name_long    = "scala~2.13_reflection";
-
-        assert!(!is_name_allowed(&bad_name_path));
-        assert!(!is_name_allowed(&bad_name_home));
-        assert!(!is_name_allowed(&bad_name_dots));
-        assert!(!is_name_allowed(&bad_name_env));
-
-        assert!(is_name_allowed(&good_name_simple));
-        assert!(is_name_allowed(&good_name_version));
-        assert!(is_name_allowed(&good_name_long));
-    }
 }

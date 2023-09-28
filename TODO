@@ -1,4 +1,6 @@
-* features for lowering binary size
+* fuzzy search
+
+* features to lower binary size
 
 * interactive search
     * literally open a manpage out of html with own pager

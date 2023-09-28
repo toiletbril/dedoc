@@ -50,12 +50,12 @@ fn show_help() -> ResultS {
     Search DevDocs pages from terminal.
 
 {GREEN}SUBCOMMANDS{RESET}
-    {BOLD}fetch{RESET}{GRAY}, ft{RESET}                       Fetch available docsets.
-    {BOLD}list{RESET}{GRAY}, ls{RESET}                        Show available docsets.
-    {BOLD}download{RESET}{GRAY}, dl{RESET}                    Download docsets.
-    {BOLD}remove{RESET}{GRAY}, rm{RESET}                      Delete docsets.
-    {BOLD}search{RESET}{GRAY}, ss{RESET}                      List pages that match your query.
-    {BOLD}open{RESET}{GRAY}, op{RESET}                        Display specified pages.
+    fetch{GRAY}, ft{RESET}                       Fetch available docsets.
+    list{GRAY}, ls{RESET}                        Show available docsets.
+    download{GRAY}, dl{RESET}                    Download docsets.
+    remove{GRAY}, rm{RESET}                      Delete docsets.
+    search{GRAY}, ss{RESET}                      List pages that match your query.
+    open{GRAY}, op{RESET}                        Display specified pages.
 
 {GREEN}OPTIONS{RESET}
     -c, --color <on/off/auto>       Use color when displaying output.
@@ -105,7 +105,7 @@ where
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
         other => {
-            Err(format!("Unknown subcommand `{other}`."))
+            Err(format!("Unknown subcommand `{other}`"))
         }
     }
 }

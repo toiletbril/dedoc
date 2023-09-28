@@ -13,7 +13,7 @@ use crate::common::{
     write_to_logfile,
 };
 use crate::common::{
-    BOLD, DEFAULT_DOCS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
+    BOLD, DEFAULT_DOCS_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
 
 fn show_fetch_help() -> ResultS {
@@ -24,7 +24,7 @@ fn show_fetch_help() -> ResultS {
     Fetch latest `docs.json` which lists available languages and frameworks.
 
 {GREEN}OPTIONS{RESET}
-    -f, --force                     Update even if `docs.json` is recent.
+    -f, --force                     Force the download and overwrite `docs.json`.
         --help                      Display help message."
     );
     Ok(())
@@ -33,10 +33,10 @@ fn show_fetch_help() -> ResultS {
 pub fn fetch_docs() -> Result<Vec<Docs>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
-    let response = get(DEFAULT_DOCS_LINK)
+    let response = get(DEFAULT_DOCS_JSON_LINK)
         .header_append("user-agent", user_agent)
         .send()
-        .map_err(|err| format!("Could not GET `{DEFAULT_DOCS_LINK}`: {err:?}"))?;
+        .map_err(|err| format!("Could not GET `{DEFAULT_DOCS_JSON_LINK}`: {err:?}"))?;
 
     let body = response
         .text()
@@ -91,7 +91,7 @@ Run `fetch --force` to ignore this warning."
         return Ok(());
     }
 
-    println!("Fetching `{DEFAULT_DOCS_LINK}`...");
+    println!("Fetching `{DEFAULT_DOCS_JSON_LINK}`...");
     let docs = fetch_docs()?;
 
     let program_path = get_program_directory()?;

@@ -1,23 +1,22 @@
-use std::fs::{create_dir_all, remove_dir_all, remove_file, File};
+use std::fs::{create_dir_all, remove_file, File};
 use std::io::{BufReader, BufWriter, Read, Write};
-use std::path::Path;
+use std::path::PathBuf;
 
 use attohttpc::get;
 
-use flate2::bufread::GzDecoder;
-use tar::Archive;
+use serde::Deserializer;
+use serde::de::{Visitor, Error, MapAccess};
 
 use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{Docs, ResultS};
 use crate::common::{
-    deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
-    is_docset_downloaded, is_docset_in_docs_or_print_warning,
+    deserialize_docs_json, get_docset_path, is_docs_json_exists, is_docset_downloaded,
+    is_docset_in_docs_or_print_warning
 };
-
 use crate::common::{
-    BOLD, DEFAULT_DOWNLOADS_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
+    BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
 
 fn show_download_help() -> ResultS {
@@ -28,84 +27,61 @@ fn show_download_help() -> ResultS {
     Download a docset. Available docsets can be displayed using `list`.
 
 {GREEN}OPTIONS{RESET}
-    -f, --force                     Overwrite downloaded docsets.
+    -f, --force                     Force the download and overwrite files.
         --help                      Display help message."
     );
     Ok(())
 }
 
-fn download_docset_tar_gz_with_progress(
+fn download_db_and_index_json_with_progress(
     docset_name: &String,
     docs: &Vec<Docs>,
-) -> Result<(), String> {
+) -> ResultS {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
     for entry in docs.iter() {
         if docset_name == &entry.slug {
-            let docsets_path = get_program_directory()?.join("docsets");
-            let specific_docset_path = docsets_path.join(&docset_name);
+            let docset_path = get_docset_path(docset_name)?;
 
-            if !specific_docset_path.exists() {
-                create_dir_all(&specific_docset_path)
-                    .map_err(|err| format!("Cannot create `{docset_name}` directory: {err}"))?;
+            if !docset_path.exists() {
+                create_dir_all(&docset_path)
+                    .map_err(|err| format!("Cannot create `{}` directory: {err}", docset_path.display()))?;
             }
 
-            let tar_gz_path = specific_docset_path
-                .join(docset_name)
-                .with_extension("tar.gz");
+            for (file_name, i) in [("db.json", 1), ("index.json", 2)] {
+                let file_path = docset_path
+                    .join(file_name);
 
-            let file = File::create(&tar_gz_path)
-                .map_err(|err| format!("Could not create `{}`: {err}", tar_gz_path.display()))?;
+                let file = File::create(&file_path)
+                    .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
 
-            let download_link = format!("{DEFAULT_DOWNLOADS_LINK}/{docset_name}.tar.gz");
+                let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}", file_name, entry.mtime);
 
-            let response = get(&download_link)
-                .header_append("user-agent", &user_agent)
-                .send()
-                .map_err(|err| format!("Could not GET {download_link}: {err}"))?;
+                let response = get(&download_link)
+                    .header_append("user-agent", &user_agent)
+                    .send()
+                    .map_err(|err| format!("Could not GET {download_link}: {err}"))?;
 
-            let content_length = response
-                .headers()
-                .get("content-length")
-                .map_or("0", |header| header.to_str().unwrap_or("0"))
-                .parse::<usize>()
-                .unwrap_or(0);
+                let mut file_writer = BufWriter::new(file);
+                let mut response_reader = BufReader::new(response);
 
-            let mut file_writer = BufWriter::new(file);
-            let mut response_reader = BufReader::new(response);
+                let mut buffer = [0; 1024 * 4];
+                let mut file_size = 0;
 
-            let mut buffer = [0; 1024 * 8];
-            let mut file_size = 0;
+                while let Ok(size) = response_reader.read(&mut buffer) {
+                    if size == 0 {
+                        break;
+                    }
 
-            while let Ok(size) = response_reader.read(&mut buffer) {
-                if size == 0 {
-                    break;
+                    file_writer
+                        .write(&buffer[..size])
+                        .map_err(|err| format!("Could not download file: {err}"))?;
+
+                    file_size += size;
+
+                    print!("\rReceived {file_size} bytes, file {i} of 2...");
                 }
-
-                file_writer
-                    .write(&buffer[..size])
-                    .map_err(|err| format!("Could not download file: {err}"))?;
-
-                file_size += size;
-
-                print!("\rReceived {file_size} of {content_length} bytes...");
-            }
-            println!();
-
-            file_writer
-                .flush()
-                .map_err(|err| format!("Could not flush buffer to file: {err}"))?;
-
-            if file_size != content_length {
-                let message = format!(
-                    "File size ({file_size}) is different than required size ({content_length}). \
-                     Please re-run this command :("
-                );
-
-                remove_dir_all(&specific_docset_path)
-                    .map_err(|err| format!("Could not remove bad docset ({}): {err}", specific_docset_path.display()))?;
-
-                return Err(message);
+                println!();
             }
         }
     }
@@ -113,83 +89,161 @@ fn download_docset_tar_gz_with_progress(
     Ok(())
 }
 
-fn remove_if_exists(path: &Path) -> ResultS {
-    let path_exists = path.try_exists()
-        .map_err(|err| format!("Could not read `{}`: {err}", path.display()))?;
-
-    if path_exists {
-        remove_file(&path)
-            .map_err(|err| format!("Could not remove `{}`: {err}", path.display()))?;
+// Remove class="...", title="...", data-language="..." attributes from HTML tags to reduce size.
+fn sanitize_html_line<'a>(input: String) -> String {
+    enum State {
+        Default,
+        InTag,
+        InKey,
+        InValue,
     }
 
-    Ok(())
+    let length = input.len();
+
+    let mut output = String::new();
+    let mut state = State::Default;
+    let mut position = 0;
+
+    let mut chars = input.chars();
+
+    while let Some(ch) = chars.next() {
+        match state {
+            State::Default => {
+                if ch == '<' {
+                    state = State::InTag;
+                }
+                output.push(ch);
+            }
+            State::InTag => {
+                let bytes = input.as_bytes();
+                match ch {
+                    'd' if position + 15 < length && bytes[position..position + 15] == *b"data-language=\"" => {
+                        state = State::InKey;
+                    }
+                    't' if position + 7 < length && bytes[position..position + 7] == *b"title=\"" => {
+                        state = State::InKey;
+                    }
+                    'c' if position + 7 < length && bytes[position..position + 7] == *b"class=\"" => {
+                        state = State::InKey;
+                    }
+                    '>' => {
+                        state = State::Default;
+                        output.push(ch);
+                    }
+                    _ => output.push(ch)
+                }
+            }
+            State::InKey => {
+                if ch == '\"' {
+                    state = State::InValue;
+                }
+            }
+            State::InValue => {
+                if ch == '\"' {
+                    state = State::InTag;
+                }
+            }
+        }
+        position += ch.len_utf8();
+    }
+
+    output
 }
 
-fn extract_docset_tar_gz(docset_name: &String) -> Result<(), String> {
-    let docset_path = get_docset_path(docset_name)?;
-
-    if !docset_path.exists() {
-        create_dir_all(&docset_path)
-            .map_err(|err| format!("Cannot create `{docset_name}` directory: {err}"))?;
-    }
-
-    let tar_gz_path = docset_path.join(docset_name).with_extension("tar.gz");
-
-    let tar_gz_file = File::open(&tar_gz_path)
-        .map_err(|err| format!("Could not open `{}`: {err}", tar_gz_path.display()))?;
-
-    let reader = BufReader::new(tar_gz_file);
-    let tar = GzDecoder::new(reader);
-    let mut archive = Archive::new(tar);
-
-    #[cfg(target_family = "unix")]
-    {
-        archive
-            .unpack(&docset_path)
-            .map_err(|err| format!("Could not extract `{}`: {err}", tar_gz_path.display()))?;
-    }
-
-    // Sometimes .tar archives have files with disallowed characters in their name.
-    // Unpack them manually while replacing invalid characters.
+fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
+where
+    M: MapAccess<'de>,
+{
+    #[inline]
     #[cfg(target_family = "windows")]
-    {
+    fn sanitize_filename_for_windows(filename: String) -> String {
         const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
-
-        let mut archive_files = archive.entries()
-            .map_err(|err| format!("Could not read archive `{}`: {err}", tar_gz_path.display()))?;
-
-        while let Some(file) = archive_files.next() {
-            let mut file = file
-                .map_err(|err| format!("Could not read archive `{}`: {err}", tar_gz_path.display()))?;
-
-            let path_bytes = &file.header().path_bytes();
-            let path_unsanitized_str = String::from_utf8_lossy(&path_bytes);
-
-            let path = path_unsanitized_str
-                .chars()
-                .map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c })
-                .collect::<String>();
-
-            let path_sanitized = path
-                .strip_suffix(&['.', ' '])
-                .unwrap_or(path.as_str())
-                .trim();
-
-            let unpack_path = docset_path.join(path_sanitized);
-
-            file.unpack(&unpack_path)
-                .map_err(|err| format!("Could not extract file from `{}` to {unpack_path:?}: {err}", tar_gz_path.display()))?;
-        }
+        filename
+            .chars()
+            .map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c })
+            .collect::<String>()
     }
 
-    remove_file(&tar_gz_path)
-        .map_err(|err| format!("Could not remove `{}`: {err}", tar_gz_path.display()))?;
+    let docset_path = get_docset_path(docset_name)?;
+    let mut unpacked_amount = 1;
 
-    // Remove these files, since this version does not make use of it
-    let db_json_path = docset_path.join("db").with_extension("json");
-    let index_json_path = docset_path.join("index").with_extension("json");
-    remove_if_exists(&db_json_path)?;
-    remove_if_exists(&index_json_path)?;
+    while let Some((file_path, contents)) = map.next_entry::<String, String>()
+        .map_err(|err| err.to_string())?
+    {
+        #[cfg(target_family = "windows")]
+        let file_path = sanitize_filename_for_windows(file_path);
+        let file_path = PathBuf::from(file_path);
+
+        if let Some(parent) = file_path.parent() {
+            create_dir_all(docset_path.join(parent))
+                .map_err(|err| format!("Could not create `{}`: {err}", parent.display()))?;
+        }
+
+        let mut file_name_html = file_path.as_os_str().to_owned();
+        file_name_html.push(".html");
+
+        let file_path = docset_path.join(&file_name_html);
+
+        let file = File::create(&file_path)
+            .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
+        let mut writer = BufWriter::new(file);
+
+        let sanitized_contents = sanitize_html_line(contents);
+
+        writer.write_all(sanitized_contents.trim().as_bytes())
+            .map_err(|err| format!("Could not write to `{}`: {err}", file_path.display()))?;
+
+        print!("Unpacked {unpacked_amount} files...\r");
+
+        unpacked_amount += 1;
+    }
+    println!();
+
+    Ok(())
+}
+
+struct FileVisitor {
+    docset_name: String
+}
+
+impl<'de> Visitor<'de> for FileVisitor {
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a string key and a string value")
+    }
+
+    fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
+    where
+        M: MapAccess<'de>,
+    {
+        build_docset_from_map_with_progress(&self.docset_name, map)
+            .map_err(|err| Error::custom(format!("{err}")))?;
+        Ok(())
+    }
+}
+
+fn build_docset_from_db_json(
+    docset_name: &String,
+) -> ResultS {
+    let docset_path = get_docset_path(&docset_name)?;
+    let db_json_path = docset_path
+        .join("db")
+        .with_extension("json");
+
+    let file = File::open(&db_json_path)
+        .map_err(|err| format!("Could not open `{}`: {err}", db_json_path.display()))?;
+
+    let reader = BufReader::new(file);
+
+    let mut db_json_deserializer = serde_json::Deserializer::from_reader(reader);
+
+    let file_visitor = FileVisitor { docset_name: docset_name.to_owned() };
+    db_json_deserializer.deserialize_map(file_visitor)
+        .map_err(|err| format!("Could not deserialize `{}`: {err}", db_json_path.display()))?;
+
+    remove_file(&db_json_path)
+        .map_err(|err| format!("Could not remove `{}` after building {docset_name}: {err}", db_json_path.display()))?;
 
     Ok(())
 }
@@ -219,18 +273,24 @@ where
     let mut successful_downloads = 0;
 
     while let Some(docset) = args_iter.next() {
+        // Don't print warnings when using with ls -n
+        if docset == "[downloaded]" {
+            continue;
+        }
+
         if !flag_force && is_docset_downloaded(docset)? {
             println!("\
-{YELLOW}WARNING{RESET}: `{docset}` is already downloaded. If you still want to update it, re-run this command with `--force`"
+{YELLOW}WARNING{RESET}: Docset `{docset}` is already downloaded. \
+If you still want to update it, re-run this command with `--force`"
             );
             continue;
         } else {
             if is_docset_in_docs_or_print_warning(docset, &docs) {
                 println!("Downloading `{docset}`...");
-                download_docset_tar_gz_with_progress(docset, &docs)?;
+                download_db_and_index_json_with_progress(docset, &docs)?;
 
                 println!("Extracting to `{}`...", get_docset_path(docset)?.display());
-                extract_docset_tar_gz(docset)?;
+                build_docset_from_db_json(docset)?;
 
                 successful_downloads += 1;
             }
@@ -244,4 +304,48 @@ where
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanitize_html() {
+        let html_text = r#"
+<summary>
+    <section id="method.new" class="method">
+        <span class="rightside">
+            <a class="srclink" href="https://doc.rust-lang.org/src/alloc/vec/mod.rs.html#420">source</a>
+            <span class="since" title="const since 1.39.0">
+                const: 1.39.0
+            </span>
+        </span>
+        <pre class="code-header" data-language="rust">
+            pub const fn new() -> Vec<T, Global>;
+        </pre>
+    </section>
+</summary>
+        "#;
+
+        let should_be = r#"
+<summary>
+    <section id="method.new" >
+        <span >
+            <a  href="https://doc.rust-lang.org/src/alloc/vec/mod.rs.html#420">source</a>
+            <span  >
+                const: 1.39.0
+            </span>
+        </span>
+        <pre  >
+            pub const fn new() -> Vec<T, Global>;
+        </pre>
+    </section>
+</summary>
+        "#;
+
+        let result = sanitize_html_line(html_text.to_owned());
+
+        assert_eq!(result, should_be);
+    }
 }

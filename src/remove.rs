@@ -4,7 +4,7 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{get_docset_path, is_docset_downloaded, is_name_allowed, get_local_docsets};
+use crate::common::{get_docset_path, is_docset_downloaded, get_local_docsets};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
 fn show_remove_help() -> ResultS {
@@ -19,6 +19,24 @@ fn show_remove_help() -> ResultS {
         --help                      Display help message."
     );
     Ok(())
+}
+
+pub fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
+    let docset = docset_name.as_ref();
+
+    let has_slashes = {
+        #[cfg(target_family = "windows")]
+        { docset.find("\\").is_some() || docset.find("/").is_some() }
+
+        #[cfg(target_family = "unix")]
+        { docset.find("/").is_some() }
+    };
+    let starts_with_tilde = docset.starts_with('~');
+    let has_dollars = docset.find('$').is_some();
+    let starts_with_dot = docset.starts_with('.');
+    let has_dots = docset.find("..").is_some();
+
+    !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
 
 pub fn remove<Args>(mut args: Args) -> ResultS
@@ -67,4 +85,30 @@ where
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanitize_names() {
+         let bad_name_path = "/what";
+         let bad_name_home = "~";
+         let bad_name_dots = "..";
+         let bad_name_env  = "$HOME";
+
+         let good_name_simple  = "hello";
+         let good_name_version = "qt~6.1";
+         let good_name_long    = "scala~2.13_reflection";
+
+        assert!(!is_name_allowed(&bad_name_path));
+        assert!(!is_name_allowed(&bad_name_home));
+        assert!(!is_name_allowed(&bad_name_dots));
+        assert!(!is_name_allowed(&bad_name_env));
+
+        assert!(is_name_allowed(&good_name_simple));
+        assert!(is_name_allowed(&good_name_version));
+        assert!(is_name_allowed(&good_name_long));
+    }
 }

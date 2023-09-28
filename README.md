@@ -12,15 +12,21 @@ pager or markdown reader.
 
 ## Usage
 
+Remember that running anything with `--help` prints a more detailed usage:
+ ```console
+ $ dedoc [subcommand] --help
+ ```
+
 To start using `dedoc` and fetch all latest available docsets, first run:
 ```console
 $ dedoc fetch
 Fetching `https://devdocs.io/docs.json`...
-Writing `docs.json`...
+Writing `/home/user/.dedoc/docs.json`...
 Fetching has successfully finished.
 ```
 
-You can use `-f` flag to overwrite the fetched document if you encounter any issues.
+You can use `-f` flag to overwrite the fetched document if you encounter any
+issues.
 
  To see available docsets, run:
 ```console
@@ -29,19 +35,26 @@ angular, ansible, apache_http_server, astro, async, ...
 ```
 
 Which will list all docsets available to download from file which you
-previously fetched. If you need version-specific docs, like
-`vue~3`/`~2`, use `-a` flag, which will list *everything*.
+previously fetched. If you need version-specific docs, like `vue~3`/`~2`, use
+`-a` flag, which will list *everything*.
+
+Using `-l` flag will show only local docsets, and `-n` will print each docset
+on a separate line.
 
 Download the documentation:
 ```console
 $ dedoc download rust
 Downloading `rust`...
-Received 9335861 of 9335861 bytes...
+Received 46313067 bytes, file 1 of 2...
+Received 3319078 bytes, file 2 of 2...
 Extracting to `/home/user/.dedoc/docsets/rust`...
+Unpacked 1899 files...
 Install has successfully finished.
 ```
 
 This will make the documentation available locally as a bunch of HTML pages.
+
+You can use `-f` flag here too to forcefully overwrite the documentation.
 
 To search, for instance, for `BufReader` from `rust`, run:
 ```console
@@ -49,47 +62,41 @@ $ dedoc search rust bufreader
 Searching for `bufreader`...
 Exact matches in `rust`:
    1  std/io/struct.bufreader
+         2  #method.borrow
+         3  #method.borrow_mut
+         4  #method.buffer
+         5  #method.by_ref
+         ...
 ```
 
-You will get search results which are pages with filenames that match your
-query. If you need a more thorough search, you can use `-p` flag, which will
-look inside of the files as well.
+You will get search results which are pages that match your query.
 
-Finally, to see the page you can either use `dedoc open`:
+Results that start with `#` denote fragments. Opening them will result in the
+output of only that specific fragment. Likewise, opening a page will show the
+entire page.
+
+For a more detailed search, use the `-p` flag. It makes search behave similarly
+to the `grep` command, and will look within all files, find all matches, and
+display them with some context around the found section.
+
+Use `-i` to perform case-insensitive search, and `-w` to search for the whole
+sentence.
+
+Finally, to see the page, you can either use `open`:
 ```console
 $ dedoc open rust std/io/struct.bufreader
 ```
 
-Or use `-o` flag, which will open n-th matched page:
+Or use `-o` flag with `search`, which will open n-th matched page or fragment:
 ```console
 $ dedoc search rust bufreader -o 1
 ```
 
-You would probably like to use `ss` instead of `search`, pipe output to a pager,
-like `less` and forcefully enable colors with `-c y` if your pager supports it,
-which turns the final command into:
+You would probably like to use `ss` instead of `search`, pipe output to a pager
+or markdown reader, like `less` and forcefully enable colors with `-c y`,
+turning the final command into:
 ```console
 $ dedoc -c y ss rust bufreader -o 1 | less -r
 ```
 
-## Help
-
-```console
-$ dedoc --help
-USAGE
-    dedoc <subcommand> [args]
-    Search DevDocs pages from terminal.
-
-SUBCOMMANDS
-    fetch, ft                       Fetch available docsets.
-    list, ls                        Show available docsets.
-    download, dl                    Download docsets.
-    remove, rm                      Delete docsets.
-    search, ss                      List pages that match your query.
-    open, op                        Display specified pages.
-
-OPTIONS
-    -c, --color <on/off/auto>       Use color when displaying output.
-    -v, --version                   Display version.
-        --help                      Display help message.
-```
+Happy coding!

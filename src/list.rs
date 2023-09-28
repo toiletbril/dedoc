@@ -13,7 +13,7 @@ fn show_list_help() -> ResultS {
     Show available docsets.
 
 {GREEN}OPTIONS{RESET}
-    -l, --local                     Only show local docsets.
+    -l, --local                     Show only local docsets.
     -a, --all                       Show all version-specific docsets.
     -n, --newlines                  Print each docset on a separate line.
         --help                      Display help message."
