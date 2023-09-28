@@ -26,7 +26,7 @@ fn show_search_help() -> ResultS {
 {GREEN}OPTIONS{RESET}
     -w, --whole                     Search for the whole sentence.
     -i, --ignore-case               Ignore character case.
-    -p, --precise                   Look inside files (like 'grep').
+    -p, --precise                   Look inside files (like `grep`).
     -o, --open <number>             Open n-th result.
         --help                      Display help message."
     );
