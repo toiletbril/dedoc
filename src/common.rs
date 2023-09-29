@@ -143,24 +143,34 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
     style
 }
 
-fn find_fragments(tagged_lines: &Vec<TaggedLine<Vec<RichAnnotation>>>) -> Vec<(String, usize)> {
-    // Not a HashMap because it needs to be in order.
-    let mut fragment_offsets: Vec<(String, usize)> = vec![];
+fn get_fragment_bounds(
+    tagged_lines: &Vec<TaggedLine<Vec<RichAnnotation>>>,
+    fragment: &String
+) -> (Option<usize>, Option<usize>)
+{
+    let mut current_fragment_line = None;
+    let mut found_fragment = false;
+
     let mut line_number = 0;
 
     for tagged_line in tagged_lines {
         for tagged_line_element in tagged_line.iter() {
             match tagged_line_element {
-                FragmentStart(fragment) => {
-                    fragment_offsets.push((fragment.to_owned(), line_number));
+                FragmentStart(temp_fragment) if temp_fragment == fragment => {
+                    current_fragment_line = Some(line_number);
+                    found_fragment = true;
                 }
-                Str(_) => {}
+                FragmentStart(_) if found_fragment => {
+                    let next_fragment_line = Some(line_number);
+                    return (current_fragment_line, next_fragment_line);
+                }
+                _ => {}
             }
         }
         line_number += 1;
     }
 
-    fragment_offsets
+    (current_fragment_line, None)
 }
 
 pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
@@ -169,41 +179,37 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
     let reader = BufReader::new(file);
 
     let rich_page = from_read_rich(reader, 80);
-    let fragments = find_fragments(&rich_page);
 
+    let mut current_fragment_line = 0;
+    let mut next_fragment_line = 0;
+
+    let mut is_fragment_found = false;
     let mut has_next_fragment = false;
-
-    let mut current_fragment_line: usize = 0;
-    let mut next_fragment_line: usize = 0;
 
     // If there is a fragment, determine current fragment offset and print
     // everything until the next fragment.
     if let Some(fragment) = fragment {
-        let mut found_current_element = false;
+        let (current_fragment, next_fragment) = get_fragment_bounds(&rich_page, &fragment);
+        if let Some(line) = current_fragment {
+            current_fragment_line = line;
+            is_fragment_found = true;
+        }
 
-        for fragment_entry in fragments {
-            if found_current_element {
-                next_fragment_line = fragment_entry.1;
-                has_next_fragment = true;
-                break;
-            }
-
-            if *fragment == fragment_entry.0 {
-                current_fragment_line = fragment_entry.1;
-                found_current_element = true;
-            }
+        if let Some(line) = next_fragment {
+            next_fragment_line = line;
+            has_next_fragment = true;
         }
     }
 
-    if has_next_fragment {
+    if is_fragment_found {
         println!("{GRAYER}...{RESET}")
     }
 
     let mut skipped_empty_lines = false;
 
     for (i, rich_line) in rich_page.iter().enumerate() {
-        if i < current_fragment_line { continue; }
-        if has_next_fragment && i > next_fragment_line { break; }
+        if is_fragment_found && i < current_fragment_line  { continue; }
+        if has_next_fragment && i >= next_fragment_line { break; }
 
         let tagged_strings: Vec<&TaggedString<Vec<RichAnnotation>>> = rich_line
             .tagged_strings()
