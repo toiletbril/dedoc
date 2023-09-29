@@ -49,8 +49,7 @@ fn download_db_and_index_json_with_progress(
             }
 
             for (file_name, i) in [("db.json", 1), ("index.json", 2)] {
-                let file_path = docset_path
-                    .join(file_name);
+                let file_path = docset_path.join(file_name);
 
                 let file = File::create(&file_path)
                     .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;

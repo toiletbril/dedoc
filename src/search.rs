@@ -4,7 +4,6 @@ use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{from_reader, to_writer};
 
 use toiletcli::flags;
 use toiletcli::flags::*;
@@ -67,7 +66,6 @@ struct SearchOptions<'a> {
 }
 
 #[derive(Serialize, Deserialize)]
-#[derive(PartialEq)]
 struct SearchCache<'a> {
     exact_results: Cow<'a, [ExactResult]>,
     vague_results: Cow<'a, [VagueResult]>,
@@ -81,7 +79,7 @@ fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> 
         let cache_options_file = File::open(cache_options_path).ok()?;
         let cache_options_reader = BufReader::new(cache_options_file);
 
-        let cached_search_options: SearchOptions = from_reader(cache_options_reader).ok()?;
+        let cached_search_options: SearchOptions = serde_json::from_reader(cache_options_reader).ok()?;
 
         if cached_search_options != *search_options {
             return None;
@@ -93,7 +91,7 @@ fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> 
     let cache_file = File::open(cache_path).ok()?;
     let cache_reader = BufReader::new(cache_file);
 
-    let cache: SearchCache = from_reader(cache_reader).ok()?;
+    let cache: SearchCache = serde_json::from_reader(cache_reader).ok()?;
 
     Some(cache)
 }
@@ -107,22 +105,22 @@ fn cache_search_results(
     {
         let cache_options_path = program_dir.join("search_cache_options.json");
         let cache_options_file = File::create(&cache_options_path)
-            .map_err(|err| format!("Could not open cache options at `{}`: {err}", cache_options_path.display()))?;
+            .map_err(|err| format!("Could not create cache options at `{}`: {err}", cache_options_path.display()))?;
 
         let cache_options_writer = BufWriter::new(cache_options_file);
 
-        to_writer(cache_options_writer, &search_options)
+        serde_json::to_writer(cache_options_writer, &search_options)
             .map_err(|err| format!("Could not write cache options at `{}`: {err}", cache_options_path.display()))?;
     }
 
     {
         let cache_path = program_dir.join("search_cache.json");
         let cache_file = File::create(&cache_path)
-            .map_err(|err| format!("Could not open cache at `{}`: {err}", cache_path.display()))?;
+            .map_err(|err| format!("Could not create cache at `{}`: {err}", cache_path.display()))?;
 
         let cache_writer = BufWriter::new(cache_file);
 
-        to_writer(cache_writer, &search_cache)
+        serde_json::to_writer(cache_writer, &search_cache)
             .map_err(|err| format!("Could not write cache at `{}`: {err}", cache_path.display()))?;
     }
 
@@ -155,7 +153,7 @@ pub fn search_docset_in_filenames(
     let index_json_path = docset_path.join("index.json");
 
     let index_exists = index_json_path.try_exists()
-        .map_err(|err| format!("Could not check `{}`: {err}", index_json_path.display()))?;
+        .map_err(|err| format!("Could not check if `{}` exists: {err}", index_json_path.display()))?;
 
     if !index_exists {
         let message = format!("\
@@ -170,7 +168,7 @@ Please redownload the docset with `download {docset_name} --force`."
 
     let reader = BufReader::new(file);
 
-    let index: IndexJson = from_reader(reader)
+    let index: IndexJson = serde_json::from_reader(reader)
         .map_err(|err| format!("Could not deserialize `{}`: {err}", index_json_path.display()))?;
 
     let mut items = vec![];
@@ -189,8 +187,7 @@ Please redownload the docset with `download {docset_name} --force`."
                     Ok(item)
                 } else {
                     Err(format!("Invalid page path: {}", entry.path))
-                }?
-                .to_owned();
+                }?.to_owned();
 
                 let fragment = path_split.next()
                     .map(|s| s.to_owned());
@@ -209,8 +206,7 @@ Please redownload the docset with `download {docset_name} --force`."
                     Ok(item)
                 } else {
                     Err(format!("Invalid page path: {}", entry.path))
-                }?
-                .to_owned();
+                }?.to_owned();
 
                 let fragment = path_split.next()
                     .map(|s| s.to_owned());
@@ -251,10 +247,12 @@ fn get_context_around_query(html_line: &String, index: usize, query_len: usize) 
 pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
     let item = path
         .strip_prefix(&docset_path)
-        .map_err(|err| err.to_string())?;
-    let item = item.with_extension("");
+        .map_err(|err| err.to_string())?
+        .with_extension("")
+        .display()
+        .to_string();
 
-    Ok(item.display().to_string())
+    Ok(item)
 }
 
 pub fn search_docset_precisely(
@@ -333,7 +331,9 @@ pub fn search_docset_precisely(
                     }
 
                     if let Some(index) = string_buffer.find(query) {
-                        let context = get_context_around_query(&string_buffer, index, query_len);
+                        let context =
+                            get_context_around_query(&string_buffer, index, query_len);
+
                         contexts.push(context);
                     }
 
@@ -341,11 +341,8 @@ pub fn search_docset_precisely(
                 }
 
                 if !contexts.is_empty() {
-                    let vague_result = VagueResult {
-                        item: convert_path_to_item(file_path, original_path)?,
-                        contexts: contexts,
-                    };
-
+                    let item = convert_path_to_item(file_path, original_path)?;
+                    let vague_result = VagueResult { item, contexts };
                     vague_results.push(vague_result);
                 }
             }
@@ -451,13 +448,15 @@ where
     }
 
     let query = {
-        let mut query = args.collect::<Vec<String>>().join(" ");
+        let mut merged_args = args.collect::<Vec<String>>()
+            .join(" ");
+
         if flag_whole {
-            query.insert(0, ' ');
-            query.push(' ');
-            query
+            merged_args.insert(0, ' ');
+            merged_args.push(' ');
+            merged_args
         } else {
-            query
+            merged_args
         }
     };
 

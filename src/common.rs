@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedString, TaggedLineElement::*};
-use html2text::from_read_rich;
 
 use toiletcli::colors::{Color, Style};
 
@@ -178,7 +177,7 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
 
-    let rich_page = from_read_rich(reader, 80);
+    let rich_page = html2text::from_read_rich(reader, 80);
 
     let mut current_fragment_line = 0;
     let mut next_fragment_line = 0;
@@ -209,7 +208,7 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
 
     for (i, rich_line) in rich_page.iter().enumerate() {
         if is_fragment_found && i < current_fragment_line  { continue; }
-        if has_next_fragment && i >= next_fragment_line { break; }
+        if has_next_fragment && i > next_fragment_line { break; }
 
         let tagged_strings: Vec<&TaggedString<Vec<RichAnnotation>>> = rich_line
             .tagged_strings()
