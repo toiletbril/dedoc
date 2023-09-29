@@ -23,15 +23,16 @@ pub const DEFAULT_USER_AGENT: &str = "dedoc";
 
 pub const DOC_PAGE_EXTENSION: &str = "html";
 
-pub const RED:       Color = Color::Red;
-pub const GREEN:     Color = Color::Green;
-pub const YELLOW:    Color = Color::Yellow;
-pub const GRAY:      Color = Color::BrightBlack;
-pub const GRAYER:    Color = Color::Byte(240);
-pub const GRAYEST:   Color = Color::Byte(234);
-pub const BOLD:      Style = Style::Bold;
-pub const UNDERLINE: Style = Style::Underlined;
-pub const RESET:     Style = Style::Reset;
+pub const RED:        Color = Color::Red;
+pub const GREEN:      Color = Color::Green;
+pub const YELLOW:     Color = Color::Yellow;
+pub const LIGHT_GRAY: Color = Color::Byte(248);
+pub const GRAY:       Color = Color::BrightBlack;
+pub const GRAYER:     Color = Color::Byte(240);
+pub const GRAYEST:    Color = Color::Byte(234);
+pub const BOLD:       Style = Style::Bold;
+pub const UNDERLINE:  Style = Style::Underlined;
+pub const RESET:      Style = Style::Reset;
 
 #[macro_export]
 macro_rules! debug_println {
@@ -134,7 +135,7 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
                 style.push_str(&format!("{}", Color::BrightBlack));
             }
             RichAnnotation::Preformat(_) => {
-                style.push_str(&format!("{}{}", Color::BrightBlack, GRAYEST.bg()));
+                style.push_str(&format!("{}{}", LIGHT_GRAY, GRAYEST.bg()));
             }
         }
     }

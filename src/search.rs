@@ -13,7 +13,8 @@ use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
     is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded
 };
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, GRAY, GRAYER, GRAYEST, RESET, YELLOW, DOC_PAGE_EXTENSION};
+use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
+                    RESET, YELLOW, DOC_PAGE_EXTENSION};
 
 fn show_search_help() -> ResultS {
     println!(
@@ -372,7 +373,7 @@ pub fn print_vague_search_results(search_results: &[VagueResult], mut start_inde
         println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}", result.item);
 
         for context in &result.contexts {
-            println!("{TAB}{TAB}{GRAYER}...{RESET}{GRAY}{}{}{RESET}{GRAYER}...{RESET}", GRAYEST.bg(), context);
+            println!("{TAB}{TAB}{GRAYER}...{RESET}{LIGHT_GRAY}{}{}{RESET}{GRAYER}...{RESET}", GRAYEST.bg(), context);
         }
 
         start_index += 1;
