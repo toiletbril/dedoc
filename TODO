@@ -1,8 +1,13 @@
 * fuzzy search
 
+* transpile html to intermediate markdown when building docset with `download`
+    * allow specifying default page width
+    * intermediate markdown should be markdown with colors baked in
+    * when opening pages, parse colors based on --color setting, output normal markdown
+
 * features to lower binary size
 
-* interactive search
+* interactively search whole docset
     * literally open a manpage out of html with own pager
 
 * check other devdocs browsers docsets
