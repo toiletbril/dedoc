@@ -110,6 +110,7 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
+#[inline]
 pub fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String> {
     let mut path_split = path.split('#');
 

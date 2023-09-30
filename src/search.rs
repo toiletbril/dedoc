@@ -330,6 +330,7 @@ pub fn search_docset_precisely(
                 }
             }
         }
+
         Ok((exact_files, vague_results))
     }
 
@@ -408,7 +409,7 @@ where
     if flag_help { return show_search_help(); }
 
     if !is_docs_json_exists()? {
-        return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
+        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
     let mut args = args.into_iter();

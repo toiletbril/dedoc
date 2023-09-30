@@ -6,7 +6,7 @@ use toiletcli::flags::*;
 use crate::common::ResultS;
 use crate::common::{
     deserialize_docs_json, is_docset_in_docs_or_print_warning, print_page_from_docset, print_docset_file,
-    split_to_item_and_fragment
+    split_to_item_and_fragment, is_docs_json_exists
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
@@ -39,9 +39,14 @@ where
     let args = parse_flags(&mut args, &mut flags)?;
     if flag_help || args.is_empty() { return show_open_help(); }
 
+
     if flag_html {
         let path = PathBuf::from(args.join(" "));
         return print_docset_file(path, None);
+    }
+
+    if !is_docs_json_exists()? {
+        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
     let mut args = args.into_iter();

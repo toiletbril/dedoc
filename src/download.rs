@@ -265,7 +265,7 @@ where
     if flag_help || args.is_empty() { return show_download_help(); }
 
     if !is_docs_json_exists()? {
-        return Err("`docs.json` does not exist. Please run `fetch` first".to_string());
+        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
     let docs = deserialize_docs_json()?;
