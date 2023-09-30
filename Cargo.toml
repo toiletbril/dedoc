@@ -1,31 +1,31 @@
 [package]
-name = "dedoc"
-version = "0.2.0"
-description = "Terminal-based viewer for DevDocs documentation"
-authors = ["toiletbril"]
-readme = "README.md"
+name         = "dedoc"
+version      = "0.2.1"
+description  = "Terminal-based viewer for DevDocs documentation"
+authors      = ["toiletbril"]
+readme       = "README.md"
 
-edition = "2021"
+edition      = "2021"
 rust-version = "1.66"
 
-license = "GPLv3"
-keywords = ["docs", "cli"]
+license      = "GPLv3"
+keywords     = ["docs", "cli"]
 
 [profile.release]
 opt-level = 3
-panic = "abort"
-strip = true
-lto = true
+panic     = "abort"
+strip     = true
+lto       = true
 
 [profile.profile]
 inherits = "release"
-panic = "unwind"
-strip = false
-debug = true
+panic    = "unwind"
+strip    = false
+debug    = true
 
 [dependencies]
-toiletcli = { version = "0.9.4", features = ["colors", "flags"] }
-html2text = { version = "0.6.0", features = ["ansi_colours"] }
-serde = { version = "1.0.188", features = ["derive"] }
+toiletcli  = { version = "0.9.4", default-features = false, features = ["colors", "flags"] }
+attohttpc  = { version = "0.26.1", default-features = false, features = ["tls"] }
+serde      = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.106"
-attohttpc = { version = "0.26.1", features = ["tls-native"] }
+html2text  = "0.6.0"
