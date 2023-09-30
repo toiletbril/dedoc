@@ -178,11 +178,11 @@ Please redownload the docset with `download {docset_name} --force`."
         let query = query.to_lowercase();
 
         for entry in index.entries {
-            let name = entry.name.to_lowercase();
-            let path = entry.path.to_lowercase();
+            let lowercase_name = entry.name.to_lowercase();
+            let lowercase_path = entry.path.to_lowercase();
 
-            if name.contains(&query) || path.contains(&query) {
-                let mut path_split = path.split('#');
+            if lowercase_name.contains(&query) || lowercase_path.contains(&query) {
+                let mut path_split = entry.path.split('#');
 
                 let item = if let Some(item) = path_split.next() {
                     Ok(item)
