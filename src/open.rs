@@ -60,7 +60,18 @@ where
             return Err("No page specified. Try `open --help` for more information.".to_string());
         }
 
-        print_page_from_docset(&docset, &query, None)?;
+        let mut query_split = query.split('#');
+
+        let item = if let Some(item) = query_split.next() {
+            Ok(item)
+        } else {
+            Err(format!("Invalid page query: {}", query))
+        }?.to_owned();
+
+        let fragment = query_split.next()
+            .map(|s| s.to_owned());
+
+        print_page_from_docset(&docset, &item, fragment.as_ref())?;
     }
 
     Ok(())
