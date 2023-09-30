@@ -112,32 +112,35 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
 
 fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
     let mut style = String::new();
+    let mut temp_style;
 
     for annotation in tagged_string_tags {
-        match *annotation {
-            RichAnnotation::Default => (),
+        temp_style = match *annotation {
+            RichAnnotation::Default => continue,
             RichAnnotation::Link(_) => {
-                style.push_str(&format!("{}", Color::Blue));
+                format!("{}", Color::Blue)
             }
             RichAnnotation::Image(_) => {
-                style.push_str(&format!("{}", Color::BrightBlue));
+                format!("{}", Color::BrightBlue)
             }
             RichAnnotation::Emphasis => {
-                style.push_str(&format!("{}", Style::Bold));
+                format!("{}", Style::Bold)
             }
             RichAnnotation::Strong => {
-                style.push_str(&format!("{}", Style::Bold));
+                format!("{}", Style::Bold)
             }
             RichAnnotation::Strikeout => {
-                style.push_str(&format!("{}", Style::Strikethrough));
+                format!("{}", Style::Strikethrough)
             },
             RichAnnotation::Code => {
-                style.push_str(&format!("{}", Color::BrightBlack));
+                format!("{}", Color::BrightBlack)
             }
             RichAnnotation::Preformat(_) => {
-                style.push_str(&format!("{}{}", LIGHT_GRAY, GRAYEST.bg()));
+                format!("{}{}", LIGHT_GRAY, GRAYEST.bg())
             }
-        }
+        };
+
+        style.push_str(&temp_style)
     }
 
     style
