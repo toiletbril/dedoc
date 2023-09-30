@@ -82,15 +82,21 @@ display them with some context around the found section.
 Use `-i` to perform case-insensitive search, and `-w` to search for the whole
 sentence.
 
-Finally, to see the page, you can either use `open`:
+Finally, to see the page, you can run `open`:
 ```console
 $ dedoc open rust std/io/struct.bufreader
 ```
 
-Or use `-o` flag with `search`, which will open n-th matched page or fragment:
+Use `-h` flag with `open` to make `dedoc` behave like a HTML to markdown
+transpiler. It will interpret supplied arguments as a path to HTML file.
+
+More conveniently, append `-o` flag the your previous `search` command, which
+will open n-th matched page or fragment:
 ```console
 $ dedoc search rust bufreader -o 1
 ```
+
+This will be as fast as `open`, due to search caching.
 
 You would probably like to use `ss` instead of `search`, pipe output to a pager
 or markdown reader, like `less` and forcefully enable colors with `-c y`,
