@@ -13,8 +13,15 @@ keywords = ["docs", "cli"]
 
 [profile.release]
 opt-level = 3
+panic = "abort"
 strip = true
 lto = true
+
+[profile.profile]
+inherits = "release"
+panic = "unwind"
+strip = false
+debug = true
 
 [dependencies]
 toiletcli = { version = "0.9.4", features = ["colors", "flags"] }
