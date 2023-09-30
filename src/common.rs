@@ -146,11 +146,14 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
     style
 }
 
+// This function ignores fragment's character case, to support --case-insensitive
 fn get_fragment_bounds(
     tagged_lines: &Vec<TaggedLine<Vec<RichAnnotation>>>,
     fragment: &String
 ) -> (Option<usize>, Option<usize>)
 {
+    let lowercase_fragment = fragment.to_lowercase();
+
     let mut current_fragment_line = None;
     let mut found_fragment = false;
 
@@ -159,7 +162,7 @@ fn get_fragment_bounds(
     for tagged_line in tagged_lines {
         for tagged_line_element in tagged_line.iter() {
             match tagged_line_element {
-                FragmentStart(temp_fragment) if temp_fragment == fragment => {
+                FragmentStart(temp_fragment) if temp_fragment.to_lowercase() == lowercase_fragment => {
                     current_fragment_line = Some(line_number);
                     found_fragment = true;
                 }
