@@ -110,6 +110,21 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
+pub fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String> {
+    let mut path_split = path.split('#');
+
+    let item = if let Some(item) = path_split.next() {
+        Ok(item)
+    } else {
+        Err(format!("Invalid page path: {}", path))
+    }?.to_owned();
+
+    let fragment = path_split.next()
+        .map(|s| s.to_owned());
+
+    Ok((item, fragment))
+}
+
 fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
     let mut style = String::new();
     let mut temp_style;

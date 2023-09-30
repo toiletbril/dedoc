@@ -5,7 +5,8 @@ use toiletcli::flags::*;
 
 use crate::common::ResultS;
 use crate::common::{
-    deserialize_docs_json, is_docset_in_docs_or_print_warning, print_page_from_docset, print_docset_file
+    deserialize_docs_json, is_docset_in_docs_or_print_warning, print_page_from_docset, print_docset_file,
+    split_to_item_and_fragment
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
@@ -60,16 +61,7 @@ where
             return Err("No page specified. Try `open --help` for more information.".to_string());
         }
 
-        let mut query_split = query.split('#');
-
-        let item = if let Some(item) = query_split.next() {
-            Ok(item)
-        } else {
-            Err(format!("Invalid page query: {}", query))
-        }?.to_owned();
-
-        let fragment = query_split.next()
-            .map(|s| s.to_owned());
+        let (item, fragment) = split_to_item_and_fragment(query)?;
 
         print_page_from_docset(&docset, &item, fragment.as_ref())?;
     }

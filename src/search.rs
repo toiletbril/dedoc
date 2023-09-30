@@ -11,7 +11,7 @@ use toiletcli::flags::*;
 use crate::common::ResultS;
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
-    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded
+    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded, split_to_item_and_fragment
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
                     RESET, YELLOW, DOC_PAGE_EXTENSION};
@@ -182,16 +182,7 @@ Please redownload the docset with `download {docset_name} --force`."
             let lowercase_path = entry.path.to_lowercase();
 
             if lowercase_name.contains(&query) || lowercase_path.contains(&query) {
-                let mut path_split = entry.path.split('#');
-
-                let item = if let Some(item) = path_split.next() {
-                    Ok(item)
-                } else {
-                    Err(format!("Invalid page path: {}", entry.path))
-                }?.to_owned();
-
-                let fragment = path_split.next()
-                    .map(|s| s.to_owned());
+                let (item, fragment) = split_to_item_and_fragment(entry.path)?;
 
                 let exact_match = ExactResult { item, fragment };
 
@@ -201,16 +192,7 @@ Please redownload the docset with `download {docset_name} --force`."
     } else {
         for entry in index.entries {
             if entry.name.contains(query) || entry.path.contains(query) {
-                let mut path_split = entry.path.split('#');
-
-                let item = if let Some(item) = path_split.next() {
-                    Ok(item)
-                } else {
-                    Err(format!("Invalid page path: {}", entry.path))
-                }?.to_owned();
-
-                let fragment = path_split.next()
-                    .map(|s| s.to_owned());
+                let (item, fragment) = split_to_item_and_fragment(entry.path)?;
 
                 let exact_match = ExactResult { item, fragment };
 
