@@ -18,8 +18,7 @@ mod search;
 mod list;
 mod fetch;
 
-mod tests;
-mod debug;
+mod test;
 
 use open::open;
 use remove::remove;
@@ -27,6 +26,9 @@ use download::download;
 use search::search;
 use list::list;
 use fetch::fetch;
+
+#[cfg(debug_assertions)]
+use test::test;
 
 fn show_version() -> ResultS {
     #[cfg(debug_assertions)]
@@ -72,7 +74,8 @@ fn entry<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    dedoc_debug_println!("{RED}Using debug build of {PROGRAM_NAME} v{VERSION}.{RESET}");
+    dedoc_debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
+    dedoc_debug_println!("Run `test` to perform tests.");
 
     let mut flag_version;
     let mut flag_help;
@@ -107,6 +110,7 @@ where
         "rm" | "remove"   => remove(args),
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
+        "test" if cfg!(debug_assertions) => test(args),
         other => {
             Err(format!("Unknown subcommand `{other}`"))
         }
@@ -117,15 +121,12 @@ fn main() -> ExitCode {
     let mut args = std::env::args();
     let _ = &args.next().expect("Program path is provided");
 
-    #[cfg(debug_assertions)]
-    unsafe { debug::set_output_to_stdout(); }
-
     match entry(&mut args) {
         Err(mut err) => {
             if !err.ends_with(['.', '?', ')']) {
                 err += ". Try `--help` for more information.";
             }
-            dedoc_println!("{RED}ERROR{RESET}: {err}");
+            println!("{RED}ERROR{RESET}: {err}");
 
             ExitCode::FAILURE
         }

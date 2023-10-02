@@ -10,10 +10,8 @@ use crate::common::{
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
-use crate::dedoc_println;
-
 fn show_open_help() -> ResultS {
-    dedoc_println!(
+    println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} open{RESET} [-h] <docset> <page>

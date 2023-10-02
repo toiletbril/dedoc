@@ -16,10 +16,8 @@ use crate::common::{
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
                     RESET, YELLOW, DOC_PAGE_EXTENSION};
 
-use crate::dedoc_println;
-
 fn show_search_help() -> ResultS {
-    dedoc_println!(
+    println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} search{RESET} [-wipo] <docset> <query>
@@ -355,10 +353,10 @@ const HALF_TAB: &str = "  ";
 
 fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
     for result in search_results {
-        dedoc_println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}", result.item);
+        println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}", result.item);
 
         for context in &result.contexts {
-            dedoc_println!("{TAB}{TAB}{GRAYER}...{RESET}{LIGHT_GRAY}{}{}{RESET}{GRAYER}...{RESET}", GRAYEST.bg(), context);
+            println!("{TAB}{TAB}{GRAYER}...{RESET}{LIGHT_GRAY}{}{}{RESET}{GRAYER}...{RESET}", GRAYEST.bg(), context);
         }
 
         start_index += 1;
@@ -374,12 +372,12 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
     for result in search_results {
         if let Some(fragment) = &result.fragment {
             if result.item == prev_item {
-                dedoc_println!("{TAB}{HALF_TAB}{GRAYER}{start_index:>4}{HALF_TAB}{GRAY}#{}{RESET}", fragment);
+                println!("{TAB}{HALF_TAB}{GRAYER}{start_index:>4}{HALF_TAB}{GRAY}#{}{RESET}", fragment);
             } else {
-                dedoc_println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}, #{}{RESET}", result.item, fragment);
+                println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}, #{}{RESET}", result.item, fragment);
             }
         } else {
-            dedoc_println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}", result.item);
+            println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}", result.item);
         }
 
         prev_item = &result.item;
@@ -426,7 +424,7 @@ where
 
     if !is_docset_downloaded(&docset)? {
         if is_docset_in_docs_or_print_warning(&docset, &docs) {
-            dedoc_println!("\
+            println!("\
 {YELLOW}WARNING{RESET}: Docset `{docset}` is not downloaded. Try running `download {docset}`."
             );
         }
@@ -463,7 +461,7 @@ where
 
     if flag_open_is_empty {
         // Printing query is needed to let you know if you messed up any flags
-        dedoc_println!("Searching for `{query}`...");
+        println!("Searching for `{query}`...");
     }
 
     if flag_precise {
@@ -479,7 +477,7 @@ where
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| dedoc_println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
 
             (exact.into(), vague.into())
         };
@@ -489,7 +487,7 @@ where
         if !flag_open_is_empty {
             match open_number {
                 Some(n) if n < 1 || n > exact_results_offset + vague_results.len() => {
-                    dedoc_println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
+                    println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
                 Some(n) if n <= exact_results_offset => {
                     let result = &exact_results[n - 1];
@@ -500,23 +498,23 @@ where
                     return print_page_from_docset(&docset, &result.item, None);
                 }
                 _ => {
-                    dedoc_println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
+                    println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
                 }
             }
         }
 
         if !exact_results.is_empty() {
-            dedoc_println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+            println!("{BOLD}Exact matches in `{docset}`{RESET}:");
             print_search_results(&exact_results, 1)?;
         } else {
-            dedoc_println!("{BOLD}No exact matches in `{docset}`{RESET}.");
+            println!("{BOLD}No exact matches in `{docset}`{RESET}.");
         }
 
         if !vague_results.is_empty() {
-            dedoc_println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
+            println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
             print_vague_search_results(&vague_results, exact_results_offset + 1)?;
         } else {
-            dedoc_println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
+            println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
         }
 
         return Ok(());
@@ -532,7 +530,7 @@ where
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| dedoc_println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
 
             exact.into()
         };
@@ -540,23 +538,23 @@ where
         if !flag_open_is_empty {
             match open_number {
                 Some(n) if n < 1 || n > results.len() => {
-                    dedoc_println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
+                    println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
                 }
                 Some(n) => {
                     let result = &results[n - 1];
                     return print_page_from_docset(&docset, &result.item, result.fragment.as_ref());
                 }
                 _ => {
-                    dedoc_println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
+                    println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
                 }
             }
         }
 
         if !results.is_empty() {
-            dedoc_println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+            println!("{BOLD}Exact matches in `{docset}`{RESET}:");
             return print_search_results(&results, 1);
         } else {
-            dedoc_println!("{BOLD}No exact matches in `{docset}`{RESET}.");
+            println!("{BOLD}No exact matches in `{docset}`{RESET}.");
         }
     }
 

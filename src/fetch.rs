@@ -16,10 +16,8 @@ use crate::common::{
     BOLD, DEFAULT_DOCS_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
 
-use crate::dedoc_println;
-
 fn show_fetch_help() -> ResultS {
-    dedoc_println!(
+    println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} fetch{RESET} [-f]
@@ -89,11 +87,11 @@ where
 {YELLOW}WARNING{RESET}: It seems that your `docs.json` was updated less than a week ago. \
 Run `fetch --force` to ignore this warning."
         );
-        dedoc_println!("{}", message);
+        println!("{}", message);
         return Ok(());
     }
 
-    dedoc_println!("Fetching `{DEFAULT_DOCS_JSON_LINK}`...");
+    println!("Fetching `{DEFAULT_DOCS_JSON_LINK}`...");
     let docs = fetch_docs()?;
 
     let program_path = get_program_directory()?;
@@ -103,10 +101,10 @@ Run `fetch --force` to ignore this warning."
         create_program_directory()?;
     }
 
-    dedoc_println!("Writing `{}`...", docs_json_path.display());
+    println!("Writing `{}`...", docs_json_path.display());
     serialize_and_overwrite_docs(docs_json_path, docs)?;
 
-    dedoc_println!("{BOLD}Fetching has successfully finished{RESET}.");
+    println!("{BOLD}Fetching has successfully finished{RESET}.");
 
     Ok(())
 }
