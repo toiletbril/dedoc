@@ -18,6 +18,7 @@ mod search;
 mod list;
 mod fetch;
 
+mod tests;
 mod debug;
 
 use open::open;

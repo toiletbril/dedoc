@@ -15,8 +15,12 @@ pub type ResultS = Result<(), String>;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[cfg(test)]
+pub const PROGRAM_NAME: &str = "dedoc_test";
+#[cfg(not(test))]
 #[cfg(debug_assertions)]
 pub const PROGRAM_NAME: &str = "dedoc_debug";
+#[cfg(not(test))]
 #[cfg(not(debug_assertions))]
 pub const PROGRAM_NAME: &str = "dedoc";
 

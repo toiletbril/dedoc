@@ -65,8 +65,8 @@ pub unsafe fn set_output_to_stdout() {
     DEBUG_OUTPUT = Some(Box::new(Output::Stdout(std::io::stdout())));
 }
 
-pub unsafe fn set_output_to_mock_output(mock_output: MockOutput) {
-    DEBUG_OUTPUT = Some(Box::new(Output::MockOutput(mock_output)));
+pub unsafe fn set_output_to_mock_output() {
+    DEBUG_OUTPUT = Some(Box::new(Output::MockOutput(MockOutput::new())));
 }
 
 pub fn get_mock_output() -> String {

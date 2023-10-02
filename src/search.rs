@@ -62,19 +62,19 @@ struct SearchFlags {
 // options match cached ones, to deserialize the whole search cache.
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq)]
-struct SearchOptions<'a> {
+pub(crate) struct SearchOptions<'a> {
     query:  Cow<'a, str>,
     docset: Cow<'a, str>,
     flags:  Cow<'a, SearchFlags>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct SearchCache<'a> {
+pub(crate) struct SearchCache<'a> {
     exact_results: Cow<'a, [ExactResult]>,
     vague_results: Cow<'a, [VagueResult]>,
 }
 
-fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
+pub(crate) fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
     let program_dir = get_program_directory().ok()?;
     let cache_options_path = program_dir.join("search_cache_options.json");
 
@@ -562,3 +562,4 @@ where
 
     Ok(())
 }
+
