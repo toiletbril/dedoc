@@ -30,9 +30,9 @@ pub fn reset_state_and_cache() {
 
     let program_directory = get_program_directory().unwrap();
 
-    remove_file(program_directory.join("docs.json")).unwrap();
-    remove_file(program_directory.join("search_cache_options.json")).unwrap();
-    remove_file(program_directory.join("search_cache.json")).unwrap();
+    let _ = remove_file(program_directory.join("docs.json"));
+    let _ = remove_file(program_directory.join("search_cache_options.json"));
+    let _ = remove_file(program_directory.join("search_cache.json"));
 }
 
 fn run_with_args(command: fn(IntoIter<String>) -> ResultS, args_str: &str, should_do: &str) {
@@ -64,18 +64,24 @@ fn test_search_should_use_cache() {
 
 // Manual testing. I think this way is better than integration testing I came up with initially.
 // If everything is looking cool, then it's we should be fine :3
-pub fn test<Args>(_args: Args) -> ResultS
+pub fn test<Args>(args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    reset_state_and_cache();
+    let arg = args.collect::<Vec<String>>().join(" ");
 
-    run_with_args(remove, "backbone bower", "remove backbone and bower if they exist");
+    if &arg == "full" {
+        reset_state_and_cache();
 
-    run_with_args(fetch, "", "fetch docs.json");
-    run_with_args(fetch, "", "show a fetch warning");
+        run_with_args(fetch, "", "fetch docs.json");
+        run_with_args(fetch, "", "show a fetch warning");
 
-    run_with_args(download, "backbone bower", "download docsets");
+        run_with_args(remove, "backbone bower", "remove backbone and bower if they exist");
+        run_with_args(download, "backbone bower", "download docsets");
+    } else {
+        debug_println!("Skipping `fetch` and `download`. Run `test full` to avoid skipping, or if you ran `test` first time.");
+    }
+
     run_with_args(download, "win", "suggest tailwind");
     run_with_args(download, "erl", "suggest three erlang versions");
 
