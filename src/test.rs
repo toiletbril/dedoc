@@ -1,3 +1,4 @@
+#![allow(unused)]
 #![cfg(debug_assertions)]
 
 use std::fs::{File, remove_file, remove_dir_all};
@@ -8,13 +9,14 @@ use crate::common::ResultS;
 use crate::common::get_program_directory;
 use crate::common::{RESET, RED};
 
-use crate::dedoc_debug_println;
+use crate::debug_println;
 
-use crate::list::list;
-use crate::fetch::fetch;
+use crate::open::open;
 use crate::remove::remove;
 use crate::download::download;
-use crate::search::{try_use_cache, search, SearchOptions};
+use crate::search::{SearchOptions, try_use_cache, search};
+use crate::list::list;
+use crate::fetch::fetch;
 
 pub fn create_args<'a>(args: &'a str) -> IntoIter<String> {
     args.split_whitespace()
@@ -23,18 +25,19 @@ pub fn create_args<'a>(args: &'a str) -> IntoIter<String> {
         .into_iter()
 }
 
-pub fn remove_program_dir() -> ResultS {
-    dedoc_debug_println!("Removing program directory...");
+pub fn reset_state_and_cache() {
+    debug_println!("Removing cache...");
 
-    let program_directory = get_program_directory()?;
+    let program_directory = get_program_directory().unwrap();
 
-    remove_dir_all(&program_directory)
-        .map_err(|err| format!("Could not remove `{}`: {err}", program_directory.display()))
+    remove_file(program_directory.join("docs.json")).unwrap();
+    remove_file(program_directory.join("search_cache_options.json")).unwrap();
+    remove_file(program_directory.join("search_cache.json")).unwrap();
 }
 
 fn run_with_args(command: fn(IntoIter<String>) -> ResultS, args_str: &str, should_do: &str) {
     let args = create_args(args_str);
-    dedoc_debug_println!("Running with args: `{args_str}`, should {should_do}");
+    debug_println!("Running with args: `{args_str}`, should {should_do}");
 
     let command_result = command(args);
     assert!(command_result.is_ok());
@@ -56,7 +59,7 @@ fn test_search_should_use_cache() {
         assert!(try_use_cache(&cached_search_options).is_some());
     }
 
-    dedoc_debug_println!("Search sucessfully created cache.");
+    debug_println!("Search sucessfully created cache.");
 }
 
 // Manual testing. I think this way is better than integration testing I came up with initially.
@@ -65,25 +68,27 @@ pub fn test<Args>(_args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let _ = remove_program_dir();
+    reset_state_and_cache();
+
+    run_with_args(remove, "backbone bower", "remove backbone and bower if they exist");
 
     run_with_args(fetch, "", "fetch docs.json");
-    run_with_args(download, "backbone bower", "download docsets");
+    run_with_args(fetch, "", "show a fetch warning");
 
-    test_search_should_use_cache();
+    run_with_args(download, "backbone bower", "download docsets");
+    run_with_args(download, "win", "suggest tailwind");
+    run_with_args(download, "erl", "suggest three erlang versions");
 
     run_with_args(list, "-l", "list bower and backbone");
+
+    test_search_should_use_cache();
 
     run_with_args(search, "backbone -i collection-at", "list search results in correct casing");
     run_with_args(search, "backbone -i collection-at -o 1", "open first page");
     run_with_args(search, "backbone -p map", "list precise search results");
+    run_with_args(search, "bower hahaha nothing", "should result in no matches");
 
-    run_with_args(fetch, "", "show a fetch warning");
-    run_with_args(download, "win", "suggest tailwind");
-    run_with_args(download, "erl", "suggest three erlang versions");
-    run_with_args(remove, "--purge-all", "delete docsets");
-
-    dedoc_debug_println!("Tests completed.");
+    debug_println!("Tests completed.");
 
     Ok(())
 }

@@ -39,7 +39,7 @@ pub const UNDERLINE:  Style = Style::Underlined;
 pub const RESET:      Style = Style::Reset;
 
 #[macro_export]
-macro_rules! dedoc_debug_println {
+macro_rules! debug_println {
     ($($e:expr),+) => {
         #[cfg(debug_assertions)]
         {

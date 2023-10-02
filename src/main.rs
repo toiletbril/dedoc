@@ -1,9 +1,7 @@
 use std::process::ExitCode;
 
-extern crate toiletcli;
-
 use toiletcli::common::overwrite_should_use_colors;
-use toiletcli::flags::*;
+use toiletcli::flags::{FlagType, parse_flags_until_subcommand};
 use toiletcli::flags;
 
 mod common;
@@ -18,6 +16,7 @@ mod search;
 mod list;
 mod fetch;
 
+#[cfg(debug_assertions)]
 mod test;
 
 use open::open;
@@ -74,8 +73,8 @@ fn entry<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    dedoc_debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
-    dedoc_debug_println!("Run `test` to perform tests.");
+    debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
+    debug_println!("Run `test` to perform tests.");
 
     let mut flag_version;
     let mut flag_help;
@@ -127,7 +126,6 @@ fn main() -> ExitCode {
                 err += ". Try `--help` for more information.";
             }
             println!("{RED}ERROR{RESET}: {err}");
-
             ExitCode::FAILURE
         }
         _ => ExitCode::SUCCESS,
