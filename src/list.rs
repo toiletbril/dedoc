@@ -5,8 +5,11 @@ use crate::common::ResultS;
 use crate::common::{deserialize_docs_json, get_local_docsets, is_docs_json_exists};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
+use crate::dedoc_println;
+use crate::dedoc_print;
+
 fn show_list_help() -> ResultS {
-    println!(
+    dedoc_println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} list{RESET} [-lan]
@@ -52,12 +55,12 @@ where
         let mut local_docsets_iter_peekable = local_docsets.iter().peekable();
 
         while let Some(entry) = local_docsets_iter_peekable.next() {
-            print!("{GREEN}{} [downloaded]{RESET}", entry);
+            dedoc_print!("{GREEN}{} [downloaded]{RESET}", entry);
 
             if local_docsets_iter_peekable.peek().is_some() {
-                print!("{}", separator);
+                dedoc_print!("{}", separator);
             } else {
-                println!();
+                dedoc_println!();
             }
         }
 
@@ -79,15 +82,15 @@ where
         }
 
         if local_docsets.contains(entry) {
-            print!("{GREEN}{} [downloaded]{RESET}", entry);
+            dedoc_print!("{GREEN}{} [downloaded]{RESET}", entry);
         } else {
-            print!("{}", entry);
+            dedoc_print!("{}", entry);
         }
 
         if docs_names_peekable.peek().is_some() {
-            print!("{}", separator);
+            dedoc_print!("{}", separator);
         } else {
-            println!();
+            dedoc_println!();
         }
     }
 

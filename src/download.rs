@@ -19,8 +19,10 @@ use crate::common::{
     BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
 };
 
+use crate::{dedoc_println, dedoc_print};
+
 fn show_download_help() -> ResultS {
-    println!(
+    dedoc_println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
@@ -78,9 +80,9 @@ fn download_db_and_index_json_with_progress(
 
                     file_size += size;
 
-                    print!("\rReceived {file_size} bytes, file {i} of 2...");
+                    dedoc_print!("\rReceived {file_size} bytes, file {i} of 2...");
                 }
-                println!();
+                dedoc_println!();
             }
         }
     }
@@ -194,11 +196,11 @@ where
         writer.write_all(sanitized_contents.trim().as_bytes())
             .map_err(|err| format!("Could not write to `{}`: {err}", file_path.display()))?;
 
-        print!("Unpacked {unpacked_amount} files...\r");
+        dedoc_print!("Unpacked {unpacked_amount} files...\r");
 
         unpacked_amount += 1;
     }
-    println!();
+    dedoc_println!();
 
     Ok(())
 }
@@ -280,17 +282,17 @@ where
         }
 
         if !flag_force && is_docset_downloaded(docset)? {
-            println!("\
+            dedoc_println!("\
 {YELLOW}WARNING{RESET}: Docset `{docset}` is already downloaded. \
 If you still want to update it, re-run this command with `--force`"
             );
             continue;
         } else {
             if is_docset_in_docs_or_print_warning(docset, &docs) {
-                println!("Downloading `{docset}`...");
+                dedoc_println!("Downloading `{docset}`...");
                 download_db_and_index_json_with_progress(docset, &docs)?;
 
-                println!("Extracting to `{}`...", get_docset_path(docset)?.display());
+                dedoc_println!("Extracting to `{}`...", get_docset_path(docset)?.display());
                 build_docset_from_db_json(docset)?;
 
                 successful_downloads += 1;
@@ -299,9 +301,9 @@ If you still want to update it, re-run this command with `--force`"
     }
 
     if successful_downloads > 1 {
-        println!("{BOLD}{successful_downloads} items were successfully installed{RESET}.");
+        dedoc_println!("{BOLD}{successful_downloads} items were successfully installed{RESET}.");
     } else if successful_downloads == 1 {
-        println!("{BOLD}Install has successfully finished{RESET}.");
+        dedoc_println!("{BOLD}Install has successfully finished{RESET}.");
     }
 
     Ok(())

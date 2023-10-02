@@ -7,8 +7,10 @@ use crate::common::ResultS;
 use crate::common::{get_docset_path, is_docset_downloaded, get_local_docsets};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 
+use crate::dedoc_println;
+
 fn show_remove_help() -> ResultS {
-    println!(
+    dedoc_println!(
         "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} remove{RESET} <docset1> [docset2, ...]
@@ -57,7 +59,7 @@ where
         let local_docsets = get_local_docsets()?;
         for docset in local_docsets {
             let docset_path = get_docset_path(&docset)?;
-            println!("Removing `{docset}` from `{}`...", docset_path.display());
+            dedoc_println!("Removing `{docset}` from `{}`...", docset_path.display());
             remove_dir_all(&docset_path)
                 .map_err(|err| format!("Unable to remove `{}`: {err}", docset_path.display()))?;
         }
@@ -68,19 +70,19 @@ where
 
     for docset in args.iter() {
         if !is_name_allowed(docset) {
-            println!("{YELLOW}WARNING{RESET}: `{docset}` contains forbidden characters.");
+            dedoc_println!("{YELLOW}WARNING{RESET}: `{docset}` contains forbidden characters.");
             continue;
         }
 
         if is_docset_downloaded(docset)? {
             let docset_path = get_docset_path(docset)?;
             if docset_path.exists() {
-                println!("Removing `{docset}` from `{}`...", docset_path.display());
+                dedoc_println!("Removing `{docset}` from `{}`...", docset_path.display());
                 remove_dir_all(&docset_path)
                     .map_err(|err| format!("Unable to remove `{}`: {err}", docset_path.display()))?;
             }
         } else {
-            println!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
+            dedoc_println!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
         }
     }
 
