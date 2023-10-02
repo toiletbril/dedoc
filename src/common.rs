@@ -42,7 +42,7 @@ pub const BOLD:       Style = Style::Bold;
 pub const UNDERLINE:  Style = Style::Underlined;
 pub const RESET:      Style = Style::Reset;
 
-// These macros provide a way to capture stdout for testing.
+// This allows to capture stdout for testing.
 #[macro_export]
 macro_rules! dedoc_println {
     () => {

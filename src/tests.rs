@@ -83,4 +83,3 @@ fn test_fetch_download_and_list_local() {
 
     assert_eq!(&get_mock_output(), "backbone [downloaded], bower [downloaded]\n");
 }
-

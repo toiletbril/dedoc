@@ -7,9 +7,6 @@ use std::vec::IntoIter;
 
 use crate::common::{get_program_directory, ResultS};
 
-// This is needed to substitute stdout with a different buffer for testting.
-pub static mut DEBUG_OUTPUT: Option<Box<Output>> = None;
-
 // To capture stdout, replace DEBUG_OUTPUT with MockOutput using set_output_to_mock_output
 pub struct MockOutput(Vec<u8>);
 
@@ -53,13 +50,10 @@ impl Write for Output {
             Self::MockOutput(output) => output.flush()
         }
     }
-    fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> std::io::Result<()> {
-        match self {
-            Self::Stdout(stdout) => stdout.write_fmt(fmt),
-            Self::MockOutput(output) => output.write_fmt(fmt),
-        }
-    }
 }
+
+// This allows to substitute stdout with a different buffer for testting.
+pub static mut DEBUG_OUTPUT: Option<Box<Output>> = None;
 
 pub unsafe fn set_output_to_stdout() {
     DEBUG_OUTPUT = Some(Box::new(Output::Stdout(std::io::stdout())));
@@ -140,4 +134,3 @@ macro_rules! dedoc_print_impl {
         }
     }
 }
-
