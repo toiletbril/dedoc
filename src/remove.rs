@@ -21,7 +21,7 @@ fn show_remove_help() -> ResultS {
     Ok(())
 }
 
-pub fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
+fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
     let docset = docset_name.as_ref();
 
     let has_slashes = {

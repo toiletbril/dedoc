@@ -35,14 +35,14 @@ fn show_search_help() -> ResultS {
 
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct ExactResult {
+struct ExactResult {
     item: String,
     fragment: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct VagueResult {
+struct VagueResult {
     item: String,
     contexts: Vec<String>,
 }
@@ -145,7 +145,7 @@ struct IndexJson {
 type ExactMatches = Vec<ExactResult>;
 type VagueMatches = Vec<VagueResult>;
 
-pub fn search_docset_in_filenames(
+fn search_docset_in_filenames(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
@@ -227,7 +227,7 @@ fn get_context_around_query(html_line: &String, index: usize, query_len: usize) 
 }
 
 // Item is a file path without a file extension which is relative to docset directory
-pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
+fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
     let item = path
         .strip_prefix(&docset_path)
         .map_err(|err| err.to_string())?
@@ -238,7 +238,7 @@ pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<Stri
     Ok(item)
 }
 
-pub fn search_docset_precisely(
+fn search_docset_precisely(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
@@ -351,7 +351,7 @@ pub fn search_docset_precisely(
 const TAB: &str = "    ";
 const HALF_TAB: &str = "  ";
 
-pub fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
+fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
     for result in search_results {
         println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}", result.item);
 
@@ -365,7 +365,7 @@ pub fn print_vague_search_results(search_results: &[VagueResult], mut start_inde
     Ok(())
 }
 
-pub fn print_search_results(search_results: &[ExactResult], mut start_index: usize) -> ResultS {
+fn print_search_results(search_results: &[ExactResult], mut start_index: usize) -> ResultS {
     let mut prev_item = "";
 
     // Group fragments by an item.
