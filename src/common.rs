@@ -14,6 +14,10 @@ use serde::{Deserialize, Serialize};
 pub type ResultS = Result<(), String>;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg(debug_assertions)]
+pub const PROGRAM_NAME: &str = "dedoc_debug";
+#[cfg(not(debug_assertions))]
 pub const PROGRAM_NAME: &str = "dedoc";
 
 pub const DEFAULT_DB_JSON_LINK: &str   = "https://documents.devdocs.io";
@@ -34,17 +38,44 @@ pub const BOLD:       Style = Style::Bold;
 pub const UNDERLINE:  Style = Style::Underlined;
 pub const RESET:      Style = Style::Reset;
 
+// These macros provide a way to capture stdout for testing.
 #[macro_export]
-macro_rules! debug_println {
+macro_rules! dedoc_println {
+    () => {
+        #[cfg(debug_assertions)]
+        $crate::dedoc_println_impl!();
+        #[cfg(not(debug_assertions))]
+        println!();
+    };
     ($($e:expr),+) => {{
-            #[cfg(debug_assertions)]
-            {
-                eprint!("{}:{}: ", file!(), line!());
-                eprintln!($($e),+)
-            }
-            #[cfg(not(debug_assertions))]
-            { () }
+        #[cfg(debug_assertions)]
+        $crate::dedoc_println_impl!($($e),+);
+        #[cfg(not(debug_assertions))]
+        println!($($e),+);
     }};
+}
+
+#[macro_export]
+macro_rules! dedoc_print {
+    ($($e:expr),+) => {{
+        #[cfg(debug_assertions)]
+        $crate::dedoc_print_impl!($($e),+);
+        #[cfg(not(debug_assertions))]
+        print!($($e),+);
+    }};
+}
+
+#[macro_export]
+macro_rules! dedoc_debug_println {
+    ($($e:expr),+) => {
+        #[cfg(debug_assertions)]
+        {
+            eprint!("{}:{}: ", file!(), line!());
+            eprintln!($($e),+)
+        }
+        #[cfg(not(debug_assertions))]
+        { () }
+    };
 }
 
 #[inline]

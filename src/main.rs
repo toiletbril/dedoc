@@ -18,6 +18,8 @@ mod search;
 mod list;
 mod fetch;
 
+mod debug;
+
 use open::open;
 use remove::remove;
 use download::download;
@@ -69,7 +71,7 @@ fn entry<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    debug_println!("{RED}Using debug build of {PROGRAM_NAME} v{VERSION}.{RESET}");
+    dedoc_debug_println!("{RED}Using debug build of {PROGRAM_NAME} v{VERSION}.{RESET}");
 
     let mut flag_version;
     let mut flag_help;
@@ -114,10 +116,16 @@ fn main() -> ExitCode {
     let mut args = std::env::args();
     let _ = &args.next().expect("Program path is provided");
 
+    #[cfg(debug_assertions)]
+    unsafe { debug::set_output_to_stdout(); }
+
     match entry(&mut args) {
         Err(mut err) => {
-            if !err.ends_with(['.', '?', ')']) { err += ". Try `--help` for more information."; }
-            eprintln!("{RED}ERROR{RESET}: {err}");
+            if !err.ends_with(['.', '?', ')']) {
+                err += ". Try `--help` for more information.";
+            }
+            dedoc_println!("{RED}ERROR{RESET}: {err}");
+
             ExitCode::FAILURE
         }
         _ => ExitCode::SUCCESS,
