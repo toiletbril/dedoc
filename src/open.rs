@@ -42,7 +42,8 @@ where
 
     if flag_html {
         let path = PathBuf::from(args.join(" "));
-        return print_docset_file(path, None);
+        print_docset_file(path, None)?;
+        return Ok(());
     }
 
     if !is_docs_json_exists()? {

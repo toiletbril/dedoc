@@ -491,11 +491,13 @@ where
                 }
                 Some(n) if n <= exact_results_offset => {
                     let result = &exact_results[n - 1];
-                    return print_page_from_docset(&docset, &result.item, result.fragment.as_ref());
+                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
+                    return Ok(());
                 }
                 Some(n) => {
                     let result = &vague_results[n - exact_results_offset - 1];
-                    return print_page_from_docset(&docset, &result.item, None);
+                    print_page_from_docset(&docset, &result.item, None)?;
+                    return Ok(());
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
@@ -542,7 +544,8 @@ where
                 }
                 Some(n) => {
                     let result = &results[n - 1];
-                    return print_page_from_docset(&docset, &result.item, result.fragment.as_ref());
+                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
+                    return Ok(());
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
