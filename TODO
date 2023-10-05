@@ -1,3 +1,6 @@
+* fix fragments
+* make good tests
+
 * fuzzy search
 
 * transpile html to intermediate markdown when building docset with `download`
