@@ -213,7 +213,7 @@ fn get_fragment_bounds(
     (current_fragment_line, None)
 }
 
-pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
+pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Result<bool, String> {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
@@ -300,10 +300,10 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> ResultS {
         println!("{GRAYER}...{RESET}")
     }
 
-    Ok(())
+    Ok(is_fragment_found)
 }
 
-pub fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> ResultS {
+pub fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> Result<bool, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let page_path_string = docset_path.join(page)
