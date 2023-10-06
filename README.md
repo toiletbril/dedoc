@@ -10,6 +10,10 @@ Pages are displayed as markdown documents, and can be piped to `less`,
 [`glow`](https://github.com/charmbracelet/glow) if you're fancy, or any other
 pager or markdown reader.
 
+If you have Rust installed, the preferred way to install is using `cargo
+install dedoc`. Otherwise, look for binaries in
+[Releases](https://github.com/toiletbril/dedoc/releases).
+
 ## Usage
 
 Remember that running anything with `--help` prints a more detailed usage:
