@@ -27,7 +27,7 @@ use list::list;
 use fetch::fetch;
 
 #[cfg(debug_assertions)]
-use test::test;
+use test::test_c;
 
 fn show_version() -> ResultS {
     #[cfg(debug_assertions)]
@@ -109,7 +109,7 @@ where
         "rm" | "remove"   => remove(args),
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
-        "test" if cfg!(debug_assertions) => test(args),
+        "test" if cfg!(debug_assertions) => test_c(args),
         other => {
             Err(format!("Unknown subcommand `{other}`"))
         }
