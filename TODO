@@ -1,12 +1,12 @@
-* fix fragments
 * make good tests
-
 * fuzzy search
 
 * transpile html to intermediate markdown when building docset with `download`
     * allow specifying default page width
     * intermediate markdown should be markdown with colors baked in
     * when opening pages, parse colors based on --color setting, output normal markdown
+
+* open an issue on html2text fragments
 
 * features to lower binary size
 
