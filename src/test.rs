@@ -132,6 +132,9 @@ where
         run_with_args(search, "backbone -i collection-at -o 1", "open first page"),
         run_with_args(search, "backbone -p map", "list precise search results"),
         run_with_args(search, "backbone -pi underscore", "list underscore.js with right case"),
+
+        // This fails, because for some reason html2text fails to find fragments that are inside of
+        // <li> tags :(
         run_with_args(search, "backbone -o 150", "show model-values"),
 
         run_with_args(search, "bower", "list bower results"),
