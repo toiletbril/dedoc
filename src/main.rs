@@ -109,7 +109,8 @@ where
         "rm" | "remove"   => remove(args),
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
-        "test" if cfg!(debug_assertions) => test_c(args),
+        #[cfg(debug_assertions)]
+        "test"            => test_c(args),
         other => {
             Err(format!("Unknown subcommand `{other}`"))
         }
