@@ -313,7 +313,13 @@ fn search_docset_precisely(
                         break;
                     }
 
-                    if let Some(index) = string_buffer.find(query) {
+                    let display_context = if case_insensitive {
+                        Cow::Owned(string_buffer.to_lowercase())
+                    } else {
+                        Cow::Borrowed(&string_buffer)
+                    };
+
+                    if let Some(index) = display_context.find(query) {
                         let context =
                             get_context_around_query(&string_buffer, index, query_len);
 
