@@ -9,7 +9,7 @@ readme       = "README.md"
 edition      = "2021"
 rust-version = "1.66"
 
-license      = "GPLv3"
+license      = "GPL-3.0"
 keywords     = ["docs", "cli"]
 
 [profile.release]
