@@ -4,7 +4,6 @@ use std::io::{BufRead, BufReader, BufWriter};
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{from_reader, to_writer};
 
 use toiletcli::flags;
 use toiletcli::flags::*;
@@ -12,9 +11,10 @@ use toiletcli::flags::*;
 use crate::common::ResultS;
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
-    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded
+    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded, split_to_item_and_fragment
 };
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, GRAY, GRAYER, GRAYEST, RESET, YELLOW, DOC_PAGE_EXTENSION};
+use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
+                    RESET, YELLOW, DOC_PAGE_EXTENSION};
 
 fn show_search_help() -> ResultS {
     println!(
@@ -26,7 +26,7 @@ fn show_search_help() -> ResultS {
 {GREEN}OPTIONS{RESET}
     -w, --whole                     Search for the whole sentence.
     -i, --ignore-case               Ignore character case.
-    -p, --precise                   Look inside files (like 'grep').
+    -p, --precise                   Look inside files (like `grep`).
     -o, --open <number>             Open n-th result.
         --help                      Display help message."
     );
@@ -35,14 +35,14 @@ fn show_search_help() -> ResultS {
 
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct ExactResult {
+struct ExactResult {
     item: String,
     fragment: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub struct VagueResult {
+struct VagueResult {
     item: String,
     contexts: Vec<String>,
 }
@@ -60,20 +60,19 @@ struct SearchFlags {
 // options match cached ones, to deserialize the whole search cache.
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq)]
-struct SearchOptions<'a> {
+pub(crate) struct SearchOptions<'a> {
     query:  Cow<'a, str>,
     docset: Cow<'a, str>,
     flags:  Cow<'a, SearchFlags>,
 }
 
 #[derive(Serialize, Deserialize)]
-#[derive(PartialEq)]
-struct SearchCache<'a> {
-    exact_items:   Cow<'a, [ExactResult]>,
-    vague_matches: Cow<'a, [VagueResult]>,
+pub(crate) struct SearchCache<'a> {
+    exact_results: Cow<'a, [ExactResult]>,
+    vague_results: Cow<'a, [VagueResult]>,
 }
 
-fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
+pub(crate) fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
     let program_dir = get_program_directory().ok()?;
     let cache_options_path = program_dir.join("search_cache_options.json");
 
@@ -81,7 +80,7 @@ fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> 
         let cache_options_file = File::open(cache_options_path).ok()?;
         let cache_options_reader = BufReader::new(cache_options_file);
 
-        let cached_search_options: SearchOptions = from_reader(cache_options_reader).ok()?;
+        let cached_search_options: SearchOptions = serde_json::from_reader(cache_options_reader).ok()?;
 
         if cached_search_options != *search_options {
             return None;
@@ -93,7 +92,7 @@ fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> 
     let cache_file = File::open(cache_path).ok()?;
     let cache_reader = BufReader::new(cache_file);
 
-    let cache: SearchCache = from_reader(cache_reader).ok()?;
+    let cache: SearchCache = serde_json::from_reader(cache_reader).ok()?;
 
     Some(cache)
 }
@@ -107,22 +106,22 @@ fn cache_search_results(
     {
         let cache_options_path = program_dir.join("search_cache_options.json");
         let cache_options_file = File::create(&cache_options_path)
-            .map_err(|err| format!("Could not open cache options at `{}`: {err}", cache_options_path.display()))?;
+            .map_err(|err| format!("Could not create cache options at `{}`: {err}", cache_options_path.display()))?;
 
         let cache_options_writer = BufWriter::new(cache_options_file);
 
-        to_writer(cache_options_writer, &search_options)
+        serde_json::to_writer(cache_options_writer, &search_options)
             .map_err(|err| format!("Could not write cache options at `{}`: {err}", cache_options_path.display()))?;
     }
 
     {
         let cache_path = program_dir.join("search_cache.json");
         let cache_file = File::create(&cache_path)
-            .map_err(|err| format!("Could not open cache at `{}`: {err}", cache_path.display()))?;
+            .map_err(|err| format!("Could not create cache at `{}`: {err}", cache_path.display()))?;
 
         let cache_writer = BufWriter::new(cache_file);
 
-        to_writer(cache_writer, &search_cache)
+        serde_json::to_writer(cache_writer, &search_cache)
             .map_err(|err| format!("Could not write cache at `{}`: {err}", cache_path.display()))?;
     }
 
@@ -146,7 +145,7 @@ struct IndexJson {
 type ExactMatches = Vec<ExactResult>;
 type VagueMatches = Vec<VagueResult>;
 
-pub fn search_docset_in_filenames(
+fn search_docset_in_filenames(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
@@ -155,7 +154,7 @@ pub fn search_docset_in_filenames(
     let index_json_path = docset_path.join("index.json");
 
     let index_exists = index_json_path.try_exists()
-        .map_err(|err| format!("Could not check `{}`: {err}", index_json_path.display()))?;
+        .map_err(|err| format!("Could not check if `{}` exists: {err}", index_json_path.display()))?;
 
     if !index_exists {
         let message = format!("\
@@ -170,7 +169,7 @@ Please redownload the docset with `download {docset_name} --force`."
 
     let reader = BufReader::new(file);
 
-    let index: IndexJson = from_reader(reader)
+    let index: IndexJson = serde_json::from_reader(reader)
         .map_err(|err| format!("Could not deserialize `{}`: {err}", index_json_path.display()))?;
 
     let mut items = vec![];
@@ -179,21 +178,11 @@ Please redownload the docset with `download {docset_name} --force`."
         let query = query.to_lowercase();
 
         for entry in index.entries {
-            let name = entry.name.to_lowercase();
-            let path = entry.path.to_lowercase();
+            let lowercase_name = entry.name.to_lowercase();
+            let lowercase_path = entry.path.to_lowercase();
 
-            if name.contains(&query) || path.contains(&query) {
-                let mut path_split = path.split('#');
-
-                let item = if let Some(item) = path_split.next() {
-                    Ok(item)
-                } else {
-                    Err(format!("Invalid page path: {}", entry.path))
-                }?
-                .to_owned();
-
-                let fragment = path_split.next()
-                    .map(|s| s.to_owned());
+            if lowercase_name.contains(&query) || lowercase_path.contains(&query) {
+                let (item, fragment) = split_to_item_and_fragment(entry.path)?;
 
                 let exact_match = ExactResult { item, fragment };
 
@@ -203,17 +192,7 @@ Please redownload the docset with `download {docset_name} --force`."
     } else {
         for entry in index.entries {
             if entry.name.contains(query) || entry.path.contains(query) {
-                let mut path_split = entry.path.split('#');
-
-                let item = if let Some(item) = path_split.next() {
-                    Ok(item)
-                } else {
-                    Err(format!("Invalid page path: {}", entry.path))
-                }?
-                .to_owned();
-
-                let fragment = path_split.next()
-                    .map(|s| s.to_owned());
+                let (item, fragment) = split_to_item_and_fragment(entry.path)?;
 
                 let exact_match = ExactResult { item, fragment };
 
@@ -248,16 +227,18 @@ fn get_context_around_query(html_line: &String, index: usize, query_len: usize) 
 }
 
 // Item is a file path without a file extension which is relative to docset directory
-pub fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
+fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
     let item = path
         .strip_prefix(&docset_path)
-        .map_err(|err| err.to_string())?;
-    let item = item.with_extension("");
+        .map_err(|err| err.to_string())?
+        .with_extension("")
+        .display()
+        .to_string();
 
-    Ok(item.display().to_string())
+    Ok(item)
 }
 
-pub fn search_docset_precisely(
+fn search_docset_precisely(
     docset_name: &String,
     query: &String,
     case_insensitive: bool,
@@ -332,8 +313,16 @@ pub fn search_docset_precisely(
                         break;
                     }
 
-                    if let Some(index) = string_buffer.find(query) {
-                        let context = get_context_around_query(&string_buffer, index, query_len);
+                    let display_context = if case_insensitive {
+                        Cow::Owned(string_buffer.to_lowercase())
+                    } else {
+                        Cow::Borrowed(&string_buffer)
+                    };
+
+                    if let Some(index) = display_context.find(query) {
+                        let context =
+                            get_context_around_query(&string_buffer, index, query_len);
+
                         contexts.push(context);
                     }
 
@@ -341,15 +330,13 @@ pub fn search_docset_precisely(
                 }
 
                 if !contexts.is_empty() {
-                    let vague_result = VagueResult {
-                        item: convert_path_to_item(file_path, original_path)?,
-                        contexts: contexts,
-                    };
-
+                    let item = convert_path_to_item(file_path, original_path)?;
+                    let vague_result = VagueResult { item, contexts };
                     vague_results.push(vague_result);
                 }
             }
         }
+
         Ok((exact_files, vague_results))
     }
 
@@ -370,12 +357,12 @@ pub fn search_docset_precisely(
 const TAB: &str = "    ";
 const HALF_TAB: &str = "  ";
 
-pub fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
+fn print_vague_search_results(search_results: &[VagueResult], mut start_index: usize) -> ResultS {
     for result in search_results {
         println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}{GRAY}", result.item);
 
         for context in &result.contexts {
-            println!("{TAB}{TAB}{GRAYER}...{RESET}{GRAY}{}{}{RESET}{GRAYER}...{RESET}", GRAYEST.bg(), context);
+            println!("{TAB}{TAB}{GRAYER}...{RESET}{LIGHT_GRAY}{}{}{RESET}{GRAYER}...{RESET}", GRAYEST.bg(), context);
         }
 
         start_index += 1;
@@ -384,7 +371,7 @@ pub fn print_vague_search_results(search_results: &[VagueResult], mut start_inde
     Ok(())
 }
 
-pub fn print_search_results(search_results: &[ExactResult], mut start_index: usize) -> ResultS {
+fn print_search_results(search_results: &[ExactResult], mut start_index: usize) -> ResultS {
     let mut prev_item = "";
 
     // Group fragments by an item.
@@ -406,7 +393,7 @@ pub fn print_search_results(search_results: &[ExactResult], mut start_index: usi
     Ok(())
 }
 
-pub fn search<Args>(mut args: Args) -> ResultS
+pub(crate) fn search<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
@@ -428,7 +415,7 @@ where
     if flag_help { return show_search_help(); }
 
     if !is_docs_json_exists()? {
-        return Err("`docs.json` does not exist. Maybe run `fetch` first?".to_string());
+        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
     let mut args = args.into_iter();
@@ -451,13 +438,15 @@ where
     }
 
     let query = {
-        let mut query = args.collect::<Vec<String>>().join(" ");
+        let mut merged_args = args.collect::<Vec<String>>()
+            .join(" ");
+
         if flag_whole {
-            query.insert(0, ' ');
-            query.push(' ');
-            query
+            merged_args.insert(0, ' ');
+            merged_args.push(' ');
+            merged_args
         } else {
-            query
+            merged_args
         }
     };
 
@@ -484,13 +473,13 @@ where
     if flag_precise {
         let (exact_results, vague_results) =
         if let Some(cache) = try_use_cache(&search_options) {
-            (cache.exact_items, cache.vague_matches)
+            (cache.exact_results, cache.vague_results)
         } else {
             let (exact, vague) = search_docset_precisely(&docset, &query, flag_case_insensitive)?;
 
             let search_cache = SearchCache {
-                exact_items:   Cow::Borrowed(&exact),
-                vague_matches: Cow::Borrowed(&vague),
+                exact_results: Cow::Borrowed(&exact),
+                vague_results: Cow::Borrowed(&vague),
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
@@ -508,11 +497,13 @@ where
                 }
                 Some(n) if n <= exact_results_offset => {
                     let result = &exact_results[n - 1];
-                    return print_page_from_docset(&docset, &result.item, result.fragment.as_ref());
+                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
+                    return Ok(());
                 }
                 Some(n) => {
                     let result = &vague_results[n - exact_results_offset - 1];
-                    return print_page_from_docset(&docset, &result.item, None);
+                    print_page_from_docset(&docset, &result.item, None)?;
+                    return Ok(());
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
@@ -537,13 +528,13 @@ where
         return Ok(());
     } else {
         let results = if let Some(cache) = try_use_cache(&search_options) {
-            cache.exact_items
+            cache.exact_results
         } else {
             let exact  = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
 
             let search_cache = SearchCache {
-                exact_items:   Cow::Borrowed(&exact),
-                vague_matches: Cow::Owned(vec![]),
+                exact_results: Cow::Borrowed(&exact),
+                vague_results: Cow::Owned(vec![]),
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
@@ -559,7 +550,8 @@ where
                 }
                 Some(n) => {
                     let result = &results[n - 1];
-                    return print_page_from_docset(&docset, &result.item, result.fragment.as_ref());
+                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
+                    return Ok(());
                 }
                 _ => {
                     println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");

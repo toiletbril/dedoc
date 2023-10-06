@@ -1,9 +1,7 @@
 use std::process::ExitCode;
 
-extern crate toiletcli;
-
 use toiletcli::common::overwrite_should_use_colors;
-use toiletcli::flags::*;
+use toiletcli::flags::{FlagType, parse_flags_until_subcommand};
 use toiletcli::flags;
 
 mod common;
@@ -18,12 +16,18 @@ mod search;
 mod list;
 mod fetch;
 
+#[cfg(debug_assertions)]
+mod test;
+
 use open::open;
 use remove::remove;
 use download::download;
 use search::search;
 use list::list;
 use fetch::fetch;
+
+#[cfg(debug_assertions)]
+use test::test;
 
 fn show_version() -> ResultS {
     #[cfg(debug_assertions)]
@@ -69,7 +73,8 @@ fn entry<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    debug_println!("{RED}Using debug build of {PROGRAM_NAME} v{VERSION}.{RESET}");
+    debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
+    debug_println!("Run `test` to perform tests.");
 
     let mut flag_version;
     let mut flag_help;
@@ -104,6 +109,7 @@ where
         "rm" | "remove"   => remove(args),
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
+        "test" if cfg!(debug_assertions) => test(args),
         other => {
             Err(format!("Unknown subcommand `{other}`"))
         }
@@ -116,8 +122,10 @@ fn main() -> ExitCode {
 
     match entry(&mut args) {
         Err(mut err) => {
-            if !err.ends_with(['.', '?', ')']) { err += ". Try `--help` for more information."; }
-            eprintln!("{RED}ERROR{RESET}: {err}");
+            if !err.ends_with(['.', '?', ')']) {
+                err += ". Try `--help` for more information.";
+            }
+            println!("{RED}ERROR{RESET}: {err}");
             ExitCode::FAILURE
         }
         _ => ExitCode::SUCCESS,

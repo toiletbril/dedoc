@@ -21,7 +21,7 @@ fn show_list_help() -> ResultS {
     Ok(())
 }
 
-pub fn list<Args>(mut args: Args) -> ResultS
+pub(crate) fn list<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
@@ -74,7 +74,7 @@ where
 
     while let Some(entry) = docs_names_peekable.next() {
         // slug has ~ if it's version-specific
-        if !flag_local && !flag_all && entry.find("~").is_some() {
+        if !flag_local && !flag_all && entry.contains("~") {
             continue;
         }
 

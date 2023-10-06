@@ -30,7 +30,7 @@ fn show_fetch_help() -> ResultS {
     Ok(())
 }
 
-pub fn fetch_docs() -> Result<Vec<Docs>, String> {
+fn fetch_docs() -> Result<Vec<Docs>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
     let response = get(DEFAULT_DOCS_JSON_LINK)
@@ -54,7 +54,7 @@ pub fn fetch_docs() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-pub fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<Docs>) -> Result<(), String> {
+fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<Docs>) -> Result<(), String> {
     let file = File::create(&path)
         .map_err(|err| format!("`{}`: {err}", path.display()))?;
 
@@ -66,7 +66,7 @@ pub fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<Docs>) -> Result<()
     Ok(())
 }
 
-pub fn fetch<Args>(mut args: Args) -> ResultS
+pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

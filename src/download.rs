@@ -49,8 +49,7 @@ fn download_db_and_index_json_with_progress(
             }
 
             for (file_name, i) in [("db.json", 1), ("index.json", 2)] {
-                let file_path = docset_path
-                    .join(file_name);
+                let file_path = docset_path.join(file_name);
 
                 let file = File::create(&file_path)
                     .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
@@ -90,7 +89,7 @@ fn download_db_and_index_json_with_progress(
 }
 
 // Remove class="...", title="...", data-language="..." attributes from HTML tags to reduce size.
-fn sanitize_html_line<'a>(input: String) -> String {
+fn sanitize_html_line<'a>(html_line: String) -> String {
     enum State {
         Default,
         InTag,
@@ -98,24 +97,25 @@ fn sanitize_html_line<'a>(input: String) -> String {
         InValue,
     }
 
-    let length = input.len();
+    let length = html_line.len();
+    let bytes = html_line.as_bytes();
 
-    let mut output = String::new();
+    let mut sanitized_line = String::new();
+
     let mut state = State::Default;
     let mut position = 0;
 
-    let mut chars = input.chars();
+    let mut html_line_chars = html_line.chars();
 
-    while let Some(ch) = chars.next() {
+    while let Some(ch) = html_line_chars.next() {
         match state {
             State::Default => {
                 if ch == '<' {
                     state = State::InTag;
                 }
-                output.push(ch);
+                sanitized_line.push(ch);
             }
             State::InTag => {
-                let bytes = input.as_bytes();
                 match ch {
                     'd' if position + 15 < length && bytes[position..position + 15] == *b"data-language=\"" => {
                         state = State::InKey;
@@ -128,9 +128,9 @@ fn sanitize_html_line<'a>(input: String) -> String {
                     }
                     '>' => {
                         state = State::Default;
-                        output.push(ch);
+                        sanitized_line.push(ch);
                     }
-                    _ => output.push(ch)
+                    _ => sanitized_line.push(ch)
                 }
             }
             State::InKey => {
@@ -144,10 +144,11 @@ fn sanitize_html_line<'a>(input: String) -> String {
                 }
             }
         }
+
         position += ch.len_utf8();
     }
 
-    output
+    sanitized_line
 }
 
 fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
@@ -248,7 +249,7 @@ fn build_docset_from_db_json(
     Ok(())
 }
 
-pub fn download<Args>(mut args: Args) -> ResultS
+pub(crate) fn download<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
@@ -264,7 +265,7 @@ where
     if flag_help || args.is_empty() { return show_download_help(); }
 
     if !is_docs_json_exists()? {
-        return Err("`docs.json` does not exist. Please run `fetch` first".to_string());
+        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
     let docs = deserialize_docs_json()?;
