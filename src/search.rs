@@ -393,7 +393,7 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
     Ok(())
 }
 
-pub fn search<Args>(mut args: Args) -> ResultS
+pub(crate) fn search<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

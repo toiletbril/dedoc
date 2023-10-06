@@ -249,7 +249,7 @@ fn build_docset_from_db_json(
     Ok(())
 }
 
-pub fn download<Args>(mut args: Args) -> ResultS
+pub(crate) fn download<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

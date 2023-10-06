@@ -11,32 +11,32 @@ use toiletcli::colors::{Color, Style};
 
 use serde::{Deserialize, Serialize};
 
-pub type ResultS = Result<(), String>;
+pub(crate) type ResultS = Result<(), String>;
 
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(debug_assertions)]
-pub const PROGRAM_NAME: &str = "dedoc_debug";
+pub(crate) const PROGRAM_NAME: &str = "dedoc_debug";
 #[cfg(not(debug_assertions))]
-pub const PROGRAM_NAME: &str = "dedoc";
+pub(crate) const PROGRAM_NAME: &str = "dedoc";
 
-pub const DEFAULT_DB_JSON_LINK: &str   = "https://documents.devdocs.io";
-pub const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
+pub(crate) const DEFAULT_DB_JSON_LINK: &str   = "https://documents.devdocs.io";
+pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
 
-pub const DEFAULT_USER_AGENT: &str = "dedoc";
+pub(crate) const DEFAULT_USER_AGENT: &str = "dedoc";
 
-pub const DOC_PAGE_EXTENSION: &str = "html";
+pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
 
-pub const RED:        Color = Color::Red;
-pub const GREEN:      Color = Color::Green;
-pub const YELLOW:     Color = Color::Yellow;
-pub const LIGHT_GRAY: Color = Color::Byte(248);
-pub const GRAY:       Color = Color::BrightBlack;
-pub const GRAYER:     Color = Color::Byte(240);
-pub const GRAYEST:    Color = Color::Byte(234);
-pub const BOLD:       Style = Style::Bold;
-pub const UNDERLINE:  Style = Style::Underlined;
-pub const RESET:      Style = Style::Reset;
+pub(crate) const RED:        Color = Color::Red;
+pub(crate) const GREEN:      Color = Color::Green;
+pub(crate) const YELLOW:     Color = Color::Yellow;
+pub(crate) const LIGHT_GRAY: Color = Color::Byte(248);
+pub(crate) const GRAY:       Color = Color::BrightBlack;
+pub(crate) const GRAYER:     Color = Color::Byte(240);
+pub(crate) const GRAYEST:    Color = Color::Byte(234);
+pub(crate) const BOLD:       Style = Style::Bold;
+pub(crate) const UNDERLINE:  Style = Style::Underlined;
+pub(crate) const RESET:      Style = Style::Reset;
 
 #[macro_export]
 macro_rules! debug_println {
@@ -73,7 +73,7 @@ fn unknown_version() -> String {
 #[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
 #[derive(Default)]
-pub struct Links {
+pub(crate) struct Links {
     home: String,
     code: String,
 }
@@ -81,7 +81,7 @@ pub struct Links {
 // docs.json
 #[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
-pub struct Docs {
+pub(crate) struct Docs {
     #[serde(skip)]
     name: String,
     pub slug: String,
@@ -115,7 +115,7 @@ pub struct Docs {
 //     "attribution": "whatever"
 // }
 
-pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
+pub(crate) fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     let file = File::open(&docs_json_path)
         .map_err(|err| format!("Could not open `{}`: {err}", docs_json_path.display()))?;
@@ -129,7 +129,7 @@ pub fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
 }
 
 #[inline]
-pub fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String> {
+pub(crate) fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String> {
     let mut path_split = path.split('#');
 
     let item = if let Some(item) = path_split.next() {
@@ -213,7 +213,7 @@ fn get_fragment_bounds(
     (current_fragment_line, None)
 }
 
-pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Result<bool, String> {
+pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Result<bool, String> {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
@@ -238,6 +238,12 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Result<boo
         if let Some(line) = next_fragment {
             next_fragment_line = line;
             has_next_fragment = true;
+        }
+
+        // @@@
+        #[cfg(debug_assertions)]
+        if !is_fragment_found {
+            return Err(format!("debug: #{fragment} is specified but wasn't found in the page"));
         }
     }
 
@@ -303,7 +309,7 @@ pub fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Result<boo
     Ok(is_fragment_found)
 }
 
-pub fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> Result<bool, String> {
+pub(crate) fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> Result<bool, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let page_path_string = docset_path.join(page)
@@ -325,7 +331,7 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
 static mut HOME_DIR: Option<PathBuf> = None;
 static HOME_DIR_INIT: Once = Once::new();
 
-pub fn get_home_directory() -> Result<PathBuf, String> {
+pub(crate) fn get_home_directory() -> Result<PathBuf, String> {
     unsafe {
         if let Some(home_dir) = HOME_DIR.as_ref() {
             return Ok(home_dir.clone());
@@ -369,14 +375,14 @@ pub fn get_home_directory() -> Result<PathBuf, String> {
 }
 
 #[inline]
-pub fn get_program_directory() -> Result<PathBuf, String> {
+pub(crate) fn get_program_directory() -> Result<PathBuf, String> {
     let path = get_home_directory()?;
     let dot_program = format!(".{PROGRAM_NAME}");
     let program_path = path.join(dot_program);
     Ok(program_path)
 }
 
-pub fn create_program_directory() -> ResultS {
+pub(crate) fn create_program_directory() -> ResultS {
     let program_path = get_program_directory()?;
 
     if !program_path.exists() {
@@ -393,7 +399,7 @@ pub fn create_program_directory() -> ResultS {
 
 const WEEK: Duration = Duration::from_secs(60 * 60 * 24 * 7);
 
-pub fn is_docs_json_old() -> Result<bool, String> {
+pub(crate) fn is_docs_json_old() -> Result<bool, String> {
     let program_path = get_program_directory()
         .map_err(|err| err.to_string())?;
 
@@ -416,7 +422,7 @@ pub fn is_docs_json_old() -> Result<bool, String> {
     }
 }
 
-pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
+pub(crate) fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
     let log_file_path = get_program_directory()?.join("logs.txt");
 
     let mut log_file = if log_file_path.exists() {
@@ -432,14 +438,14 @@ pub fn write_to_logfile(message: impl Display) -> Result<PathBuf, String> {
     Ok(log_file_path)
 }
 
-pub enum SearchMatch {
+pub(crate) enum SearchMatch {
     Exact,
     Vague(Vec<String>),
     None
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
-pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
+pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         SearchMatch::Exact => return true,
         SearchMatch::Vague(vague_matches) => {
@@ -456,7 +462,7 @@ pub fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
-pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch {
+pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch {
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
@@ -475,7 +481,7 @@ pub fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch 
     }
 }
 
-pub fn get_local_docsets() -> Result<Vec<String>, String> {
+pub(crate) fn get_local_docsets() -> Result<Vec<String>, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     let docsets_dir_exists = docsets_path.try_exists()
         .map_err(|err| format!("Could not check `{}`: {err}", docsets_path.display()))?;
@@ -504,20 +510,20 @@ pub fn get_local_docsets() -> Result<Vec<String>, String> {
 }
 
 #[inline]
-pub fn is_docset_downloaded(docset_name: &String) -> Result<bool, String> {
+pub(crate) fn is_docset_downloaded(docset_name: &String) -> Result<bool, String> {
     get_docset_path(docset_name)?
         .try_exists()
         .map_err(|err| format!("Could not check if `{docset_name}` exists: {err}"))
 }
 
 #[inline]
-pub fn is_docs_json_exists() -> Result<bool, String> {
+pub(crate) fn is_docs_json_exists() -> Result<bool, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     Ok(docs_json_path.exists())
 }
 
 #[inline]
-pub fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
+pub(crate) fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     Ok(docsets_path.join(docset_name))
 }

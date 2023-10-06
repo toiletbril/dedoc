@@ -21,7 +21,7 @@ fn show_list_help() -> ResultS {
     Ok(())
 }
 
-pub fn list<Args>(mut args: Args) -> ResultS
+pub(crate) fn list<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

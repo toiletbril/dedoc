@@ -39,7 +39,7 @@ fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
     !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
 
-pub fn remove<Args>(mut args: Args) -> ResultS
+pub(crate) fn remove<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

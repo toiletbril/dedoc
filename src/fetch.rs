@@ -66,7 +66,7 @@ fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<Docs>) -> Result<(), St
     Ok(())
 }
 
-pub fn fetch<Args>(mut args: Args) -> ResultS
+pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

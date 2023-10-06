@@ -24,7 +24,7 @@ fn show_open_help() -> ResultS {
     Ok(())
 }
 
-pub fn open<Args>(mut args: Args) -> ResultS
+pub(crate) fn open<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
