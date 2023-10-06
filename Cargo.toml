@@ -2,6 +2,7 @@
 name         = "dedoc"
 version      = "0.2.1"
 description  = "Terminal-based viewer for DevDocs documentation"
+repository   = "https://github.com/toiletbril/dedoc"
 authors      = ["toiletbril"]
 readme       = "README.md"
 
