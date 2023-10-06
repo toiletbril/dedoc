@@ -10,8 +10,13 @@ Pages are displayed as markdown documents, and can be piped to `less`,
 [`glow`](https://github.com/charmbracelet/glow) if you're fancy, or any other
 pager or markdown reader.
 
-If you have Rust installed, the preferred way to install is using `cargo
-install dedoc`. Otherwise, look for binaries in
+If you have Rust, the preferred way to install `dedoc` is by running:
+```console
+$ cargo install dedoc
+```
+
+Alternatively, precompiled `x86_64` binaries for Windows and Linux are
+available in 
 [Releases](https://github.com/toiletbril/dedoc/releases).
 
 ## Usage
