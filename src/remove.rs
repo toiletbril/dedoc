@@ -26,15 +26,17 @@ fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
 
     let has_slashes = {
         #[cfg(target_family = "windows")]
-        { docset.find("\\").is_some() || docset.find("/").is_some() }
+        { docset.contains('\\') || docset.contains('/') }
 
         #[cfg(target_family = "unix")]
-        { docset.find("/").is_some() }
+        { docset.contains('/') }
     };
+
     let starts_with_tilde = docset.starts_with('~');
-    let has_dollars = docset.find('$').is_some();
     let starts_with_dot = docset.starts_with('.');
-    let has_dots = docset.find("..").is_some();
+
+    let has_dollars = docset.contains('$');
+    let has_dots = docset.contains("..");
 
     !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }

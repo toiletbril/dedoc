@@ -34,7 +34,7 @@ fn show_test_help() -> ResultS {
     Ok(())
 }
 
-fn create_args<'a>(args: &'a str) -> IntoIter<String> {
+fn create_args(args: &str) -> IntoIter<String> {
     args.split_whitespace()
         .map(|s| s.to_string())
         .collect::<Vec<String>>()
@@ -76,7 +76,7 @@ fn test_search_should_use_cache(args: &str) {
 
     {
         let cache_options_path = program_directory.join("search_cache_options.json");
-        let cache_options_file = File::open(&cache_options_path).unwrap();
+        let cache_options_file = File::open(cache_options_path).unwrap();
         let cache_options_reader = BufReader::new(cache_options_file);
 
         let cached_search_options: SearchOptions = serde_json::from_reader(cache_options_reader).unwrap();
@@ -125,7 +125,7 @@ where
 
     debug_println!("Performing search tests...");
 
-    let search_results = vec![
+    let search_results = [
         run_with_args(search, "backbone -o 1", "open first page"),
         run_with_args(search, "backbone -o 100", "open 100th page"),
         run_with_args(search, "backbone -i collection-at", "list search results in correct casing"),

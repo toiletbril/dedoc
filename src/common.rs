@@ -182,8 +182,8 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
 
 // This function ignores fragment's character case, to support --case-insensitive
 fn get_fragment_bounds(
-    tagged_lines: &Vec<TaggedLine<Vec<RichAnnotation>>>,
-    fragment: &String
+    tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
+    fragment: &str
 ) -> (Option<usize>, Option<usize>)
 {
     let lowercase_fragment = fragment.to_lowercase();
@@ -191,9 +191,7 @@ fn get_fragment_bounds(
     let mut current_fragment_line = None;
     let mut found_fragment = false;
 
-    let mut line_number = 0;
-
-    for tagged_line in tagged_lines {
+    for (line_number, tagged_line) in tagged_lines.iter().enumerate() {
         for tagged_line_element in tagged_line.iter() {
             match tagged_line_element {
                 FragmentStart(temp_fragment) if temp_fragment.to_lowercase() == lowercase_fragment => {
@@ -207,7 +205,6 @@ fn get_fragment_bounds(
                 _ => {}
             }
         }
-        line_number += 1;
     }
 
     (current_fragment_line, None)
@@ -229,7 +226,8 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
     // If there is a fragment, determine current fragment offset and print
     // everything until the next fragment.
     if let Some(fragment) = fragment {
-        let (current_fragment, next_fragment) = get_fragment_bounds(&rich_page, &fragment);
+        let (current_fragment, next_fragment) = get_fragment_bounds(&rich_page, fragment);
+
         if let Some(line) = current_fragment {
             current_fragment_line = line;
             is_fragment_found = true;
@@ -240,7 +238,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
             has_next_fragment = true;
         }
 
-        // @@@
+        // @@@: figure out better way to short-circuit search when it fails a test
         #[cfg(debug_assertions)]
         if !is_fragment_found {
             return Err(format!("debug: #{fragment} is specified but wasn't found in the page"));
@@ -279,7 +277,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
             if is_only_tag {
                 // Pad preformat to 80 characters for cool background.
                 if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
-                    let padding_amount = (80 as usize)
+                    let padding_amount = 80_usize
                         .saturating_sub(tagged_string.s.len());
 
                     for _ in 0..padding_amount {
@@ -445,7 +443,7 @@ pub(crate) enum SearchMatch {
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
-pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
+pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &[Docs]) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         SearchMatch::Exact => return true,
         SearchMatch::Vague(vague_matches) => {
@@ -462,7 +460,7 @@ pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Ve
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
-pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch {
+pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &[Docs]) -> SearchMatch {
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
@@ -492,10 +490,10 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String> {
         return Ok(result);
     }
 
-    let mut docsets_dir = read_dir(docsets_path)
+    let docsets_dir = read_dir(docsets_path)
         .map_err(|err| err.to_string())?;
 
-    while let Some(entry) = docsets_dir.next() {
+    for entry in docsets_dir {
         let entry = entry
             .map_err(|err| err.to_string())?;
 

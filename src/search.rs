@@ -229,7 +229,7 @@ fn get_context_around_query(html_line: &String, index: usize, query_len: usize) 
 // Item is a file path without a file extension which is relative to docset directory
 fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
     let item = path
-        .strip_prefix(&docset_path)
+        .strip_prefix(docset_path)
         .map_err(|err| err.to_string())?
         .with_extension("")
         .display()
@@ -260,7 +260,7 @@ fn search_docset_precisely(
         let mut exact_files   = vec![];
         let mut vague_results = vec![];
 
-        let dir = read_dir(&path)
+        let dir = read_dir(path)
             .map_err(|err| format!("Could not read `{}` directory: {err}", path.display()))?;
 
         for entry in dir {
@@ -275,7 +275,7 @@ fn search_docset_precisely(
 
             if file_type.is_dir() {
                 let (mut exact, mut vague) =
-                    visit_dir_with_query(original_path, &entry.path(), &query, case_insensitive)?;
+                    visit_dir_with_query(original_path, &entry.path(), query, case_insensitive)?;
 
                 exact_files.append(&mut exact);
                 vague_results.append(&mut vague);

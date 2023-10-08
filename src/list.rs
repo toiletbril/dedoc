@@ -74,7 +74,7 @@ where
 
     while let Some(entry) = docs_names_peekable.next() {
         // slug has ~ if it's version-specific
-        if !flag_local && !flag_all && entry.contains("~") {
+        if !flag_local && !flag_all && entry.contains('~') {
             continue;
         }
 
