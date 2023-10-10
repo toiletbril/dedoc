@@ -89,7 +89,7 @@ fn test_search_should_use_cache(args: &str) {
 
 // Manual testing. I think this way is better than integration testing I came up with initially.
 // If everything is looking cool, then it's we should be fine :3
-pub(crate) fn test_c<Args>(mut args: Args) -> ResultS
+pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {

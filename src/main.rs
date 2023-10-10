@@ -27,7 +27,7 @@ use list::list;
 use fetch::fetch;
 
 #[cfg(debug_assertions)]
-use test::test_c;
+use test::debug_test;
 
 fn show_version() -> ResultS {
     #[cfg(debug_assertions)]
@@ -110,7 +110,7 @@ where
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
         #[cfg(debug_assertions)]
-        "test"            => test_c(args),
+        "test"            => debug_test(args),
         other => {
             Err(format!("Unknown subcommand `{other}`"))
         }
