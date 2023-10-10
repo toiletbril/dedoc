@@ -1,5 +1,6 @@
 * make good tests
 * fuzzy search
+* print warnings after command output
 
 * transpile html to intermediate markdown when building docset with `download`
     * allow specifying default page width

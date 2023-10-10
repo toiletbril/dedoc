@@ -1,8 +1,8 @@
 # dedoc
 
-Search [DevDocs](https://devdocs.io/) from your terminal. Offline. **Without
-browser**. Without Python, Javascript or other inconveniences. Even without
-desktop environment.
+Search and view [DevDocs](https://devdocs.io/) from your terminal. Offline.
+**Without browser**. Without Python, Javascript or other inconveniences. Even
+without desktop environment.
 
 App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`.
 
@@ -16,8 +16,7 @@ $ cargo install dedoc
 ```
 
 Alternatively, precompiled `x86_64` binaries for Windows and Linux are
-available in 
-[Releases](https://github.com/toiletbril/dedoc/releases).
+available in [releases](https://github.com/toiletbril/dedoc/releases).
 
 ## Usage
 
@@ -95,6 +94,11 @@ Finally, to see the page, you can run `open` with the path with optional
 fragment:
 ```console
 $ dedoc open rust "std/io/struct.bufreader#method.borrow"
+...
+fn borrow(&self) -> &T
+Immutably borrows from an owned value. Read more
+source
+...
 ```
 
 Using `-h` with `open` makes `dedoc` interpret supplied arguments as a path to
@@ -103,16 +107,16 @@ HTML file and behave like a HTML to markdown transpiler.
 Instead of typing out the whole path, you can conveniently append `-o` flag the
 your previous `search` command, which will open n-th matched page or fragment:
 ```console
-$ dedoc search rust bufreader -o 1
+$ dedoc search rust bufreader -o 2
 ```
 
 This will be as fast as `open`, due to search caching.
 
 You would probably like to use `ss` instead of `search`, pipe output to a pager
-or markdown reader, like `less` and forcefully enable colors with `-c y`,
-turning the final command into:
+or markdown reader, like `less` and forcefully enable colors for it with `-c
+y`, turning the final command into:
 ```console
-$ dedoc -c y ss rust bufreader -o 1 | less -r
+$ dedoc -c y ss rust bufreader -o 2 | less -r
 ```
 
 Happy coding!
