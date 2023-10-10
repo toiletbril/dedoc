@@ -398,6 +398,8 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
 
 fn search_impl(
     search_options: SearchOptions,
+    // Passing this as a String is needed to check if output was not numeric
+    // before parsing it as number
     flag_open: String
 ) -> Result<Vec<String>, String> {
     let mut warnings = vec![];
@@ -407,7 +409,7 @@ fn search_impl(
     let open_number = flag_open.parse::<usize>().ok();
 
     if open_number.is_none() {
-        // Printing query is needed to let you know if you messed up any flags
+        // This lets you know whether flag messed up your query
         println!("Searching for `{}`...", search_options.query);
     }
 
@@ -582,6 +584,7 @@ where
         flags:  Cow::Borrowed(&search_flags),
     };
 
+    // Print warnings only after search results
     let warnings = search_impl(search_options, flag_open)?;
 
     for warning in warnings {
