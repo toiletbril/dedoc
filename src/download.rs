@@ -16,8 +16,9 @@ use crate::common::{
     is_docset_in_docs_or_print_warning
 };
 use crate::common::{
-    BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
+    BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION
 };
+use crate::print_warning;
 
 fn show_download_help() -> ResultS {
     println!(
@@ -151,7 +152,7 @@ fn sanitize_html_line(html_line: String) -> String {
     sanitized_line
 }
 
-fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
+fn build_docset_from_map_with_progress<'de, M>(docset_name: &str, mut map: M) -> ResultS
 where
     M: MapAccess<'de>,
 {
@@ -279,9 +280,9 @@ where
         }
 
         if !flag_force && is_docset_downloaded(docset)? {
-            println!("\
-{YELLOW}WARNING{RESET}: Docset `{docset}` is already downloaded. \
-If you still want to update it, re-run this command with `--force`"
+            print_warning!(
+                "Docset `{docset}` is already downloaded. \
+                If you still want to update it, re-run this command with `--force`"
             );
             continue;
         } else if is_docset_in_docs_or_print_warning(docset, &docs) {

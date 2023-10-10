@@ -1,3 +1,5 @@
+#![allow(clippy::useless_format)]
+
 use std::borrow::Cow;
 use std::fs::{read_dir, File};
 use std::io::{BufRead, BufReader, BufWriter};
@@ -14,7 +16,8 @@ use crate::common::{
     is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded, split_to_item_and_fragment
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
-                    RESET, YELLOW, DOC_PAGE_EXTENSION};
+                    RESET, DOC_PAGE_EXTENSION};
+use crate::print_warning;
 
 fn show_search_help() -> ResultS {
     println!(
@@ -146,8 +149,8 @@ type ExactMatches = Vec<ExactResult>;
 type VagueMatches = Vec<VagueResult>;
 
 fn search_docset_in_filenames(
-    docset_name: &String,
-    query: &String,
+    docset_name: &str,
+    query: &str,
     case_insensitive: bool,
 ) -> Result<ExactMatches, String> {
     let docset_path = get_docset_path(docset_name)?;
@@ -239,8 +242,8 @@ fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, 
 }
 
 fn search_docset_precisely(
-    docset_name: &String,
-    query: &String,
+    docset_name: &str,
+    query: &str,
     case_insensitive: bool,
 ) -> Result<(ExactMatches, VagueMatches), String> {
     let docset_path = get_docset_path(docset_name)?;
@@ -393,6 +396,125 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
     Ok(())
 }
 
+fn search_impl(
+    search_options: SearchOptions,
+    flag_open: String
+) -> Result<Vec<String>, String> {
+    let mut warnings = vec![];
+
+    let SearchOptions { ref docset, ref flags, ref query } = search_options;
+
+    let open_number = flag_open.parse::<usize>().ok();
+
+    if open_number.is_none() {
+        // Printing query is needed to let you know if you messed up any flags
+        println!("Searching for `{}`...", search_options.query);
+    }
+
+    if flags.precise {
+        let (exact_results, vague_results) =
+        if let Some(cache) = try_use_cache(&search_options) {
+            (cache.exact_results, cache.vague_results)
+        } else {
+            let (exact, vague) = search_docset_precisely(docset, query, flags.case_insensitive)?;
+
+            let search_cache = SearchCache {
+                exact_results: Cow::Borrowed(&exact),
+                vague_results: Cow::Borrowed(&vague),
+            };
+
+            let _ = cache_search_results(&search_options, &search_cache)
+                .map_err(|err| {
+                    warnings.push(format!("Could not write cache: {err}."));
+                });
+
+            (exact.into(), vague.into())
+        };
+
+        let exact_results_offset = exact_results.len();
+
+        if !flag_open.is_empty() {
+            match open_number {
+                Some(n) if n < 1 || n > exact_results_offset + vague_results.len() => {
+                    warnings.push(format!("`--open {n}` is out of bounds."));
+                }
+                Some(n) if n <= exact_results_offset => {
+                    let result = &exact_results[n - 1];
+                    print_page_from_docset(docset, &result.item, result.fragment.as_ref())?;
+                    return Ok(warnings);
+                }
+                Some(n) => {
+                    let result = &vague_results[n - exact_results_offset - 1];
+                    print_page_from_docset(docset, &result.item, None)?;
+                    return Ok(warnings);
+                }
+                _ => {
+                    warnings.push(format!("`--open` requires a number."));
+                }
+            }
+        }
+
+        if !exact_results.is_empty() {
+            println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+            print_search_results(&exact_results, 1)?;
+        } else {
+            println!("{BOLD}No exact matches in `{docset}`{RESET}.");
+        }
+
+        if !vague_results.is_empty() {
+            println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
+            print_vague_search_results(&vague_results, exact_results_offset + 1)?;
+        } else {
+            println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
+        }
+
+        Ok(warnings)
+    } else {
+        let results = if let Some(cache) = try_use_cache(&search_options) {
+            cache.exact_results
+        } else {
+            let exact  = search_docset_in_filenames(docset, query, flags.case_insensitive)?;
+
+            let search_cache = SearchCache {
+                exact_results: Cow::Borrowed(&exact),
+                vague_results: Cow::Owned(vec![]),
+            };
+
+            let _ = cache_search_results(&search_options, &search_cache)
+                .map_err(|err| {
+                    warnings.push(format!("Could not write cache: {err}."));
+                });
+
+            exact.into()
+        };
+
+        if !flag_open.is_empty() {
+            match open_number {
+                Some(n) if n < 1 || n > results.len() => {
+                    warnings.push(format!("`--open {n}` is out of bounds."));
+                }
+                Some(n) => {
+                    let result = &results[n - 1];
+                    print_page_from_docset(docset, &result.item, result.fragment.as_ref())?;
+                    return Ok(warnings);
+                }
+                _ => {
+                    warnings.push(format!("`--open` requires a number."));
+                }
+            }
+        }
+
+        if !results.is_empty() {
+            println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+            print_search_results(&results, 1)?;
+        } else {
+            println!("{BOLD}No exact matches in `{docset}`{RESET}.");
+        }
+
+        Ok(warnings)
+    }
+}
+
 pub(crate) fn search<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
@@ -430,9 +552,7 @@ where
 
     if !is_docset_downloaded(&docset)? {
         if is_docset_in_docs_or_print_warning(&docset, &docs) {
-            println!("\
-{YELLOW}WARNING{RESET}: Docset `{docset}` is not downloaded. Try running `download {docset}`."
-            );
+            print_warning!("Docset `{docset}` is not downloaded. Try running `download {docset}`.");
         }
         return Ok(());
     }
@@ -450,9 +570,6 @@ where
         }
     };
 
-    let flag_open_is_empty = flag_open.is_empty();
-    let open_number = flag_open.parse::<usize>().ok();
-
     let search_flags = SearchFlags {
         precise: flag_precise,
         case_insensitive: flag_case_insensitive,
@@ -465,106 +582,10 @@ where
         flags:  Cow::Borrowed(&search_flags),
     };
 
-    if flag_open_is_empty {
-        // Printing query is needed to let you know if you messed up any flags
-        println!("Searching for `{query}`...");
-    }
+    let warnings = search_impl(search_options, flag_open)?;
 
-    if flag_precise {
-        let (exact_results, vague_results) =
-        if let Some(cache) = try_use_cache(&search_options) {
-            (cache.exact_results, cache.vague_results)
-        } else {
-            let (exact, vague) = search_docset_precisely(&docset, &query, flag_case_insensitive)?;
-
-            let search_cache = SearchCache {
-                exact_results: Cow::Borrowed(&exact),
-                vague_results: Cow::Borrowed(&vague),
-            };
-
-            let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
-
-            (exact.into(), vague.into())
-        };
-
-        let exact_results_offset = exact_results.len();
-
-        if !flag_open_is_empty {
-            match open_number {
-                Some(n) if n < 1 || n > exact_results_offset + vague_results.len() => {
-                    println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
-                }
-                Some(n) if n <= exact_results_offset => {
-                    let result = &exact_results[n - 1];
-                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
-                    return Ok(());
-                }
-                Some(n) => {
-                    let result = &vague_results[n - exact_results_offset - 1];
-                    print_page_from_docset(&docset, &result.item, None)?;
-                    return Ok(());
-                }
-                _ => {
-                    println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
-                }
-            }
-        }
-
-        if !exact_results.is_empty() {
-            println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-            print_search_results(&exact_results, 1)?;
-        } else {
-            println!("{BOLD}No exact matches in `{docset}`{RESET}.");
-        }
-
-        if !vague_results.is_empty() {
-            println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
-            print_vague_search_results(&vague_results, exact_results_offset + 1)?;
-        } else {
-            println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
-        }
-
-        return Ok(());
-    } else {
-        let results = if let Some(cache) = try_use_cache(&search_options) {
-            cache.exact_results
-        } else {
-            let exact  = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
-
-            let search_cache = SearchCache {
-                exact_results: Cow::Borrowed(&exact),
-                vague_results: Cow::Owned(vec![]),
-            };
-
-            let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
-
-            exact.into()
-        };
-
-        if !flag_open_is_empty {
-            match open_number {
-                Some(n) if n < 1 || n > results.len() => {
-                    println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
-                }
-                Some(n) => {
-                    let result = &results[n - 1];
-                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
-                    return Ok(());
-                }
-                _ => {
-                    println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
-                }
-            }
-        }
-
-        if !results.is_empty() {
-            println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-            return print_search_results(&results, 1);
-        } else {
-            println!("{BOLD}No exact matches in `{docset}`{RESET}.");
-        }
+    for warning in warnings {
+        print_warning!("{}", warning);
     }
 
     Ok(())

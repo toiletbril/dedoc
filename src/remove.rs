@@ -6,6 +6,7 @@ use toiletcli::flags::*;
 use crate::common::ResultS;
 use crate::common::{get_docset_path, is_docset_downloaded, get_local_docsets};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
+use crate::print_warning;
 
 fn show_remove_help() -> ResultS {
     println!(
@@ -70,7 +71,7 @@ where
 
     for docset in args.iter() {
         if !is_name_allowed(docset) {
-            println!("{YELLOW}WARNING{RESET}: `{docset}` contains forbidden characters.");
+            print_warning!("`{docset}` contains forbidden characters.");
             continue;
         }
 
@@ -82,7 +83,7 @@ where
                     .map_err(|err| format!("Unable to remove `{}`: {err}", docset_path.display()))?;
             }
         } else {
-            println!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
+            print_warning!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
         }
     }
 

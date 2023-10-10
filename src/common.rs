@@ -128,6 +128,16 @@ pub(crate) fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
+#[macro_export]
+macro_rules! print_warning {
+    ($($e:expr),+) => {
+        {
+            eprint!("{}WARNING{}: ", toiletcli::colors::Color::Yellow, toiletcli::colors::Style::Reset);
+            eprintln!($($e),+);
+        }
+    };
+}
+
 #[inline]
 pub(crate) fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String> {
     let mut path_split = path.split('#');
@@ -307,7 +317,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
     Ok(is_fragment_found)
 }
 
-pub(crate) fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> Result<bool, String> {
+pub(crate) fn print_page_from_docset(docset_name: &str, page: &str, fragment: Option<&String>) -> Result<bool, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let page_path_string = docset_path.join(page)
@@ -450,10 +460,10 @@ pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &[D
             let end_index = std::cmp::min(3, vague_matches.len());
             let first_three = &vague_matches[..end_index];
 
-            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
+            print_warning!("Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
         }
         SearchMatch::None => {
-            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
+            print_warning!("Unknown docset `{docset_name}`. Did you run `fetch`?");
         }
     }
     false
@@ -521,7 +531,7 @@ pub(crate) fn is_docs_json_exists() -> Result<bool, String> {
 }
 
 #[inline]
-pub(crate) fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
+pub(crate) fn get_docset_path(docset_name: &str) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     Ok(docsets_path.join(docset_name))
 }
