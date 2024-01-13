@@ -408,8 +408,7 @@ pub(crate) fn create_program_directory() -> ResultS {
 const WEEK: Duration = Duration::from_secs(60 * 60 * 24 * 7);
 
 pub(crate) fn is_docs_json_old() -> Result<bool, String> {
-    let program_path = get_program_directory()
-        .map_err(|err| err.to_string())?;
+    let program_path = get_program_directory()?;
 
     let metadata = program_path
         .join("docs.json")
