@@ -88,7 +88,8 @@ to the `grep` command, and will look within all files, find all matches, and
 display them with some context around the found section.
 
 Use `-i` to perform case-insensitive search, and `-w` to search for the whole
-sentence.
+sentence. If you want to forcefully print the entire page instead of only a
+fragment, use `-f` flag.
 
 Finally, to see the page, you can run `open` with the path with optional
 fragment:
@@ -113,10 +114,10 @@ $ dedoc search rust bufreader -o 2
 This will be as fast as `open`, due to search caching.
 
 You would probably like to use `ss` instead of `search`, pipe output to a pager
-or markdown reader, like `less` and forcefully enable colors for it with `-c
-y`, turning the final command into:
+or markdown reader, like `less` and forcefully enable colors for it with `-c`,
+turning the final command into:
 ```console
-$ dedoc -c y ss rust bufreader -o 2 | less -r
+$ dedoc -c ss rust bufreader -o 2 | less -r
 ```
 
 Happy coding!
