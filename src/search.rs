@@ -23,7 +23,7 @@ fn show_search_help() -> ResultS {
     println!(
         "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} search{RESET} [-wipo] <docset> <query>
+    {BOLD}{PROGRAM_NAME} search{RESET} [-wipof] <docset> <query>
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
@@ -31,6 +31,7 @@ fn show_search_help() -> ResultS {
     -i, --ignore-case               Ignore character case.
     -p, --precise                   Look inside files (like `grep`).
     -o, --open <number>             Open n-th result.
+    -f, --ignore-fragment           Ignore the fragment and open the entire page.
         --help                      Display help message."
     );
     Ok(())
@@ -57,6 +58,7 @@ struct SearchFlags {
     case_insensitive: bool,
     precise: bool,
     whole: bool,
+    ignore_fragment: bool,
 }
 
 // Sometimes search results are big, and it's cheaper to check a small file if current search
@@ -442,7 +444,12 @@ fn search_impl(
                 }
                 Some(n) if n <= exact_results_offset => {
                     let result = &exact_results[n - 1];
-                    print_page_from_docset(docset, &result.item, result.fragment.as_ref())?;
+                    let fragment = if flags.ignore_fragment {
+                        None
+                    } else {
+                        result.fragment.as_ref()
+                    };
+                    print_page_from_docset(docset, &result.item, fragment)?;
                     return Ok(warnings);
                 }
                 Some(n) => {
@@ -497,7 +504,12 @@ fn search_impl(
                 }
                 Some(n) => {
                     let result = &results[n - 1];
-                    print_page_from_docset(docset, &result.item, result.fragment.as_ref())?;
+                    let fragment = if flags.ignore_fragment {
+                        None
+                    } else {
+                        result.fragment.as_ref()
+                    };
+                    print_page_from_docset(docset, &result.item, fragment)?;
                     return Ok(warnings);
                 }
                 _ => {
@@ -526,13 +538,15 @@ where
     let mut flag_precise;
     let mut flag_open;
     let mut flag_case_insensitive;
+    let mut flag_ignore_fragment;
 
     let mut flags = flags![
         flag_help: BoolFlag,             ["--help"],
         flag_whole: BoolFlag,            ["--whole", "-w"],
         flag_precise: BoolFlag,          ["--precise", "-p"],
         flag_open: StringFlag,           ["--open", "-o"],
-        flag_case_insensitive: BoolFlag, ["--ignore-case", "-i"]
+        flag_case_insensitive: BoolFlag, ["--ignore-case", "-i"],
+        flag_ignore_fragment: BoolFlag,  ["--ignore-fragment", "-f"]
     ];
 
     let args = parse_flags(&mut args, &mut flags)?;
@@ -576,6 +590,7 @@ where
         precise: flag_precise,
         case_insensitive: flag_case_insensitive,
         whole: flag_whole,
+        ignore_fragment: flag_ignore_fragment,
     };
 
     let search_options = SearchOptions {
@@ -586,7 +601,6 @@ where
 
     // Print warnings only after search results
     let warnings = search_impl(search_options, flag_open)?;
-
     for warning in warnings {
         print_warning!("{}", warning);
     }
