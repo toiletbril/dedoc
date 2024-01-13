@@ -34,13 +34,6 @@ fn show_test_help() -> ResultS {
     Ok(())
 }
 
-fn create_args(args: &str) -> IntoIter<String> {
-    args.split_whitespace()
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>()
-        .into_iter()
-}
-
 fn reset_state_and_cache() {
     debug_println!("Removing cache...");
 
@@ -51,6 +44,13 @@ fn reset_state_and_cache() {
     let _ = remove_file(program_directory.join("search_cache.json"));
 }
 
+fn create_args(args: &str) -> IntoIter<String> {
+    args.split_whitespace()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>()
+        .into_iter()
+}
+
 fn run_with_args<O>(
     command: fn(IntoIter<String>) -> Result<O, String>,
     args_str: &str, should_do: &str
@@ -59,7 +59,6 @@ fn run_with_args<O>(
     debug_println!("Running with args: `{args_str}`, should {should_do}");
 
     let command_result = command(args);
-
     if let Err(err) = &command_result {
         debug_println!("{BOLD}*** Test failed with: {err} ***");
         false
