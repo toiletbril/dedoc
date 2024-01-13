@@ -81,15 +81,15 @@ You will get search results which are pages that match your query.
 
 Results that start with `#` denote fragments. Opening them will result in the
 output of only that specific fragment. Likewise, opening a page will show the
-entire page.
+entire page. If you want to forcefully print the entire page instead of only a
+fragment, use `-f` flag.
 
 For a more detailed search, use the `-p` flag. It makes search behave similarly
 to the `grep` command, and will look within all files, find all matches, and
 display them with some context around the found section.
 
 Use `-i` to perform case-insensitive search, and `-w` to search for the whole
-sentence. If you want to forcefully print the entire page instead of only a
-fragment, use `-f` flag.
+sentence.
 
 Finally, to see the page, you can run `open` with the path with optional
 fragment:
