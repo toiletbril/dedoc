@@ -103,7 +103,8 @@ source
 ```
 
 Using `-h` with `open` makes `dedoc` interpret supplied arguments as a path to
-HTML file and behave like a HTML to markdown transpiler.
+HTML file and behave like a HTML to markdown transpiler. To make output wider or
+narrower, you can use `-c` flag with the number of columns.
 
 Instead of typing out the whole path, you can conveniently append `-o` flag the
 your previous `search` command, which will open n-th matched page or fragment:
@@ -111,7 +112,8 @@ your previous `search` command, which will open n-th matched page or fragment:
 $ dedoc search rust bufreader -o 2
 ```
 
-This will be as fast as `open`, due to search caching.
+This will be as fast as `open`, due to search caching. `-c` flag here works the
+same way as in `open`.
 
 You would probably like to use `ss` instead of `search`, pipe output to a pager
 or markdown reader, like `less` and forcefully enable colors for it with `-c`,
