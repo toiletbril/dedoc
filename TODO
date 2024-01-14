@@ -1,6 +1,3 @@
-* when creating flags, swap long flags with short ones to make alignment cooler.
-* use r# for multiline strings
-
 * make good tests
 * fuzzy search
 
