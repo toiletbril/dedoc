@@ -14,7 +14,7 @@ use crate::common::ResultS;
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
     is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded,
-    split_to_item_and_fragment, get_flag_error
+    split_to_item_and_fragment, get_flag_error, get_terminal_width
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
                     RESET, DOC_PAGE_EXTENSION};
@@ -23,7 +23,7 @@ use crate::print_warning;
 fn show_search_help() -> ResultS {
     println!("\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} search{RESET} [-wipof] <docset> <query>
+    {BOLD}{PROGRAM_NAME} search{RESET} [-wipofc] <docset> <query>
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
@@ -31,7 +31,8 @@ fn show_search_help() -> ResultS {
     -i, --ignore-case               Ignore character case.
     -p, --precise                   Look inside files (like `grep`).
     -o, --open <number>             Open n-th result.
-    -f, --ignore-fragment           Ignore the fragment and open the entire page.
+    -f, --ignore-fragment           For --open: ignore the fragment and open the entire page.
+    -c, --columns <number>          For --open: make output N columns wide.
         --help                      Display help message."
     );
     Ok(())
@@ -402,13 +403,26 @@ fn search_impl(
     search_options: SearchOptions,
     // Passing this as a String is needed to check if output was not numeric
     // before parsing it as number
-    flag_open: String
+    flag_open: String,
+    flag_columns: String
 ) -> Result<Vec<String>, String> {
     let mut warnings = vec![];
 
     let SearchOptions { ref docset, ref flags, ref query } = search_options;
 
     let open_number = flag_open.parse::<usize>().ok();
+    let mut width = get_terminal_width();
+
+    let maybe_columns = flag_columns.parse::<usize>().ok();
+    if let Some(col_number) = maybe_columns {
+        if col_number == 0 {
+            width = 999;
+        } else if col_number > 10 {
+            width = col_number;
+        }
+    } else if !flag_columns.is_empty() {
+        warnings.push("Invalid number of columns.".to_string());
+    }
 
     if open_number.is_none() {
         // This lets you know whether flag messed up your query
@@ -449,12 +463,12 @@ fn search_impl(
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment)?;
+                    print_page_from_docset(docset, &result.item, fragment, width)?;
                     return Ok(warnings);
                 }
                 Some(n) => {
                     let result = &vague_results[n - exact_results_offset - 1];
-                    print_page_from_docset(docset, &result.item, None)?;
+                    print_page_from_docset(docset, &result.item, None, width)?;
                     return Ok(warnings);
                 }
                 _ => {
@@ -509,7 +523,7 @@ fn search_impl(
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment)?;
+                    print_page_from_docset(docset, &result.item, fragment, width)?;
                     return Ok(warnings);
                 }
                 _ => {
@@ -534,6 +548,7 @@ where
     Args: Iterator<Item = String>,
 {
     let mut flag_whole;
+    let mut flag_columns;
     let mut flag_precise;
     let mut flag_open;
     let mut flag_case_insensitive;
@@ -541,6 +556,7 @@ where
     let mut flag_help;
 
     let mut flags = flags![
+        flag_columns: StringFlag,        ["-c", "--columns"],
         flag_whole: BoolFlag,            ["-w", "--whole"],
         flag_precise: BoolFlag,          ["-p", "--precise"],
         flag_open: StringFlag,           ["-o", "--open"],
@@ -603,7 +619,7 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
     };
 
     // Print warnings only after search results
-    let warnings = search_impl(search_options, flag_open)?;
+    let warnings = search_impl(search_options, flag_open, flag_columns)?;
     for warning in warnings {
         print_warning!("{}", warning);
     }

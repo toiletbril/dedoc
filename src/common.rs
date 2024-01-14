@@ -28,6 +28,8 @@ pub(crate) const DEFAULT_USER_AGENT: &str = "dedoc";
 
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
 
+pub(crate) const DEFAULT_WIDTH: usize = 80;
+
 pub(crate) const RED:        Color = Color::Red;
 pub(crate) const GREEN:      Color = Color::Green;
 pub(crate) const YELLOW:     Color = Color::Yellow;
@@ -147,6 +149,20 @@ pub(crate) fn get_flag_error(flag_error: &FlagError) -> String {
     }
 }
 
+pub(crate) fn get_terminal_width() -> usize {
+    let result = terminal_size::terminal_size();
+
+    if let Some((terminal_size::Width(w), _)) = result {
+        if w < 120 {
+            return w as usize;
+        } else {
+            return 120;
+        }
+    }
+
+    DEFAULT_WIDTH
+}
+
 #[inline]
 pub(crate) fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String> {
     let mut path_split = path.split('#');
@@ -229,12 +245,12 @@ fn get_fragment_bounds(
     (current_fragment_line, None)
 }
 
-pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Result<bool, String> {
+pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>, width: usize) -> Result<bool, String> {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
 
-    let rich_page = html2text::from_read_rich(reader, 80);
+    let rich_page = html2text::from_read_rich(reader, width);
 
     let mut current_fragment_line = 0;
     let mut next_fragment_line = 0;
@@ -296,7 +312,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
             if is_only_tag {
                 // Pad preformat to 80 characters for cool background.
                 if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
-                    let padding_amount = 80_usize
+                    let padding_amount = width
                         .saturating_sub(tagged_string.s.len());
 
                     for _ in 0..padding_amount {
@@ -326,7 +342,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
     Ok(is_fragment_found)
 }
 
-pub(crate) fn print_page_from_docset(docset_name: &str, page: &str, fragment: Option<&String>) -> Result<bool, String> {
+pub(crate) fn print_page_from_docset(docset_name: &str, page: &str, fragment: Option<&String>, width: usize) -> Result<bool, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let page_path_string = docset_path.join(page)
@@ -342,7 +358,7 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
         return Err(message);
     }
 
-    print_docset_file(page_path, fragment)
+    print_docset_file(page_path, fragment, width)
 }
 
 static mut HOME_DIR: Option<PathBuf> = None;
