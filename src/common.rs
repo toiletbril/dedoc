@@ -8,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedString, TaggedLineElement::*};
 
 use toiletcli::colors::{Color, Style};
+use toiletcli::flags::{FlagError, FlagErrorType};
 
 use serde::{Deserialize, Serialize};
 
@@ -136,6 +137,14 @@ macro_rules! print_warning {
             eprintln!($($e),+);
         }
     };
+}
+
+pub(crate) fn get_flag_error(flag_error: &FlagError) -> String {
+    match flag_error.error_type {
+        FlagErrorType::CannotCombine => format!("Flag `{}` cannot be combined", flag_error.flag),
+        FlagErrorType::NoValueProvided => format!("No value provided for `{}` flag", flag_error.flag),
+        FlagErrorType::Unknown => format!("Unknown flag `{}`", flag_error.flag),
+    }
 }
 
 #[inline]

@@ -13,15 +13,15 @@ use toiletcli::flags::*;
 use crate::common::ResultS;
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
-    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded, split_to_item_and_fragment
+    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded,
+    split_to_item_and_fragment, get_flag_error
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
                     RESET, DOC_PAGE_EXTENSION};
 use crate::print_warning;
 
 fn show_search_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} search{RESET} [-wipof] <docset> <query>
     List docset pages that match your query.
@@ -533,27 +533,30 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_whole;
     let mut flag_precise;
     let mut flag_open;
     let mut flag_case_insensitive;
     let mut flag_ignore_fragment;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag,             ["--help"],
-        flag_whole: BoolFlag,            ["--whole", "-w"],
-        flag_precise: BoolFlag,          ["--precise", "-p"],
-        flag_open: StringFlag,           ["--open", "-o"],
-        flag_case_insensitive: BoolFlag, ["--ignore-case", "-i"],
-        flag_ignore_fragment: BoolFlag,  ["--ignore-fragment", "-f"]
+        flag_whole: BoolFlag,            ["-w", "--whole"],
+        flag_precise: BoolFlag,          ["-p", "--precise"],
+        flag_open: StringFlag,           ["-o", "--open"],
+        flag_case_insensitive: BoolFlag, ["-i", "--ignore-case"],
+        flag_ignore_fragment: BoolFlag,  ["-f", "--ignore-fragment"],
+        flag_help: BoolFlag,             ["--help"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
+
     if flag_help { return show_search_help(); }
 
     if !is_docs_json_exists()? {
-        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
+        return Err("\
+The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
     let mut args = args.into_iter();

@@ -7,6 +7,7 @@ use toiletcli::flags;
 mod common;
 
 use common::ResultS;
+use common::get_flag_error;
 use common::{BOLD, UNDERLINE, GREEN, GRAY, PROGRAM_NAME, RED, RESET, VERSION};
 
 mod open;
@@ -34,8 +35,7 @@ fn show_version() -> ResultS {
     let version = format!("{VERSION} debug build");
     #[cfg(not(debug_assertions))]
     let version = VERSION;
-    println!(
-        "\
+    println!("\
 dedoc {version}
 (c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
 
@@ -47,8 +47,7 @@ There is NO WARRANTY, to the extent permitted by law."
 }
 
 fn show_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
     Search DevDocs pages from terminal.
@@ -62,7 +61,8 @@ fn show_help() -> ResultS {
     open{GRAY}, op{RESET}                        Display specified pages.
 
 {GREEN}OPTIONS{RESET}
-    -c, --color <on/off/auto>       Use color when displaying output.
+    -c  --force-colors              Forcefully enable colors.
+        --color <on/off/auto>       Control output colors.
     -v, --version                   Display version.
         --help                      Display help message."
     );
@@ -77,18 +77,19 @@ where
     debug_println!("Run `test` to perform tests.");
 
     let mut flag_version;
-    let mut flag_help;
     let mut flag_color;
     let mut flag_color_force;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag,        ["--help"],
-        flag_version: BoolFlag,     ["--version", "-v"],
+        flag_version: BoolFlag,     ["-v", "--version"],
+        flag_color_force: BoolFlag, ["-c", "--force-colors"],
         flag_color: StringFlag,     ["--color"],
-        flag_color_force: BoolFlag, ["-c"]
+        flag_help: BoolFlag,        ["--help"]
     ];
 
-    let subcommand = parse_flags_until_subcommand(&mut args, &mut flags)?
+    let subcommand = parse_flags_until_subcommand(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?
         .to_lowercase();
 
     if !flag_color.is_empty() {

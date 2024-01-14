@@ -6,13 +6,12 @@ use toiletcli::flags::*;
 use crate::common::ResultS;
 use crate::common::{
     deserialize_docs_json, is_docset_in_docs_or_print_warning, print_page_from_docset, print_docset_file,
-    split_to_item_and_fragment, is_docs_json_exists
+    split_to_item_and_fragment, is_docs_json_exists, get_flag_error
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
 fn show_open_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} open{RESET} [-h] <docset> <page>
     Print a page. Pages can be searched using `search`.
@@ -28,15 +27,16 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_html;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag, ["--help"],
-        flag_html: BoolFlag, ["--html", "-h"]
+        flag_html: BoolFlag, ["-h", "--html"],
+        flag_help: BoolFlag, ["--help"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
     if flag_help || args.is_empty() { return show_open_help(); }
 
 

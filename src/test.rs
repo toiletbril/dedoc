@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::vec::IntoIter;
 
 use crate::common::ResultS;
-use crate::common::get_program_directory;
+use crate::common::{get_program_directory, get_flag_error};
 use crate::common::{RED, GREEN, BOLD, RESET, PROGRAM_NAME};
 use crate::debug_println;
 
@@ -21,8 +21,7 @@ use toiletcli::flags::{FlagType, parse_flags};
 use toiletcli::flags;
 
 fn show_test_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} test{RESET} [-f] <docset> <page>
     Run the testing suite.
@@ -92,17 +91,18 @@ pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_full;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag, ["--help"],
-        flag_full: BoolFlag, ["-f", "--full"]
+        flag_full: BoolFlag, ["-f", "--full"],
+        flag_help: BoolFlag, ["--help"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
-    if flag_help { return show_test_help(); }
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
 
+    if flag_help { return show_test_help(); }
     if flag_full {
         reset_state_and_cache();
 

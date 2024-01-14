@@ -13,7 +13,7 @@ use toiletcli::flags::*;
 use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, is_docs_json_exists, is_docset_downloaded,
-    is_docset_in_docs_or_print_warning
+    is_docset_in_docs_or_print_warning, get_flag_error
 };
 use crate::common::{
     BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION
@@ -21,8 +21,7 @@ use crate::common::{
 use crate::print_warning;
 
 fn show_download_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
     Download a docset. Available docsets can be displayed using `list`.
@@ -254,15 +253,16 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_force;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag,  ["--help"],
-        flag_force: BoolFlag, ["--force", "-f"]
+        flag_force: BoolFlag, ["-f", "--force"],
+        flag_help: BoolFlag,  ["--help"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
     if flag_help || args.is_empty() { return show_download_help(); }
 
     if !is_docs_json_exists()? {

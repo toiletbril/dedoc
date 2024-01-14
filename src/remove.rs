@@ -4,13 +4,12 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{get_docset_path, is_docset_downloaded, get_local_docsets};
+use crate::common::{get_docset_path, is_docset_downloaded, get_local_docsets, get_flag_error};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
 use crate::print_warning;
 
 fn show_remove_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} remove{RESET} <docset1> [docset2, ...]
     Delete a docset. Only docsets downloaded by {PROGRAM_NAME} can be removed.
@@ -46,15 +45,16 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_purge_all;
+    let mut flag_help;
 
     let mut flags = flags![
         flag_help: BoolFlag,      ["--help"],
         flag_purge_all: BoolFlag, ["--purge-all"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
 
     if flag_purge_all {
         let local_docsets = get_local_docsets()?;
