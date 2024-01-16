@@ -29,5 +29,5 @@ toiletcli     = { version = "0.10.0", default-features = false, features = ["col
 attohttpc     = { version = "0.26.1", default-features = false, features = ["tls"] }
 serde         = { version = "1.0.188", features = ["derive"] }
 serde_json    = "1.0.106"
-html2text     = "0.6.0"
+html2text     = "0.11.0"
 terminal_size = "0.3.0"

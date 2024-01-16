@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedString, TaggedLineElement::*};
+use html2text::Colour;
 
 use toiletcli::colors::{Color, Style};
 use toiletcli::flags::{FlagError, FlagErrorType};
@@ -207,6 +208,13 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
             RichAnnotation::Preformat(_) => {
                 format!("{}{}", LIGHT_GRAY, GRAYEST.bg())
             }
+            RichAnnotation::Colour(Colour {r, g, b}) => {
+                format!("{}", Color::RGB(r, g, b))
+            }
+            RichAnnotation::BgColour(Colour {r, g, b}) => {
+                format!("{}", Color::RGB(r, g, b).bg())
+            }
+            _ => continue
         };
 
         style.push_str(&temp_style)
