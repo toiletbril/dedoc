@@ -1,8 +1,8 @@
 # dedoc
 
-Search [DevDocs](https://devdocs.io/) from your terminal. Offline. **Without
-browser**. Without Python, Javascript or other inconveniences. Even without
-desktop environment.
+Search and view [DevDocs](https://devdocs.io/) from your terminal. Offline.
+**Without browser**. Without Python, Javascript or other inconveniences. Even
+without desktop environment.
 
 App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`.
 
@@ -16,8 +16,7 @@ $ cargo install dedoc
 ```
 
 Alternatively, precompiled `x86_64` binaries for Windows and Linux are
-available in 
-[Releases](https://github.com/toiletbril/dedoc/releases).
+available in [releases](https://github.com/toiletbril/dedoc/releases).
 
 ## Usage
 
@@ -82,7 +81,8 @@ You will get search results which are pages that match your query.
 
 Results that start with `#` denote fragments. Opening them will result in the
 output of only that specific fragment. Likewise, opening a page will show the
-entire page.
+entire page. If you want to forcefully print the entire page instead of only a
+fragment, use `-f` flag.
 
 For a more detailed search, use the `-p` flag. It makes search behave similarly
 to the `grep` command, and will look within all files, find all matches, and
@@ -95,24 +95,31 @@ Finally, to see the page, you can run `open` with the path with optional
 fragment:
 ```console
 $ dedoc open rust "std/io/struct.bufreader#method.borrow"
+...
+fn borrow(&self) -> &T
+Immutably borrows from an owned value. Read more
+source
+...
 ```
 
 Using `-h` with `open` makes `dedoc` interpret supplied arguments as a path to
-HTML file and behave like a HTML to markdown transpiler.
+HTML file and behave like a HTML to markdown transpiler. To make output wider or
+narrower, you can use `-c` flag with the number of columns.
 
 Instead of typing out the whole path, you can conveniently append `-o` flag the
 your previous `search` command, which will open n-th matched page or fragment:
 ```console
-$ dedoc search rust bufreader -o 1
+$ dedoc search rust bufreader -o 2
 ```
 
-This will be as fast as `open`, due to search caching.
+This will be as fast as `open`, due to search caching. `-c` flag here works the
+same way as in `open`.
 
 You would probably like to use `ss` instead of `search`, pipe output to a pager
-or markdown reader, like `less` and forcefully enable colors with `-c y`,
+or markdown reader, like `less` and forcefully enable colors for it with `-c`,
 turning the final command into:
 ```console
-$ dedoc -c y ss rust bufreader -o 1 | less -r
+$ dedoc -c ss rust bufreader -o 2 | less -r
 ```
 
 Happy coding!

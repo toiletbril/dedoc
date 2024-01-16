@@ -8,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedString, TaggedLineElement::*};
 
 use toiletcli::colors::{Color, Style};
+use toiletcli::flags::{FlagError, FlagErrorType};
 
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +27,8 @@ pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
 pub(crate) const DEFAULT_USER_AGENT: &str = "dedoc";
 
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
+
+pub(crate) const DEFAULT_WIDTH: usize = 80;
 
 pub(crate) const RED:        Color = Color::Red;
 pub(crate) const GREEN:      Color = Color::Green;
@@ -128,6 +131,38 @@ pub(crate) fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
+#[macro_export]
+macro_rules! print_warning {
+    ($($e:expr),+) => {
+        {
+            eprint!("{}WARNING{}: ", toiletcli::colors::Color::Yellow, toiletcli::colors::Style::Reset);
+            eprintln!($($e),+);
+        }
+    };
+}
+
+pub(crate) fn get_flag_error(flag_error: &FlagError) -> String {
+    match flag_error.error_type {
+        FlagErrorType::CannotCombine => format!("Flag `{}` cannot be combined", flag_error.flag),
+        FlagErrorType::NoValueProvided => format!("No value provided for `{}` flag", flag_error.flag),
+        FlagErrorType::Unknown => format!("Unknown flag `{}`", flag_error.flag),
+    }
+}
+
+pub(crate) fn get_terminal_width() -> usize {
+    let result = terminal_size::terminal_size();
+
+    if let Some((terminal_size::Width(w), _)) = result {
+        if w < 120 {
+            return w as usize;
+        } else {
+            return 120;
+        }
+    }
+
+    DEFAULT_WIDTH
+}
+
 #[inline]
 pub(crate) fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String> {
     let mut path_split = path.split('#');
@@ -182,8 +217,8 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
 
 // This function ignores fragment's character case, to support --case-insensitive
 fn get_fragment_bounds(
-    tagged_lines: &Vec<TaggedLine<Vec<RichAnnotation>>>,
-    fragment: &String
+    tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
+    fragment: &str
 ) -> (Option<usize>, Option<usize>)
 {
     let lowercase_fragment = fragment.to_lowercase();
@@ -191,9 +226,7 @@ fn get_fragment_bounds(
     let mut current_fragment_line = None;
     let mut found_fragment = false;
 
-    let mut line_number = 0;
-
-    for tagged_line in tagged_lines {
+    for (line_number, tagged_line) in tagged_lines.iter().enumerate() {
         for tagged_line_element in tagged_line.iter() {
             match tagged_line_element {
                 FragmentStart(temp_fragment) if temp_fragment.to_lowercase() == lowercase_fragment => {
@@ -207,18 +240,17 @@ fn get_fragment_bounds(
                 _ => {}
             }
         }
-        line_number += 1;
     }
 
     (current_fragment_line, None)
 }
 
-pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Result<bool, String> {
+pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>, width: usize) -> Result<bool, String> {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
 
-    let rich_page = html2text::from_read_rich(reader, 80);
+    let rich_page = html2text::from_read_rich(reader, width);
 
     let mut current_fragment_line = 0;
     let mut next_fragment_line = 0;
@@ -229,7 +261,8 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
     // If there is a fragment, determine current fragment offset and print
     // everything until the next fragment.
     if let Some(fragment) = fragment {
-        let (current_fragment, next_fragment) = get_fragment_bounds(&rich_page, &fragment);
+        let (current_fragment, next_fragment) = get_fragment_bounds(&rich_page, fragment);
+
         if let Some(line) = current_fragment {
             current_fragment_line = line;
             is_fragment_found = true;
@@ -240,7 +273,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
             has_next_fragment = true;
         }
 
-        // @@@
+        // @@@: figure out better way to short-circuit search when it fails a test
         #[cfg(debug_assertions)]
         if !is_fragment_found {
             return Err(format!("debug: #{fragment} is specified but wasn't found in the page"));
@@ -279,7 +312,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
             if is_only_tag {
                 // Pad preformat to 80 characters for cool background.
                 if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
-                    let padding_amount = (80 as usize)
+                    let padding_amount = width
                         .saturating_sub(tagged_string.s.len());
 
                     for _ in 0..padding_amount {
@@ -309,7 +342,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>) -> Res
     Ok(is_fragment_found)
 }
 
-pub(crate) fn print_page_from_docset(docset_name: &String, page: &String, fragment: Option<&String>) -> Result<bool, String> {
+pub(crate) fn print_page_from_docset(docset_name: &str, page: &str, fragment: Option<&String>, width: usize) -> Result<bool, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let page_path_string = docset_path.join(page)
@@ -325,7 +358,7 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
         return Err(message);
     }
 
-    print_docset_file(page_path, fragment)
+    print_docset_file(page_path, fragment, width)
 }
 
 static mut HOME_DIR: Option<PathBuf> = None;
@@ -400,8 +433,7 @@ pub(crate) fn create_program_directory() -> ResultS {
 const WEEK: Duration = Duration::from_secs(60 * 60 * 24 * 7);
 
 pub(crate) fn is_docs_json_old() -> Result<bool, String> {
-    let program_path = get_program_directory()
-        .map_err(|err| err.to_string())?;
+    let program_path = get_program_directory()?;
 
     let metadata = program_path
         .join("docs.json")
@@ -445,24 +477,24 @@ pub(crate) enum SearchMatch {
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
-pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &Vec<Docs>) -> bool {
+pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &[Docs]) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         SearchMatch::Exact => return true,
         SearchMatch::Vague(vague_matches) => {
             let end_index = std::cmp::min(3, vague_matches.len());
             let first_three = &vague_matches[..end_index];
 
-            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
+            print_warning!("Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`"));
         }
         SearchMatch::None => {
-            println!("{YELLOW}WARNING{RESET}: Unknown docset `{docset_name}`. Did you run `fetch`?");
+            print_warning!("Unknown docset `{docset_name}`. Did you run `fetch`?");
         }
     }
     false
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
-pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &Vec<Docs>) -> SearchMatch {
+pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &[Docs]) -> SearchMatch {
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
@@ -492,10 +524,10 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String> {
         return Ok(result);
     }
 
-    let mut docsets_dir = read_dir(docsets_path)
+    let docsets_dir = read_dir(docsets_path)
         .map_err(|err| err.to_string())?;
 
-    while let Some(entry) = docsets_dir.next() {
+    for entry in docsets_dir {
         let entry = entry
             .map_err(|err| err.to_string())?;
 
@@ -523,7 +555,7 @@ pub(crate) fn is_docs_json_exists() -> Result<bool, String> {
 }
 
 #[inline]
-pub(crate) fn get_docset_path(docset_name: &String) -> Result<PathBuf, String> {
+pub(crate) fn get_docset_path(docset_name: &str) -> Result<PathBuf, String> {
     let docsets_path = get_program_directory()?.join("docsets");
     Ok(docsets_path.join(docset_name))
 }

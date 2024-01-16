@@ -4,12 +4,12 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{get_docset_path, is_docset_downloaded, get_local_docsets};
+use crate::common::{get_docset_path, is_docset_downloaded, get_local_docsets, get_flag_error};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
+use crate::print_warning;
 
 fn show_remove_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} remove{RESET} <docset1> [docset2, ...]
     Delete a docset. Only docsets downloaded by {PROGRAM_NAME} can be removed.
@@ -26,15 +26,17 @@ fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
 
     let has_slashes = {
         #[cfg(target_family = "windows")]
-        { docset.find("\\").is_some() || docset.find("/").is_some() }
+        { docset.contains('\\') || docset.contains('/') }
 
         #[cfg(target_family = "unix")]
-        { docset.find("/").is_some() }
+        { docset.contains('/') }
     };
+
     let starts_with_tilde = docset.starts_with('~');
-    let has_dollars = docset.find('$').is_some();
     let starts_with_dot = docset.starts_with('.');
-    let has_dots = docset.find("..").is_some();
+
+    let has_dollars = docset.contains('$');
+    let has_dots = docset.contains("..");
 
     !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
 }
@@ -43,15 +45,16 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_purge_all;
+    let mut flag_help;
 
     let mut flags = flags![
         flag_help: BoolFlag,      ["--help"],
         flag_purge_all: BoolFlag, ["--purge-all"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
 
     if flag_purge_all {
         let local_docsets = get_local_docsets()?;
@@ -68,7 +71,7 @@ where
 
     for docset in args.iter() {
         if !is_name_allowed(docset) {
-            println!("{YELLOW}WARNING{RESET}: `{docset}` contains forbidden characters.");
+            print_warning!("`{docset}` contains forbidden characters.");
             continue;
         }
 
@@ -80,7 +83,7 @@ where
                     .map_err(|err| format!("Unable to remove `{}`: {err}", docset_path.display()))?;
             }
         } else {
-            println!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
+            print_warning!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
         }
     }
 

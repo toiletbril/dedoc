@@ -2,7 +2,7 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{deserialize_docs_json, get_local_docsets, is_docs_json_exists};
+use crate::common::{deserialize_docs_json, get_local_docsets, is_docs_json_exists, get_flag_error};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 
 fn show_list_help() -> ResultS {
@@ -25,19 +25,20 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_all;
     let mut flag_local;
     let mut flag_newlines;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag,     ["--help"],
-        flag_all: BoolFlag,      ["--all", "-a"],
-        flag_local: BoolFlag,    ["--local", "-l"],
-        flag_newlines: BoolFlag, ["--newlines", "-n"]
+        flag_all: BoolFlag,      ["-a", "--all"],
+        flag_local: BoolFlag,    ["-l", "--local"],
+        flag_newlines: BoolFlag, ["-n", "--newlines"],
+        flag_help: BoolFlag,     ["--help"]
     ];
 
-    parse_flags(&mut args, &mut flags)?;
+    parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
     if flag_help { return show_list_help(); }
 
     if !is_docs_json_exists()? {
@@ -74,7 +75,7 @@ where
 
     while let Some(entry) = docs_names_peekable.next() {
         // slug has ~ if it's version-specific
-        if !flag_local && !flag_all && entry.contains("~") {
+        if !flag_local && !flag_all && entry.contains('~') {
             continue;
         }
 

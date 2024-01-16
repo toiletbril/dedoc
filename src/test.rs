@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::vec::IntoIter;
 
 use crate::common::ResultS;
-use crate::common::get_program_directory;
+use crate::common::{get_program_directory, get_flag_error};
 use crate::common::{RED, GREEN, BOLD, RESET, PROGRAM_NAME};
 use crate::debug_println;
 
@@ -21,8 +21,7 @@ use toiletcli::flags::{FlagType, parse_flags};
 use toiletcli::flags;
 
 fn show_test_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} test{RESET} [-f] <docset> <page>
     Run the testing suite.
@@ -32,13 +31,6 @@ fn show_test_help() -> ResultS {
         --help                      Display help message."
     );
     Ok(())
-}
-
-fn create_args<'a>(args: &'a str) -> IntoIter<String> {
-    args.split_whitespace()
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>()
-        .into_iter()
 }
 
 fn reset_state_and_cache() {
@@ -51,6 +43,13 @@ fn reset_state_and_cache() {
     let _ = remove_file(program_directory.join("search_cache.json"));
 }
 
+fn create_args(args: &str) -> IntoIter<String> {
+    args.split_whitespace()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>()
+        .into_iter()
+}
+
 fn run_with_args<O>(
     command: fn(IntoIter<String>) -> Result<O, String>,
     args_str: &str, should_do: &str
@@ -59,7 +58,6 @@ fn run_with_args<O>(
     debug_println!("Running with args: `{args_str}`, should {should_do}");
 
     let command_result = command(args);
-
     if let Err(err) = &command_result {
         debug_println!("{BOLD}*** Test failed with: {err} ***");
         false
@@ -76,7 +74,7 @@ fn test_search_should_use_cache(args: &str) {
 
     {
         let cache_options_path = program_directory.join("search_cache_options.json");
-        let cache_options_file = File::open(&cache_options_path).unwrap();
+        let cache_options_file = File::open(cache_options_path).unwrap();
         let cache_options_reader = BufReader::new(cache_options_file);
 
         let cached_search_options: SearchOptions = serde_json::from_reader(cache_options_reader).unwrap();
@@ -89,21 +87,22 @@ fn test_search_should_use_cache(args: &str) {
 
 // Manual testing. I think this way is better than integration testing I came up with initially.
 // If everything is looking cool, then it's we should be fine :3
-pub(crate) fn test_c<Args>(mut args: Args) -> ResultS
+pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_full;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag, ["--help"],
-        flag_full: BoolFlag, ["-f", "--full"]
+        flag_full: BoolFlag, ["-f", "--full"],
+        flag_help: BoolFlag, ["--help"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
-    if flag_help { return show_test_help(); }
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
 
+    if flag_help { return show_test_help(); }
     if flag_full {
         reset_state_and_cache();
 
@@ -125,7 +124,7 @@ where
 
     debug_println!("Performing search tests...");
 
-    let search_results = vec![
+    let search_results = [
         run_with_args(search, "backbone -o 1", "open first page"),
         run_with_args(search, "backbone -o 100", "open 100th page"),
         run_with_args(search, "backbone -i collection-at", "list search results in correct casing"),

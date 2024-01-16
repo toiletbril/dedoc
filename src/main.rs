@@ -7,6 +7,7 @@ use toiletcli::flags;
 mod common;
 
 use common::ResultS;
+use common::get_flag_error;
 use common::{BOLD, UNDERLINE, GREEN, GRAY, PROGRAM_NAME, RED, RESET, VERSION};
 
 mod open;
@@ -27,15 +28,14 @@ use list::list;
 use fetch::fetch;
 
 #[cfg(debug_assertions)]
-use test::test_c;
+use test::debug_test;
 
 fn show_version() -> ResultS {
     #[cfg(debug_assertions)]
     let version = format!("{VERSION} debug build");
     #[cfg(not(debug_assertions))]
     let version = VERSION;
-    println!(
-        "\
+    println!("\
 dedoc {version}
 (c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
 
@@ -47,8 +47,7 @@ There is NO WARRANTY, to the extent permitted by law."
 }
 
 fn show_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
     Search DevDocs pages from terminal.
@@ -62,7 +61,8 @@ fn show_help() -> ResultS {
     open{GRAY}, op{RESET}                        Display specified pages.
 
 {GREEN}OPTIONS{RESET}
-    -c, --color <on/off/auto>       Use color when displaying output.
+    -c  --force-colors              Forcefully enable colors.
+        --color <on/off/auto>       Control output colors.
     -v, --version                   Display version.
         --help                      Display help message."
     );
@@ -77,23 +77,26 @@ where
     debug_println!("Run `test` to perform tests.");
 
     let mut flag_version;
-    let mut flag_help;
     let mut flag_color;
+    let mut flag_color_force;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag,    ["--help"],
-        flag_version: BoolFlag, ["--version", "-v"],
-        flag_color: StringFlag, ["--color", "-c"]
+        flag_version: BoolFlag,     ["-v", "--version"],
+        flag_color_force: BoolFlag, ["-c", "--force-colors"],
+        flag_color: StringFlag,     ["--color"],
+        flag_help: BoolFlag,        ["--help"]
     ];
 
-    let subcommand = parse_flags_until_subcommand(&mut args, &mut flags)?
+    let subcommand = parse_flags_until_subcommand(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?
         .to_lowercase();
 
     if !flag_color.is_empty() {
         match flag_color.as_str() {
-            "y" | "yes" | "on"  | "always" => unsafe { overwrite_should_use_colors(true) }
-            "n" | "no"  | "off" | "never"  => unsafe { overwrite_should_use_colors(false) }
-            "auto" | "tty" => {}
+            _ if flag_color_force => unsafe { overwrite_should_use_colors(true) }
+            "y" | "yes" | "on"    => unsafe { overwrite_should_use_colors(true) }
+            "n" | "no"  | "off"   => unsafe { overwrite_should_use_colors(false) }
             other => {
                 return Err(format!("Argument `{other}` for `--color <on/off/auto>` is invalid."));
             }
@@ -110,7 +113,7 @@ where
         "ss" | "search"   => search(args),
         "op" | "open"     => open(args),
         #[cfg(debug_assertions)]
-        "test"            => test_c(args),
+        "test"            => debug_test(args),
         other => {
             Err(format!("Unknown subcommand `{other}`"))
         }

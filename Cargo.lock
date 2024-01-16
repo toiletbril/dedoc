@@ -82,12 +82,13 @@ checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
 name = "dedoc"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "attohttpc",
  "html2text",
  "serde",
  "serde_json",
+ "terminal_size",
  "toiletcli",
 ]
 
@@ -675,6 +676,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal_size"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21bebf2b7c9e0a515f6e0f8c51dc0f8e4696391e6f1ff30379559f8365fb0df7"
+dependencies = [
+ "rustix",
+ "windows-sys",
+]
+
+[[package]]
 name = "tinyvec"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -691,9 +702,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "toiletcli"
-version = "0.9.4"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12ed45c3d66cc0f459d78743c66323ae4d92a99e1df62c3ceeaae61af897d48a"
+checksum = "5ca5f964dd0f2d9fc81b29c11356c659fa296c90d3ee31d1e167ada41ff496d4"
 dependencies = [
  "atty",
 ]

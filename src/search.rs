@@ -1,3 +1,5 @@
+#![allow(clippy::useless_format)]
+
 use std::borrow::Cow;
 use std::fs::{read_dir, File};
 use std::io::{BufRead, BufReader, BufWriter};
@@ -11,16 +13,17 @@ use toiletcli::flags::*;
 use crate::common::ResultS;
 use crate::common::{
     deserialize_docs_json, get_docset_path, get_program_directory, is_docs_json_exists,
-    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded, split_to_item_and_fragment
+    is_docset_in_docs_or_print_warning, print_page_from_docset, is_docset_downloaded,
+    split_to_item_and_fragment, get_flag_error, get_terminal_width
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, LIGHT_GRAY, GRAY, GRAYER, GRAYEST,
-                    RESET, YELLOW, DOC_PAGE_EXTENSION};
+                    RESET, DOC_PAGE_EXTENSION};
+use crate::print_warning;
 
 fn show_search_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} search{RESET} [-wipo] <docset> <query>
+    {BOLD}{PROGRAM_NAME} search{RESET} [-wipofc] <docset> <query>
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
@@ -28,6 +31,8 @@ fn show_search_help() -> ResultS {
     -i, --ignore-case               Ignore character case.
     -p, --precise                   Look inside files (like `grep`).
     -o, --open <number>             Open n-th result.
+    -f, --ignore-fragment           For --open: ignore the fragment and open the entire page.
+    -c, --columns <number>          For --open: make output N columns wide.
         --help                      Display help message."
     );
     Ok(())
@@ -54,6 +59,7 @@ struct SearchFlags {
     case_insensitive: bool,
     precise: bool,
     whole: bool,
+    ignore_fragment: bool,
 }
 
 // Sometimes search results are big, and it's cheaper to check a small file if current search
@@ -146,8 +152,8 @@ type ExactMatches = Vec<ExactResult>;
 type VagueMatches = Vec<VagueResult>;
 
 fn search_docset_in_filenames(
-    docset_name: &String,
-    query: &String,
+    docset_name: &str,
+    query: &str,
     case_insensitive: bool,
 ) -> Result<ExactMatches, String> {
     let docset_path = get_docset_path(docset_name)?;
@@ -229,7 +235,7 @@ fn get_context_around_query(html_line: &String, index: usize, query_len: usize) 
 // Item is a file path without a file extension which is relative to docset directory
 fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
     let item = path
-        .strip_prefix(&docset_path)
+        .strip_prefix(docset_path)
         .map_err(|err| err.to_string())?
         .with_extension("")
         .display()
@@ -239,8 +245,8 @@ fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, 
 }
 
 fn search_docset_precisely(
-    docset_name: &String,
-    query: &String,
+    docset_name: &str,
+    query: &str,
     case_insensitive: bool,
 ) -> Result<(ExactMatches, VagueMatches), String> {
     let docset_path = get_docset_path(docset_name)?;
@@ -260,7 +266,7 @@ fn search_docset_precisely(
         let mut exact_files   = vec![];
         let mut vague_results = vec![];
 
-        let dir = read_dir(&path)
+        let dir = read_dir(path)
             .map_err(|err| format!("Could not read `{}` directory: {err}", path.display()))?;
 
         for entry in dir {
@@ -275,7 +281,7 @@ fn search_docset_precisely(
 
             if file_type.is_dir() {
                 let (mut exact, mut vague) =
-                    visit_dir_with_query(original_path, &entry.path(), &query, case_insensitive)?;
+                    visit_dir_with_query(original_path, &entry.path(), query, case_insensitive)?;
 
                 exact_files.append(&mut exact);
                 vague_results.append(&mut vague);
@@ -393,89 +399,42 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
     Ok(())
 }
 
-pub(crate) fn search<Args>(mut args: Args) -> ResultS
-where
-    Args: Iterator<Item = String>,
-{
-    let mut flag_help;
-    let mut flag_whole;
-    let mut flag_precise;
-    let mut flag_open;
-    let mut flag_case_insensitive;
+fn search_impl(
+    search_options: SearchOptions,
+    // Passing this as a String is needed to check if output was not numeric
+    // before parsing it as number
+    flag_open: String,
+    flag_columns: String
+) -> Result<Vec<String>, String> {
+    let mut warnings = vec![];
 
-    let mut flags = flags![
-        flag_help: BoolFlag,             ["--help"],
-        flag_whole: BoolFlag,            ["--whole", "-w"],
-        flag_precise: BoolFlag,          ["--precise", "-p"],
-        flag_open: StringFlag,           ["--open", "-o"],
-        flag_case_insensitive: BoolFlag, ["--ignore-case", "-i"]
-    ];
+    let SearchOptions { ref docset, ref flags, ref query } = search_options;
 
-    let args = parse_flags(&mut args, &mut flags)?;
-    if flag_help { return show_search_help(); }
-
-    if !is_docs_json_exists()? {
-        return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
-    }
-
-    let mut args = args.into_iter();
-
-    let docset = if let Some(docset_name) = args.next() {
-        docset_name
-    } else {
-        return show_search_help();
-    };
-
-    let docs = deserialize_docs_json()?;
-
-    if !is_docset_downloaded(&docset)? {
-        if is_docset_in_docs_or_print_warning(&docset, &docs) {
-            println!("\
-{YELLOW}WARNING{RESET}: Docset `{docset}` is not downloaded. Try running `download {docset}`."
-            );
-        }
-        return Ok(());
-    }
-
-    let query = {
-        let mut merged_args = args.collect::<Vec<String>>()
-            .join(" ");
-
-        if flag_whole {
-            merged_args.insert(0, ' ');
-            merged_args.push(' ');
-            merged_args
-        } else {
-            merged_args
-        }
-    };
-
-    let flag_open_is_empty = flag_open.is_empty();
     let open_number = flag_open.parse::<usize>().ok();
+    let mut width = get_terminal_width();
 
-    let search_flags = SearchFlags {
-        precise: flag_precise,
-        case_insensitive: flag_case_insensitive,
-        whole: flag_whole,
-    };
-
-    let search_options = SearchOptions {
-        query:  Cow::Borrowed(&query),
-        docset: Cow::Borrowed(&docset),
-        flags:  Cow::Borrowed(&search_flags),
-    };
-
-    if flag_open_is_empty {
-        // Printing query is needed to let you know if you messed up any flags
-        println!("Searching for `{query}`...");
+    let maybe_columns = flag_columns.parse::<usize>().ok();
+    if let Some(col_number) = maybe_columns {
+        if col_number == 0 {
+            width = 999;
+        } else if col_number > 10 {
+            width = col_number;
+        }
+    } else if !flag_columns.is_empty() {
+        warnings.push("Invalid number of columns.".to_string());
     }
 
-    if flag_precise {
+    if open_number.is_none() {
+        // This lets you know whether flag messed up your query
+        println!("Searching for `{}`...", search_options.query);
+    }
+
+    if flags.precise {
         let (exact_results, vague_results) =
         if let Some(cache) = try_use_cache(&search_options) {
             (cache.exact_results, cache.vague_results)
         } else {
-            let (exact, vague) = search_docset_precisely(&docset, &query, flag_case_insensitive)?;
+            let (exact, vague) = search_docset_precisely(docset, query, flags.case_insensitive)?;
 
             let search_cache = SearchCache {
                 exact_results: Cow::Borrowed(&exact),
@@ -483,30 +442,37 @@ where
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+                .map_err(|err| {
+                    warnings.push(format!("Could not write cache: {err}."));
+                });
 
             (exact.into(), vague.into())
         };
 
         let exact_results_offset = exact_results.len();
 
-        if !flag_open_is_empty {
+        if !flag_open.is_empty() {
             match open_number {
                 Some(n) if n < 1 || n > exact_results_offset + vague_results.len() => {
-                    println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
+                    warnings.push(format!("`--open {n}` is out of bounds."));
                 }
                 Some(n) if n <= exact_results_offset => {
                     let result = &exact_results[n - 1];
-                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
-                    return Ok(());
+                    let fragment = if flags.ignore_fragment {
+                        None
+                    } else {
+                        result.fragment.as_ref()
+                    };
+                    print_page_from_docset(docset, &result.item, fragment, width)?;
+                    return Ok(warnings);
                 }
                 Some(n) => {
                     let result = &vague_results[n - exact_results_offset - 1];
-                    print_page_from_docset(&docset, &result.item, None)?;
-                    return Ok(());
+                    print_page_from_docset(docset, &result.item, None, width)?;
+                    return Ok(warnings);
                 }
                 _ => {
-                    println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
+                    warnings.push(format!("`--open` requires a number."));
                 }
             }
         }
@@ -525,12 +491,12 @@ where
             println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
         }
 
-        return Ok(());
+        Ok(warnings)
     } else {
         let results = if let Some(cache) = try_use_cache(&search_options) {
             cache.exact_results
         } else {
-            let exact  = search_docset_in_filenames(&docset, &query, flag_case_insensitive)?;
+            let exact  = search_docset_in_filenames(docset, query, flags.case_insensitive)?;
 
             let search_cache = SearchCache {
                 exact_results: Cow::Borrowed(&exact),
@@ -538,33 +504,124 @@ where
             };
 
             let _ = cache_search_results(&search_options, &search_cache)
-                .map_err(|err| println!("{YELLOW}WARNING{RESET}: Could not write cache: {err}."));
+                .map_err(|err| {
+                    warnings.push(format!("Could not write cache: {err}."));
+                });
 
             exact.into()
         };
 
-        if !flag_open_is_empty {
+        if !flag_open.is_empty() {
             match open_number {
                 Some(n) if n < 1 || n > results.len() => {
-                    println!("{YELLOW}WARNING{RESET}: `--open {n}` is out of bounds.");
+                    warnings.push(format!("`--open {n}` is out of bounds."));
                 }
                 Some(n) => {
                     let result = &results[n - 1];
-                    print_page_from_docset(&docset, &result.item, result.fragment.as_ref())?;
-                    return Ok(());
+                    let fragment = if flags.ignore_fragment {
+                        None
+                    } else {
+                        result.fragment.as_ref()
+                    };
+                    print_page_from_docset(docset, &result.item, fragment, width)?;
+                    return Ok(warnings);
                 }
                 _ => {
-                    println!("{YELLOW}WARNING{RESET}: `--open` requires a number.");
+                    warnings.push(format!("`--open` requires a number."));
                 }
             }
         }
 
         if !results.is_empty() {
             println!("{BOLD}Exact matches in `{docset}`{RESET}:");
-            return print_search_results(&results, 1);
+            print_search_results(&results, 1)?;
         } else {
             println!("{BOLD}No exact matches in `{docset}`{RESET}.");
         }
+
+        Ok(warnings)
+    }
+}
+
+pub(crate) fn search<Args>(mut args: Args) -> ResultS
+where
+    Args: Iterator<Item = String>,
+{
+    let mut flag_whole;
+    let mut flag_columns;
+    let mut flag_precise;
+    let mut flag_open;
+    let mut flag_case_insensitive;
+    let mut flag_ignore_fragment;
+    let mut flag_help;
+
+    let mut flags = flags![
+        flag_columns: StringFlag,        ["-c", "--columns"],
+        flag_whole: BoolFlag,            ["-w", "--whole"],
+        flag_precise: BoolFlag,          ["-p", "--precise"],
+        flag_open: StringFlag,           ["-o", "--open"],
+        flag_case_insensitive: BoolFlag, ["-i", "--ignore-case"],
+        flag_ignore_fragment: BoolFlag,  ["-f", "--ignore-fragment"],
+        flag_help: BoolFlag,             ["--help"]
+    ];
+
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
+
+    if flag_help { return show_search_help(); }
+
+    if !is_docs_json_exists()? {
+        return Err("\
+The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
+    }
+
+    let mut args = args.into_iter();
+
+    let docset = if let Some(docset_name) = args.next() {
+        docset_name
+    } else {
+        return show_search_help();
+    };
+
+    let docs = deserialize_docs_json()?;
+
+    if !is_docset_downloaded(&docset)? {
+        if is_docset_in_docs_or_print_warning(&docset, &docs) {
+            print_warning!("Docset `{docset}` is not downloaded. Try running `download {docset}`.");
+        }
+        return Ok(());
+    }
+
+    let query = {
+        let mut merged_args = args.collect::<Vec<String>>()
+            .join(" ");
+
+        if flag_whole {
+            merged_args.insert(0, ' ');
+            merged_args.push(' ');
+            merged_args
+        } else {
+            merged_args
+        }
+    };
+
+    let search_flags = SearchFlags {
+        precise: flag_precise,
+        case_insensitive: flag_case_insensitive,
+        whole: flag_whole,
+        ignore_fragment: flag_ignore_fragment,
+    };
+
+    let search_options = SearchOptions {
+        query:  Cow::Borrowed(&query),
+        docset: Cow::Borrowed(&docset),
+        flags:  Cow::Borrowed(&search_flags),
+    };
+
+    // Print warnings only after search results
+    let warnings = search_impl(search_options, flag_open, flag_columns)?;
+    for warning in warnings {
+        print_warning!("{}", warning);
     }
 
     Ok(())

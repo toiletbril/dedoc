@@ -13,15 +13,15 @@ use toiletcli::flags::*;
 use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, is_docs_json_exists, is_docset_downloaded,
-    is_docset_in_docs_or_print_warning
+    is_docset_in_docs_or_print_warning, get_flag_error
 };
 use crate::common::{
-    BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION, YELLOW,
+    BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION
 };
+use crate::print_warning;
 
 fn show_download_help() -> ResultS {
-    println!(
-        "\
+    println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
     Download a docset. Available docsets can be displayed using `list`.
@@ -35,7 +35,7 @@ fn show_download_help() -> ResultS {
 
 fn download_db_and_index_json_with_progress(
     docset_name: &String,
-    docs: &Vec<Docs>,
+    docs: &[Docs],
 ) -> ResultS {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
@@ -89,7 +89,7 @@ fn download_db_and_index_json_with_progress(
 }
 
 // Remove class="...", title="...", data-language="..." attributes from HTML tags to reduce size.
-fn sanitize_html_line<'a>(html_line: String) -> String {
+fn sanitize_html_line(html_line: String) -> String {
     enum State {
         Default,
         InTag,
@@ -105,9 +105,9 @@ fn sanitize_html_line<'a>(html_line: String) -> String {
     let mut state = State::Default;
     let mut position = 0;
 
-    let mut html_line_chars = html_line.chars();
+    let html_line_chars = html_line.chars();
 
-    while let Some(ch) = html_line_chars.next() {
+    for ch in html_line_chars {
         match state {
             State::Default => {
                 if ch == '<' {
@@ -151,7 +151,7 @@ fn sanitize_html_line<'a>(html_line: String) -> String {
     sanitized_line
 }
 
-fn build_docset_from_map_with_progress<'de, M>(docset_name: &String, mut map: M) -> ResultS
+fn build_docset_from_map_with_progress<'de, M>(docset_name: &str, mut map: M) -> ResultS
 where
     M: MapAccess<'de>,
 {
@@ -219,7 +219,7 @@ impl<'de> Visitor<'de> for FileVisitor {
         M: MapAccess<'de>,
     {
         build_docset_from_map_with_progress(&self.docset_name, map)
-            .map_err(|err| Error::custom(format!("{err}")))?;
+            .map_err(|err| Error::custom(format!("Error while building `{}`: {err}", self.docset_name)))?;
         Ok(())
     }
 }
@@ -227,7 +227,7 @@ impl<'de> Visitor<'de> for FileVisitor {
 fn build_docset_from_db_json(
     docset_name: &String,
 ) -> ResultS {
-    let docset_path = get_docset_path(&docset_name)?;
+    let docset_path = get_docset_path(docset_name)?;
     let db_json_path = docset_path
         .join("db")
         .with_extension("json");
@@ -253,15 +253,16 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
 where
     Args: Iterator<Item = String>,
 {
-    let mut flag_help;
     let mut flag_force;
+    let mut flag_help;
 
     let mut flags = flags![
-        flag_help: BoolFlag,  ["--help"],
-        flag_force: BoolFlag, ["--force", "-f"]
+        flag_force: BoolFlag, ["-f", "--force"],
+        flag_help: BoolFlag,  ["--help"]
     ];
 
-    let args = parse_flags(&mut args, &mut flags)?;
+    let args = parse_flags(&mut args, &mut flags)
+        .map_err(|err| get_flag_error(&err))?;
     if flag_help || args.is_empty() { return show_download_help(); }
 
     if !is_docs_json_exists()? {
@@ -270,38 +271,35 @@ where
 
     let docs = deserialize_docs_json()?;
 
-    let mut args_iter = args.iter();
     let mut successful_downloads = 0;
 
-    while let Some(docset) = args_iter.next() {
+    for docset in args.iter() {
         // Don't print warnings when using with ls -n
         if docset == "[downloaded]" {
             continue;
         }
 
         if !flag_force && is_docset_downloaded(docset)? {
-            println!("\
-{YELLOW}WARNING{RESET}: Docset `{docset}` is already downloaded. \
-If you still want to update it, re-run this command with `--force`"
+            print_warning!(
+                "Docset `{docset}` is already downloaded. \
+                If you still want to update it, re-run this command with `--force`"
             );
             continue;
-        } else {
-            if is_docset_in_docs_or_print_warning(docset, &docs) {
-                println!("Downloading `{docset}`...");
-                download_db_and_index_json_with_progress(docset, &docs)?;
+        } else if is_docset_in_docs_or_print_warning(docset, &docs) {
+            println!("Downloading `{docset}`...");
+            download_db_and_index_json_with_progress(docset, &docs)?;
 
-                println!("Extracting to `{}`...", get_docset_path(docset)?.display());
-                build_docset_from_db_json(docset)?;
+            println!("Extracting to `{}`...", get_docset_path(docset)?.display());
+            build_docset_from_db_json(docset)?;
 
-                successful_downloads += 1;
-            }
+            successful_downloads += 1;
         }
     }
 
-    if successful_downloads > 1 {
-        println!("{BOLD}{successful_downloads} items were successfully installed{RESET}.");
-    } else if successful_downloads == 1 {
-        println!("{BOLD}Install has successfully finished{RESET}.");
+    match successful_downloads {
+        0   => {}
+        1   => println!("{BOLD}Install has successfully finished{RESET}."),
+        _   => println!("{BOLD}{successful_downloads} items were successfully installed{RESET}."),
     }
 
     Ok(())
