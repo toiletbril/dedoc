@@ -61,7 +61,7 @@ fn show_help() -> ResultS {
     open{GRAY}, op{RESET}                        Display specified pages.
 
 {GREEN}OPTIONS{RESET}
-    -c  --force-colors              Forcefully enable colors.
+    -c, --force-colors              Forcefully enable colors.
         --color <on/off/auto>       Control output colors.
     -v, --version                   Display version.
         --help                      Display help message."
