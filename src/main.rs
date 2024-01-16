@@ -92,9 +92,11 @@ where
         .map_err(|err| get_flag_error(&err))?
         .to_lowercase();
 
+    if flag_color_force {
+        unsafe { overwrite_should_use_colors(true) }
+    }
     if !flag_color.is_empty() {
         match flag_color.as_str() {
-            _ if flag_color_force => unsafe { overwrite_should_use_colors(true) }
             "y" | "yes" | "on"    => unsafe { overwrite_should_use_colors(true) }
             "n" | "no"  | "off"   => unsafe { overwrite_should_use_colors(false) }
             other => {
