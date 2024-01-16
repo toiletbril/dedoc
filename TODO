@@ -1,3 +1,6 @@
+* line numbers for output
+* see version of downloaded docset, allow to update it without --force flag
+
 * make good tests
 * fuzzy search
 
