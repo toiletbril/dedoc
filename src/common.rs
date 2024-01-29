@@ -227,8 +227,7 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
 fn get_fragment_bounds(
     tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
     fragment: &str
-) -> (Option<usize>, Option<usize>)
-{
+) -> (Option<usize>, Option<usize>) {
     let lowercase_fragment = fragment.to_lowercase();
 
     let mut current_fragment_line = None;
@@ -253,7 +252,12 @@ fn get_fragment_bounds(
     (current_fragment_line, None)
 }
 
-pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>, width: usize) -> Result<bool, String> {
+pub(crate) fn print_docset_file(
+    path: PathBuf,
+    fragment: Option<&String>,
+    width: usize,
+    number_lines: bool
+) -> Result<bool, String> {
     let file = File::open(&path)
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
@@ -293,6 +297,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>, width:
     }
 
     let mut skipped_empty_lines = false;
+    let mut line_number = 0;
 
     for (i, rich_line) in rich_page.iter().enumerate() {
         if is_fragment_found && i < current_fragment_line  { continue; }
@@ -307,6 +312,11 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>, width:
 
         let mut line_buffer = String::new();
 
+        if number_lines {
+            line_number += 1;
+            line_buffer += &format!("{GRAYER}{line_number:>5}{RESET}  ");
+        }
+
         for tagged_string in tagged_strings {
             let style = get_tag_style(&tagged_string.tag);
 
@@ -318,7 +328,7 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>, width:
             line_buffer += &tagged_string.s;
 
             if is_only_tag {
-                // Pad preformat to 80 characters for cool background.
+                // Pad preformat to terminal width for cool background.
                 if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
                     let padding_amount = width
                         .saturating_sub(tagged_string.s.len());
@@ -350,7 +360,13 @@ pub(crate) fn print_docset_file(path: PathBuf, fragment: Option<&String>, width:
     Ok(is_fragment_found)
 }
 
-pub(crate) fn print_page_from_docset(docset_name: &str, page: &str, fragment: Option<&String>, width: usize) -> Result<bool, String> {
+pub(crate) fn print_page_from_docset(
+    docset_name: &str,
+    page: &str,
+    fragment: Option<&String>,
+    width: usize,
+    number_lines: bool
+) -> Result<bool, String> {
     let docset_path = get_docset_path(docset_name)?;
 
     let page_path_string = docset_path.join(page)
@@ -366,7 +382,7 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
         return Err(message);
     }
 
-    print_docset_file(page_path, fragment, width)
+    print_docset_file(page_path, fragment, width, number_lines)
 }
 
 static mut HOME_DIR: Option<PathBuf> = None;
@@ -545,6 +561,9 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String> {
 
         result.push(holy_result_option_please_stop);
     }
+
+    // Since non-local docsets are sorted alphabetically.
+    result.sort();
 
     Ok(result)
 }

@@ -19,7 +19,8 @@ fn show_open_help() -> ResultS {
 
 {GREEN}OPTIONS{RESET}
     -h, --html                      Interpret arguments as a path to HTML file and translate it to markdown.
-    -c, --columns                   Make output N columns wide.
+    -c, --columns <number>          Make output N columns wide.
+    -n, --line-numbers              Number output lines.
         --help                      Display help message."
     );
     Ok(())
@@ -31,12 +32,14 @@ where
 {
     let mut flag_html;
     let mut flag_columns;
+    let mut flag_number_lines;
     let mut flag_help;
 
     let mut flags = flags![
-        flag_html: BoolFlag,      ["-h", "--html"],
-        flag_columns: StringFlag, ["-c", "--columns"],
-        flag_help: BoolFlag,      ["--help"]
+        flag_html: BoolFlag,         ["-h", "--html"],
+        flag_columns: StringFlag,    ["-c", "--columns"],
+        flag_number_lines: BoolFlag, ["-n", "--line-numbers"],
+        flag_help: BoolFlag,         ["--help"]
     ];
 
     let args = parse_flags(&mut args, &mut flags)
@@ -58,7 +61,7 @@ where
 
     if flag_html {
         let path = PathBuf::from(args.join(" "));
-        print_docset_file(path, None, width)?;
+        print_docset_file(path, None, width, flag_number_lines)?;
         return Ok(());
     }
 
@@ -85,7 +88,7 @@ where
 
         let (item, fragment) = split_to_item_and_fragment(query)?;
 
-        print_page_from_docset(&docset, &item, fragment.as_ref(), width)?;
+        print_page_from_docset(&docset, &item, fragment.as_ref(), width, flag_number_lines)?;
     }
 
     Ok(())

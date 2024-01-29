@@ -23,7 +23,7 @@ use crate::print_warning;
 fn show_search_help() -> ResultS {
     println!("\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} search{RESET} [-wipofc] <docset> <query>
+    {BOLD}{PROGRAM_NAME} search{RESET} [-wipofcn] <docset> <query>
     List docset pages that match your query.
 
 {GREEN}OPTIONS{RESET}
@@ -31,10 +31,12 @@ fn show_search_help() -> ResultS {
     -i, --ignore-case               Ignore character case.
     -p, --precise                   Look inside files (like `grep`).
     -o, --open <number>             Open n-th result.
-    -f, --ignore-fragment           For --open: ignore the fragment and open the entire page.
-    -c, --columns <number>          For --open: make output N columns wide.
-        --help                      Display help message."
-    );
+        --help                      Display help message.
+
+  Options that work with `--open`:
+    -f, --ignore-fragment           Ignore the fragment and open the entire page.
+    -c, --columns <number>          Make output N columns wide.
+    -n, --line-numbers              Number outputted lines.");
     Ok(())
 }
 
@@ -232,7 +234,7 @@ fn get_context_around_query(html_line: &String, index: usize, query_len: usize) 
     html_line[start_pos..end_pos].trim().to_owned()
 }
 
-// Item is a file path without a file extension which is relative to docset directory
+// Item is a file path without a file extension which is relative to docset directory.
 fn convert_path_to_item(path: PathBuf, docset_path: &PathBuf) -> Result<String, String> {
     let item = path
         .strip_prefix(docset_path)
@@ -401,10 +403,11 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
 
 fn search_impl(
     search_options: SearchOptions,
-    // Passing this as a String is needed to check if output was not numeric
-    // before parsing it as number
+    // Passing some flags as a String is needed to check if output was not numeric before parsing
+    // it as a number
     flag_open: String,
-    flag_columns: String
+    flag_columns: String,
+    flag_line_numbers: bool
 ) -> Result<Vec<String>, String> {
     let mut warnings = vec![];
 
@@ -463,12 +466,12 @@ fn search_impl(
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment, width)?;
+                    print_page_from_docset(docset, &result.item, fragment, width, flag_line_numbers)?;
                     return Ok(warnings);
                 }
                 Some(n) => {
                     let result = &vague_results[n - exact_results_offset - 1];
-                    print_page_from_docset(docset, &result.item, None, width)?;
+                    print_page_from_docset(docset, &result.item, None, width, flag_line_numbers)?;
                     return Ok(warnings);
                 }
                 _ => {
@@ -523,7 +526,7 @@ fn search_impl(
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment, width)?;
+                    print_page_from_docset(docset, &result.item, fragment, width, flag_line_numbers)?;
                     return Ok(warnings);
                 }
                 _ => {
@@ -553,6 +556,7 @@ where
     let mut flag_open;
     let mut flag_case_insensitive;
     let mut flag_ignore_fragment;
+    let mut flag_line_numbers;
     let mut flag_help;
 
     let mut flags = flags![
@@ -562,6 +566,7 @@ where
         flag_open: StringFlag,           ["-o", "--open"],
         flag_case_insensitive: BoolFlag, ["-i", "--ignore-case"],
         flag_ignore_fragment: BoolFlag,  ["-f", "--ignore-fragment"],
+        flag_line_numbers: BoolFlag,     ["-n", "--line-numbers"],
         flag_help: BoolFlag,             ["--help"]
     ];
 
@@ -619,7 +624,7 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
     };
 
     // Print warnings only after search results
-    let warnings = search_impl(search_options, flag_open, flag_columns)?;
+    let warnings = search_impl(search_options, flag_open, flag_columns, flag_line_numbers)?;
     for warning in warnings {
         print_warning!("{}", warning);
     }
