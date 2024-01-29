@@ -1,7 +1,5 @@
 * fuzzy search
 
-* see version of downloaded docset, allow to update it without --force flag
-
 * make good tests
 
 * transpile html to intermediate markdown when building docset with `download`

@@ -1,7 +1,7 @@
 use std::fs::{create_dir_all, File, read_dir};
 use std::fmt::Display;
 use std::sync::Once;
-use std::io::{BufReader, Write};
+use std::io::{BufReader, Write, Read};
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
@@ -535,6 +535,45 @@ pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &[Docs]) -> SearchMa
     } else {
         SearchMatch::Vague(vague_matches)
     }
+}
+
+pub(crate) fn get_docset_mtime(docset_name: &String) -> Result<u64, String>{
+    let docset_path = get_docset_path(docset_name)?;
+    let mtime_path = docset_path.join(".dedoc_mtime");
+
+    let mtime_exists = mtime_path.try_exists()
+        .map_err(|err| format!("Could not check `{}`: {err}", mtime_path.display()))?;
+
+    if !mtime_exists {
+        // Could not determine mtime. Since that docset belongs to older version of dedoc, assume
+        // that the docset is old.
+        return Ok(0);
+    }
+    let mut mtime_file = File::open(&mtime_path)
+        .map_err(|err| format!("Could not open `{}`: {err}", mtime_path.display()))?;
+    let mut mtime_string = String::new();
+    let _ = mtime_file.read_to_string(&mut mtime_string)
+        .map_err(|err| format!("Could not read `{}`: {err}", mtime_path.display()))?;
+    let mtime = mtime_string.parse::<u64>()
+        .map_err(|err| format!("Could not parse mtime of `{}`: {err}", mtime_path.display()))?;
+
+    return Ok(mtime)
+}
+
+pub(crate) fn is_docset_old(docset_name: &String, docs: &[Docs]) -> Result<bool, String> {
+    for entry in docs.iter() {
+        if entry.slug.contains(docset_name) {
+            if entry.slug == *docset_name {
+                if entry.mtime > get_docset_mtime(docset_name)? {
+                    return Ok(true);
+                } else {
+                    return Ok(false);
+                }
+            }
+        }
+    }
+
+    return Err("Docset `{docset_name}` is not downloaded.".to_string());
 }
 
 pub(crate) fn get_local_docsets() -> Result<Vec<String>, String> {

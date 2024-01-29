@@ -13,7 +13,8 @@ use toiletcli::flags::*;
 use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, is_docs_json_exists, is_docset_downloaded,
-    is_docset_in_docs_or_print_warning, get_flag_error
+    is_docset_in_docs_or_print_warning, get_flag_error, is_docset_old,
+    get_local_docsets
 };
 use crate::common::{
     BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION
@@ -24,10 +25,12 @@ fn show_download_help() -> ResultS {
     println!("\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
-    Download a docset. Available docsets can be displayed using `list`.
+    Download or update a docset. Available docsets can be displayed using `list`.
 
 {GREEN}OPTIONS{RESET}
     -f, --force                     Force the download and overwrite files.
+    -u, --update-all                Update docsets whose local version is older than the one in
+                                    fetched `docs.json`.
         --help                      Display help message."
     );
     Ok(())
@@ -82,6 +85,12 @@ fn download_db_and_index_json_with_progress(
                 }
                 println!();
             }
+            // Create a file that will store current version of the docset.
+            let mtime_path = docset_path.join(".dedoc_mtime");
+            let mut mtime_file = File::create(&mtime_path)
+                .map_err(|err| format!("Could not open `{}`: {err}", mtime_path.display()))?;
+            write!(mtime_file, "{}", entry.mtime)
+                .map_err(|err| format!("Could not write to `{}`: {err}", mtime_path.display()))?;
         }
     }
 
@@ -254,24 +263,43 @@ where
     Args: Iterator<Item = String>,
 {
     let mut flag_force;
+    let mut flag_update_all;
     let mut flag_help;
 
     let mut flags = flags![
-        flag_force: BoolFlag, ["-f", "--force"],
-        flag_help: BoolFlag,  ["--help"]
+        flag_force: BoolFlag,      ["-f", "--force"],
+        flag_update_all: BoolFlag, ["-u", "--update-all"],
+        flag_help: BoolFlag,       ["--help"]
     ];
 
     let args = parse_flags(&mut args, &mut flags)
         .map_err(|err| get_flag_error(&err))?;
+    let docs = deserialize_docs_json()?;
+    let mut successful_downloads = 0;
+
+    if flag_update_all {
+        let local_docsets = get_local_docsets()?;
+        for ref docset in local_docsets {
+            if is_docset_old(docset, &docs)? {
+                println!("Downloading `{docset}`...");
+                download_db_and_index_json_with_progress(docset, &docs)?;
+                println!("Extracting to `{}`...", get_docset_path(docset)?.display());
+                build_docset_from_db_json(docset)?;
+                successful_downloads += 1;
+            } else {
+                print_warning!("\
+Docset `{docset}` is of recent version. If you believe that is not true, try running `fetch`.");
+            }
+        }
+        println!("{BOLD}{successful_downloads} items were successfully updated{RESET}.");
+        return Ok(())
+    }
+
     if flag_help || args.is_empty() { return show_download_help(); }
 
     if !is_docs_json_exists()? {
         return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
-
-    let docs = deserialize_docs_json()?;
-
-    let mut successful_downloads = 0;
 
     for docset in args.iter() {
         // Don't print warnings when using with ls -n
@@ -279,19 +307,17 @@ where
             continue;
         }
 
-        if !flag_force && is_docset_downloaded(docset)? {
-            print_warning!(
-                "Docset `{docset}` is already downloaded. \
-                If you still want to update it, re-run this command with `--force`"
+        if !flag_force && is_docset_downloaded(docset)? && !is_docset_old(docset, &docs)? {
+            print_warning!("\
+Docset `{docset}` is already downloaded and is of recent version. \
+If you still want to re-download it, re-run this command with `--force`"
             );
             continue;
         } else if is_docset_in_docs_or_print_warning(docset, &docs) {
             println!("Downloading `{docset}`...");
             download_db_and_index_json_with_progress(docset, &docs)?;
-
             println!("Extracting to `{}`...", get_docset_path(docset)?.display());
             build_docset_from_db_json(docset)?;
-
             successful_downloads += 1;
         }
     }

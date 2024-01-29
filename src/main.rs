@@ -54,9 +54,9 @@ fn show_help() -> ResultS {
 
 {GREEN}SUBCOMMANDS{RESET}
     fetch{GRAY}, ft{RESET}                       Fetch available docsets.
-    list{GRAY}, ls{RESET}                        Show available docsets.
-    download{GRAY}, dl{RESET}                    Download docsets.
-    remove{GRAY}, rm{RESET}                      Delete docsets.
+    list{GRAY}, ls{RESET}                        Show docsets available for download.
+    download{GRAY}, dl{RESET}                    Download and update docsets.
+    remove{GRAY}, rm{RESET}                      Delete local docsets.
     search{GRAY}, ss{RESET}                      List pages that match your query.
     open{GRAY}, op{RESET}                        Display specified pages.
 
