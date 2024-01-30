@@ -62,6 +62,7 @@ struct SearchFlags {
     precise: bool,
     whole: bool,
     ignore_fragment: bool,
+    line_numbers: bool
 }
 
 // Sometimes search results are big, and it's cheaper to check a small file if current search
@@ -407,7 +408,6 @@ fn search_impl(
     // it as a number
     flag_open: String,
     flag_columns: String,
-    flag_line_numbers: bool
 ) -> Result<Vec<String>, String> {
     let mut warnings = vec![];
 
@@ -430,6 +430,11 @@ fn search_impl(
     if open_number.is_none() {
         // This lets you know whether flag messed up your query
         println!("Searching for `{}`...", search_options.query);
+    }
+
+    // Some flags do nothing if --open was not specified.
+    if open_number.is_none() && (flags.ignore_fragment || flags.line_numbers || maybe_columns.is_some()) {
+        warnings.push("`--open` was not specified and some flags were ignored.".to_string());
     }
 
     if flags.precise {
@@ -466,12 +471,12 @@ fn search_impl(
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment, width, flag_line_numbers)?;
+                    print_page_from_docset(docset, &result.item, fragment, width, flags.line_numbers)?;
                     return Ok(warnings);
                 }
                 Some(n) => {
                     let result = &vague_results[n - exact_results_offset - 1];
-                    print_page_from_docset(docset, &result.item, None, width, flag_line_numbers)?;
+                    print_page_from_docset(docset, &result.item, None, width, flags.line_numbers)?;
                     return Ok(warnings);
                 }
                 _ => {
@@ -526,7 +531,7 @@ fn search_impl(
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment, width, flag_line_numbers)?;
+                    print_page_from_docset(docset, &result.item, fragment, width, flags.line_numbers)?;
                     return Ok(warnings);
                 }
                 _ => {
@@ -551,28 +556,27 @@ where
     Args: Iterator<Item = String>,
 {
     let mut flag_whole;
-    let mut flag_columns;
     let mut flag_precise;
     let mut flag_open;
     let mut flag_case_insensitive;
-    let mut flag_ignore_fragment;
-    let mut flag_line_numbers;
+    let mut flag_open_columns;
+    let mut flag_open_ignore_fragment;
+    let mut flag_open_line_numbers;
     let mut flag_help;
 
     let mut flags = flags![
-        flag_columns: StringFlag,        ["-c", "--columns"],
-        flag_whole: BoolFlag,            ["-w", "--whole"],
-        flag_precise: BoolFlag,          ["-p", "--precise"],
-        flag_open: StringFlag,           ["-o", "--open"],
-        flag_case_insensitive: BoolFlag, ["-i", "--ignore-case"],
-        flag_ignore_fragment: BoolFlag,  ["-f", "--ignore-fragment"],
-        flag_line_numbers: BoolFlag,     ["-n", "--line-numbers"],
-        flag_help: BoolFlag,             ["--help"]
+        flag_whole: BoolFlag,                 ["-w", "--whole"],
+        flag_precise: BoolFlag,               ["-p", "--precise"],
+        flag_open: StringFlag,                ["-o", "--open"],
+        flag_case_insensitive: BoolFlag,      ["-i", "--ignore-case"],
+        flag_open_columns: StringFlag,        ["-c", "--columns"],
+        flag_open_ignore_fragment: BoolFlag,  ["-f", "--ignore-fragment"],
+        flag_open_line_numbers: BoolFlag,     ["-n", "--line-numbers"],
+        flag_help: BoolFlag,                  ["--help"]
     ];
 
     let args = parse_flags(&mut args, &mut flags)
         .map_err(|err| get_flag_error(&err))?;
-
     if flag_help { return show_search_help(); }
 
     if !is_docs_json_exists()? {
@@ -581,13 +585,11 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
     }
 
     let mut args = args.into_iter();
-
     let docset = if let Some(docset_name) = args.next() {
         docset_name
     } else {
         return show_search_help();
     };
-
     let docs = deserialize_docs_json()?;
 
     if !is_docset_downloaded(&docset)? {
@@ -614,7 +616,8 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
         precise: flag_precise,
         case_insensitive: flag_case_insensitive,
         whole: flag_whole,
-        ignore_fragment: flag_ignore_fragment,
+        ignore_fragment: flag_open_ignore_fragment,
+        line_numbers: flag_open_line_numbers
     };
 
     let search_options = SearchOptions {
@@ -624,7 +627,7 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
     };
 
     // Print warnings only after search results
-    let warnings = search_impl(search_options, flag_open, flag_columns, flag_line_numbers)?;
+    let warnings = search_impl(search_options, flag_open, flag_open_columns)?;
     for warning in warnings {
         print_warning!("{}", warning);
     }

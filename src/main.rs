@@ -94,8 +94,7 @@ where
 
     if flag_color_force {
         unsafe { overwrite_should_use_colors(true) }
-    }
-    if !flag_color.is_empty() {
+    } else if !flag_color.is_empty() {
         match flag_color.as_str() {
             "y" | "yes" | "on"    => unsafe { overwrite_should_use_colors(true) }
             "n" | "no"  | "off"   => unsafe { overwrite_should_use_colors(false) }

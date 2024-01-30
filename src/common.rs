@@ -27,6 +27,8 @@ pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
 
 pub(crate) const DEFAULT_USER_AGENT: &str = "dedoc";
 
+pub(crate) const MTIME_FILENAME: &str = ".dedoc_mtime";
+
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
 
 pub(crate) const DEFAULT_WIDTH: usize = 80;
@@ -262,7 +264,14 @@ pub(crate) fn print_docset_file(
         .map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
     let reader = BufReader::new(file);
 
-    let rich_page = html2text::from_read_rich(reader, width);
+    // If we are outputting line numbers, leave 7 columns for ourselves.
+    let actual_width = if number_lines {
+        width - 7
+    } else {
+        width
+    };
+
+    let rich_page = html2text::from_read_rich(reader, actual_width);
 
     let mut current_fragment_line = 0;
     let mut next_fragment_line = 0;
@@ -330,7 +339,7 @@ pub(crate) fn print_docset_file(
             if is_only_tag {
                 // Pad preformat to terminal width for cool background.
                 if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
-                    let padding_amount = width
+                    let padding_amount = actual_width
                         .saturating_sub(tagged_string.s.len());
 
                     for _ in 0..padding_amount {
@@ -500,8 +509,13 @@ pub(crate) enum SearchMatch {
     None
 }
 
+#[inline]
+pub(crate) fn find_docset_in_docs<'a>(docset_name: &str, docs: &'a [Docs]) -> Option<&'a Docs> {
+    docs.iter().find(|entry| entry.slug == docset_name)
+}
+
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
-pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &[Docs]) -> bool {
+pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str, docs: &[Docs]) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         SearchMatch::Exact => return true,
         SearchMatch::Vague(vague_matches) => {
@@ -518,7 +532,7 @@ pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &String, docs: &[D
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
-pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &[Docs]) -> SearchMatch {
+pub(crate) fn is_docset_in_docs(docset_name: &str, docs: &[Docs]) -> SearchMatch {
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
@@ -537,9 +551,9 @@ pub(crate) fn is_docset_in_docs(docset_name: &String, docs: &[Docs]) -> SearchMa
     }
 }
 
-pub(crate) fn get_docset_mtime(docset_name: &String) -> Result<u64, String>{
+pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>{
     let docset_path = get_docset_path(docset_name)?;
-    let mtime_path = docset_path.join(".dedoc_mtime");
+    let mtime_path = docset_path.join(MTIME_FILENAME);
 
     let mtime_exists = mtime_path.try_exists()
         .map_err(|err| format!("Could not check `{}`: {err}", mtime_path.display()))?;
@@ -557,23 +571,15 @@ pub(crate) fn get_docset_mtime(docset_name: &String) -> Result<u64, String>{
     let mtime = mtime_string.parse::<u64>()
         .map_err(|err| format!("Could not parse mtime of `{}`: {err}", mtime_path.display()))?;
 
-    return Ok(mtime)
+    Ok(mtime)
 }
 
-pub(crate) fn is_docset_old(docset_name: &String, docs: &[Docs]) -> Result<bool, String> {
-    for entry in docs.iter() {
-        if entry.slug.contains(docset_name) {
-            if entry.slug == *docset_name {
-                if entry.mtime > get_docset_mtime(docset_name)? {
-                    return Ok(true);
-                } else {
-                    return Ok(false);
-                }
-            }
-        }
+pub(crate) fn is_docset_old(docset_name: &str, docs: &[Docs]) -> Result<bool, String> {
+    if let Some(entry) = find_docset_in_docs(docset_name, docs) {
+        return Ok(entry.mtime > get_docset_mtime(docset_name)?)
     }
 
-    return Err("Docset `{docset_name}` is not downloaded.".to_string());
+    Err("Docset `{docset_name}` is not downloaded.".to_string())
 }
 
 pub(crate) fn get_local_docsets() -> Result<Vec<String>, String> {

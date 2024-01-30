@@ -14,10 +14,11 @@ use crate::common::{Docs, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, is_docs_json_exists, is_docset_downloaded,
     is_docset_in_docs_or_print_warning, get_flag_error, is_docset_old,
-    get_local_docsets
+    get_local_docsets, find_docset_in_docs
 };
 use crate::common::{
-    BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION
+    BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION,
+    MTIME_FILENAME
 };
 use crate::print_warning;
 
@@ -37,61 +38,58 @@ fn show_download_help() -> ResultS {
 }
 
 fn download_db_and_index_json_with_progress(
-    docset_name: &String,
+    docset_name: &str,
     docs: &[Docs],
 ) -> ResultS {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
-    for entry in docs.iter() {
-        if docset_name == &entry.slug {
-            let docset_path = get_docset_path(docset_name)?;
-
-            if !docset_path.exists() {
-                create_dir_all(&docset_path)
-                    .map_err(|err| format!("Cannot create `{}` directory: {err}", docset_path.display()))?;
-            }
-
-            for (file_name, i) in [("db.json", 1), ("index.json", 2)] {
-                let file_path = docset_path.join(file_name);
-
-                let file = File::create(&file_path)
-                    .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
-
-                let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}", file_name, entry.mtime);
-
-                let response = get(&download_link)
-                    .header_append("user-agent", &user_agent)
-                    .send()
-                    .map_err(|err| format!("Could not GET {download_link}: {err}"))?;
-
-                let mut file_writer = BufWriter::new(file);
-                let mut response_reader = BufReader::new(response);
-
-                let mut buffer = [0; 1024 * 4];
-                let mut file_size = 0;
-
-                while let Ok(size) = response_reader.read(&mut buffer) {
-                    if size == 0 {
-                        break;
-                    }
-
-                    file_writer
-                        .write(&buffer[..size])
-                        .map_err(|err| format!("Could not download file: {err}"))?;
-
-                    file_size += size;
-
-                    print!("\rReceived {file_size} bytes, file {i} of 2...");
-                }
-                println!();
-            }
-            // Create a file that will store current version of the docset.
-            let mtime_path = docset_path.join(".dedoc_mtime");
-            let mut mtime_file = File::create(&mtime_path)
-                .map_err(|err| format!("Could not open `{}`: {err}", mtime_path.display()))?;
-            write!(mtime_file, "{}", entry.mtime)
-                .map_err(|err| format!("Could not write to `{}`: {err}", mtime_path.display()))?;
+    if let Some(entry) = find_docset_in_docs(docset_name, docs) {
+        let docset_path = get_docset_path(docset_name)?;
+        if !docset_path.exists() {
+            create_dir_all(&docset_path)
+                .map_err(|err| format!("Cannot create `{}` directory: {err}", docset_path.display()))?;
         }
+
+        for (i, file_name) in ["db.json", "index.json"].iter().enumerate() {
+            let file_path = docset_path.join(file_name);
+
+            let file = File::create(&file_path)
+                .map_err(|err| format!("Could not create `{}`: {err}", file_path.display()))?;
+
+            let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}", file_name, entry.mtime);
+
+            let response = get(&download_link)
+                .header_append("user-agent", &user_agent)
+                .send()
+                .map_err(|err| format!("Could not GET {download_link}: {err}"))?;
+
+            let mut file_writer = BufWriter::new(file);
+            let mut response_reader = BufReader::new(response);
+
+            let mut buffer = [0; 1024 * 4];
+            let mut file_size = 0;
+
+            while let Ok(size) = response_reader.read(&mut buffer) {
+                if size == 0 {
+                    break;
+                }
+
+                file_writer
+                    .write(&buffer[..size])
+                    .map_err(|err| format!("Could not download file: {err}"))?;
+
+                file_size += size;
+
+                print!("\rReceived {file_size} bytes, file {} of 2...", i + 1);
+            }
+            println!();
+        }
+        // Create a file that will store current version of the docset.
+        let mtime_path = docset_path.join(MTIME_FILENAME);
+        let mut mtime_file = File::create(&mtime_path)
+            .map_err(|err| format!("Could not open `{}`: {err}", mtime_path.display()))?;
+        write!(mtime_file, "{}", entry.mtime)
+            .map_err(|err| format!("Could not write to `{}`: {err}", mtime_path.display()))?;
     }
 
     Ok(())
@@ -288,7 +286,7 @@ where
                 successful_downloads += 1;
             } else {
                 print_warning!("\
-Docset `{docset}` is of recent version. If you believe that is not true, try running `fetch`.");
+Docset `{docset}` is of recent version. If you believe that is an error, try running `fetch`.");
             }
         }
         println!("{BOLD}{successful_downloads} items were successfully updated{RESET}.");
