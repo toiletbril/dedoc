@@ -1,11 +1,11 @@
 * fuzzy search
+* a flag to search for a docset with `list`
 
 * make good tests
 
 * transpile html to intermediate markdown when building docset with `download`
-    * allow specifying default page width
-    * intermediate markdown should be markdown with colors baked in
-    * when opening pages, parse colors based on --color setting, output normal markdown
+    * allow specifying [default?] page width
+    * colors baked in, allow toggling them
 
 * open an issue on html2text fragments
 
