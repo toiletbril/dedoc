@@ -7,7 +7,7 @@ use attohttpc::get;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
-use crate::common::{Docs, ResultS};
+use crate::common::{DocsEntry, ResultS};
 use crate::common::{
     create_program_directory, get_program_directory, is_docs_json_exists, is_docs_json_old,
     write_to_logfile, get_flag_error
@@ -29,7 +29,7 @@ fn show_fetch_help() -> ResultS {
     Ok(())
 }
 
-fn fetch_docs() -> Result<Vec<Docs>, String> {
+fn fetch_docs() -> Result<Vec<DocsEntry>, String> {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
     let response = get(DEFAULT_DOCS_JSON_LINK)
@@ -41,7 +41,7 @@ fn fetch_docs() -> Result<Vec<Docs>, String> {
         .text()
         .map_err(|err| format!("Unable to read response body: {err}"))?;
 
-    let docs: Vec<Docs> = serde_json::from_str(body.as_str()).map_err(|err| {
+    let docs: Vec<DocsEntry> = serde_json::from_str(body.as_str()).map_err(|err| {
         let result = write_to_logfile(format!("Error while parsing JSON body: {err}\n\n{body}"));
         let log_file_message = match result {
                 Ok(path) => format!("Log file is saved at `{}`.", path.display()),
@@ -53,7 +53,7 @@ fn fetch_docs() -> Result<Vec<Docs>, String> {
     Ok(docs)
 }
 
-fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<Docs>) -> Result<(), String> {
+fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<DocsEntry>) -> Result<(), String> {
     let file = File::create(&path)
         .map_err(|err| format!("`{}`: {err}", path.display()))?;
 
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_parse_docs() {
-        let json: Result<Vec<Docs>, _> =
+        let json: Result<Vec<DocsEntry>, _> =
             serde_json::from_str(TEST_STRING).map_err(|err| err.to_string());
 
         assert_eq!(json.unwrap()[0].slug, "angular");

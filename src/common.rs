@@ -84,10 +84,10 @@ pub(crate) struct Links {
     code: String,
 }
 
-// docs.json
+// Entries from docs.json
 #[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Docs {
+pub(crate) struct DocsEntry {
     #[serde(skip)]
     name: String,
     pub slug: String,
@@ -121,7 +121,7 @@ pub(crate) struct Docs {
 //     "attribution": "whatever"
 // }
 
-pub(crate) fn deserialize_docs_json() -> Result<Vec<Docs>, String> {
+pub(crate) fn deserialize_docs_json() -> Result<Vec<DocsEntry>, String> {
     let docs_json_path = get_program_directory()?.join("docs.json");
     let file = File::open(&docs_json_path)
         .map_err(|err| format!("Could not open `{}`: {err}", docs_json_path.display()))?;
@@ -510,12 +510,12 @@ pub(crate) enum SearchMatch {
 }
 
 #[inline]
-pub(crate) fn find_docset_in_docs<'a>(docset_name: &str, docs: &'a [Docs]) -> Option<&'a Docs> {
+pub(crate) fn find_docset_in_docs<'a>(docset_name: &str, docs: &'a [DocsEntry]) -> Option<&'a DocsEntry> {
     docs.iter().find(|entry| entry.slug == docset_name)
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
-pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str, docs: &[Docs]) -> bool {
+pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str, docs: &[DocsEntry]) -> bool {
     match is_docset_in_docs(docset_name, docs) {
         SearchMatch::Exact => return true,
         SearchMatch::Vague(vague_matches) => {
@@ -532,7 +532,7 @@ pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str, docs: &[Docs
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in their path.
-pub(crate) fn is_docset_in_docs(docset_name: &str, docs: &[Docs]) -> SearchMatch {
+pub(crate) fn is_docset_in_docs(docset_name: &str, docs: &[DocsEntry]) -> SearchMatch {
     let mut vague_matches = vec![];
 
     for entry in docs.iter() {
@@ -574,7 +574,7 @@ pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>{
     Ok(mtime)
 }
 
-pub(crate) fn is_docset_old(docset_name: &str, docs: &[Docs]) -> Result<bool, String> {
+pub(crate) fn is_docset_old(docset_name: &str, docs: &[DocsEntry]) -> Result<bool, String> {
     if let Some(entry) = find_docset_in_docs(docset_name, docs) {
         return Ok(entry.mtime > get_docset_mtime(docset_name)?)
     }

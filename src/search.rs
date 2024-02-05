@@ -402,40 +402,33 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
     Ok(())
 }
 
-fn search_impl(
-    search_options: SearchOptions,
-    // Passing some flags as a String is needed to check if output was not numeric before parsing
-    // it as a number
-    flag_open: String,
-    flag_columns: String,
-) -> Result<Vec<String>, String> {
-    let mut warnings = vec![];
+struct OpenOptions {
+    open_number: Option<usize>,
+    ignore_fragment: bool,
+    page_width: Option<usize>,
+    line_numbers: bool,
+}
 
+fn search_impl(
+    mut warnings: Vec<String>,
+    search_options: SearchOptions,
+    open_options: OpenOptions
+) -> Result<Vec<String>, String> {
     let SearchOptions { ref docset, ref flags, ref query } = search_options;
 
-    let open_number = flag_open.parse::<usize>().ok();
-    let mut width = get_terminal_width();
-
-    let maybe_columns = flag_columns.parse::<usize>().ok();
-    if let Some(col_number) = maybe_columns {
-        if col_number == 0 {
-            width = 999;
-        } else if col_number > 10 {
-            width = col_number;
-        }
-    } else if !flag_columns.is_empty() {
-        warnings.push("Invalid number of columns.".to_string());
-    }
-
-    if open_number.is_none() {
+    if open_options.open_number.is_none() {
         // This lets you know whether flag messed up your query
         println!("Searching for `{}`...", search_options.query);
     }
 
     // Some flags do nothing if --open was not specified.
-    if open_number.is_none() && (flags.ignore_fragment || flags.line_numbers || maybe_columns.is_some()) {
+    if open_options.open_number.is_none() &&
+       (open_options.ignore_fragment || open_options.line_numbers || open_options.page_width.is_some())
+    {
         warnings.push("`--open` was not specified and some flags were ignored.".to_string());
     }
+
+    let width = if let Some(w) = open_options.page_width { w } else { get_terminal_width() };
 
     if flags.precise {
         let (exact_results, vague_results) =
@@ -459,12 +452,12 @@ fn search_impl(
 
         let exact_results_offset = exact_results.len();
 
-        if !flag_open.is_empty() {
+        if let Some(open_number) = open_options.open_number {
             match open_number {
-                Some(n) if n < 1 || n > exact_results_offset + vague_results.len() => {
+                n if n < 1 || n > exact_results_offset + vague_results.len() => {
                     warnings.push(format!("`--open {n}` is out of bounds."));
                 }
-                Some(n) if n <= exact_results_offset => {
+                n if n <= exact_results_offset => {
                     let result = &exact_results[n - 1];
                     let fragment = if flags.ignore_fragment {
                         None
@@ -474,15 +467,14 @@ fn search_impl(
                     print_page_from_docset(docset, &result.item, fragment, width, flags.line_numbers)?;
                     return Ok(warnings);
                 }
-                Some(n) => {
+                n => {
                     let result = &vague_results[n - exact_results_offset - 1];
                     print_page_from_docset(docset, &result.item, None, width, flags.line_numbers)?;
                     return Ok(warnings);
                 }
-                _ => {
-                    warnings.push(format!("`--open` requires a number."));
-                }
             }
+        } else {
+            warnings.push(format!("`--open` requires a number."));
         }
 
         if !exact_results.is_empty() {
@@ -519,12 +511,12 @@ fn search_impl(
             exact.into()
         };
 
-        if !flag_open.is_empty() {
+        if let Some(open_number) = open_options.open_number {
             match open_number {
-                Some(n) if n < 1 || n > results.len() => {
+                n if n < 1 || n > results.len() => {
                     warnings.push(format!("`--open {n}` is out of bounds."));
                 }
-                Some(n) => {
+                n => {
                     let result = &results[n - 1];
                     let fragment = if flags.ignore_fragment {
                         None
@@ -534,10 +526,9 @@ fn search_impl(
                     print_page_from_docset(docset, &result.item, fragment, width, flags.line_numbers)?;
                     return Ok(warnings);
                 }
-                _ => {
-                    warnings.push(format!("`--open` requires a number."));
-                }
             }
+        } else {
+            warnings.push(format!("`--open` requires a number."));
         }
 
         if !results.is_empty() {
@@ -599,6 +590,8 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
         return Ok(());
     }
 
+    let mut warnings = vec![];
+
     let query = {
         let mut merged_args = args.collect::<Vec<String>>()
             .join(" ");
@@ -626,8 +619,29 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
         flags:  Cow::Borrowed(&search_flags),
     };
 
+    let open_number = flag_open.parse::<usize>().ok();
+
+    let mut page_width = None;
+    let maybe_columns = flag_open_columns.parse::<usize>().ok();
+    if let Some(col_number) = maybe_columns {
+        if col_number == 0 {
+            page_width = Some(999);
+        } else if col_number > 10 {
+            page_width = Some(col_number);
+        }
+    } else if !flag_open_columns.is_empty() {
+        warnings.push("Invalid number of columns.".to_string());
+    }
+
+    let open_options = OpenOptions {
+        open_number,
+        ignore_fragment: flag_open_ignore_fragment,
+        page_width,
+        line_numbers: flag_open_line_numbers
+    };
+
     // Print warnings only after search results
-    let warnings = search_impl(search_options, flag_open, flag_open_columns)?;
+    let warnings = search_impl(warnings, search_options, open_options)?;
     for warning in warnings {
         print_warning!("{}", warning);
     }

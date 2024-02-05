@@ -10,11 +10,11 @@ use serde::de::{Visitor, Error, MapAccess};
 use toiletcli::flags;
 use toiletcli::flags::*;
 
-use crate::common::{Docs, ResultS};
+use crate::common::{DocsEntry, ResultS};
 use crate::common::{
     deserialize_docs_json, get_docset_path, is_docs_json_exists, is_docset_downloaded,
     is_docset_in_docs_or_print_warning, get_flag_error, is_docset_old,
-    get_local_docsets, find_docset_in_docs
+    get_local_docsets, find_docset_in_docs, is_docs_json_old
 };
 use crate::common::{
     BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET, VERSION,
@@ -39,13 +39,15 @@ fn show_download_help() -> ResultS {
 
 fn download_db_and_index_json_with_progress(
     docset_name: &str,
-    docs: &[Docs],
+    docs: &[DocsEntry],
 ) -> ResultS {
     let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
     if let Some(entry) = find_docset_in_docs(docset_name, docs) {
         let docset_path = get_docset_path(docset_name)?;
-        if !docset_path.exists() {
+        if !docset_path.try_exists()
+            .map_err(|err| format!("Could not check if {} exists: {err}", docset_path.display()))?
+        {
             create_dir_all(&docset_path)
                 .map_err(|err| format!("Cannot create `{}` directory: {err}", docset_path.display()))?;
         }
@@ -276,6 +278,10 @@ where
     let mut successful_downloads = 0;
 
     if flag_update_all {
+        if is_docs_json_old()? {
+            print_warning!("\
+Your `docs.json` was updated more than a week ago. Run `fetch` to retrieve a new list of available docsets.");
+        }
         let local_docsets = get_local_docsets()?;
         for ref docset in local_docsets {
             if is_docset_old(docset, &docs)? {
@@ -285,11 +291,15 @@ where
                 build_docset_from_db_json(docset)?;
                 successful_downloads += 1;
             } else {
-                print_warning!("\
-Docset `{docset}` is of recent version. If you believe that is an error, try running `fetch`.");
+                print_warning!("`{docset}` is recent, skipping...");
             }
         }
-        println!("{BOLD}{successful_downloads} items were successfully updated{RESET}.");
+
+        match successful_downloads {
+            0 => {}
+            1 => println!("{BOLD}{successful_downloads} item was successfully updated{RESET}."),
+            _ => println!("{BOLD}{successful_downloads} items were successfully updated{RESET}.")
+        }
         return Ok(())
     }
 
