@@ -60,9 +60,7 @@ where
     }
 
     if flag_local {
-        let mut local_docsets_iter_peekable = local_docsets.iter().peekable();
-
-        while let Some(entry) = local_docsets_iter_peekable.next() {
+        for ref entry in local_docsets {
             if should_filter && !entry.contains(&flag_search) {
                 continue;
             }
@@ -72,7 +70,7 @@ where
             print!("{GREEN}{} [downloaded]{RESET}", entry);
             first_result = false;
         }
-        println!();
+        if !first_result { println!(); }
 
         return Ok(());
     }
@@ -83,9 +81,7 @@ where
         .map(|entry| entry.slug.to_string())
         .collect::<Vec<String>>();
 
-    let mut docs_names_peekable = docs_names.iter().peekable();
-
-    while let Some(entry) = docs_names_peekable.next() {
+    for ref entry in docs_names {
         if should_filter && !entry.contains(&flag_search) {
             continue;
         }
@@ -103,7 +99,8 @@ where
         }
         first_result = false;
     }
-    println!();
+    // Print a final newline only if something was found
+    if !first_result { println!(); }
 
     Ok(())
 }
