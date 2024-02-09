@@ -48,7 +48,6 @@ where
         return Err("The list of available documents has not yet been downloaded. Please run `fetch` first.".to_string());
     }
 
-    let mut printed_final_lf = false;
     let mut first_result = true;
 
     let local_docsets = get_local_docsets()?;
@@ -71,13 +70,9 @@ where
                 print!("{}", separator);
             }
             print!("{GREEN}{} [downloaded]{RESET}", entry);
-            if local_docsets_iter_peekable.peek().is_none() {
-                printed_final_lf = true;
-                println!();
-            }
             first_result = false;
         }
-        if !printed_final_lf { println!(); }
+        println!();
 
         return Ok(());
     }
@@ -106,13 +101,9 @@ where
         } else {
             print!("{}", entry);
         }
-        if docs_names_peekable.peek().is_none() {
-            printed_final_lf = true;
-            println!();
-        }
         first_result = false;
     }
-    if !printed_final_lf { println!(); }
+    println!();
 
     Ok(())
 }
