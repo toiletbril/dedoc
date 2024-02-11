@@ -57,11 +57,10 @@ struct VagueResult {
 // Flags that change search result must be added here for cache to be updated.
 #[derive(Serialize, Deserialize)]
 #[derive(Default, PartialEq, Clone)]
-struct SearchFlags {
+struct SearchOptions {
     case_insensitive: bool,
     precise: bool,
     whole: bool,
-    ignore_fragment: bool,
     line_numbers: bool
 }
 
@@ -69,10 +68,10 @@ struct SearchFlags {
 // options match cached ones, to deserialize the whole search cache.
 #[derive(Serialize, Deserialize)]
 #[derive(PartialEq)]
-pub(crate) struct SearchOptions<'a> {
+pub(crate) struct SearchContext<'a> {
     query:  Cow<'a, str>,
     docset: Cow<'a, str>,
-    flags:  Cow<'a, SearchFlags>,
+    options:  Cow<'a, SearchOptions>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -81,7 +80,7 @@ pub(crate) struct SearchCache<'a> {
     vague_results: Cow<'a, [VagueResult]>,
 }
 
-pub(crate) fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<SearchCache<'a>> {
+pub(crate) fn try_use_cache<'a>(search_options: &SearchContext) -> Option<SearchCache<'a>> {
     let program_dir = get_program_directory().ok()?;
     let cache_options_path = program_dir.join("search_cache_options.json");
 
@@ -89,7 +88,7 @@ pub(crate) fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<Search
         let cache_options_file = File::open(cache_options_path).ok()?;
         let cache_options_reader = BufReader::new(cache_options_file);
 
-        let cached_search_options: SearchOptions = serde_json::from_reader(cache_options_reader).ok()?;
+        let cached_search_options: SearchContext = serde_json::from_reader(cache_options_reader).ok()?;
 
         if cached_search_options != *search_options {
             return None;
@@ -107,7 +106,7 @@ pub(crate) fn try_use_cache<'a>(search_options: &SearchOptions) -> Option<Search
 }
 
 fn cache_search_results(
-    search_options: &SearchOptions,
+    search_options: &SearchContext,
     search_cache:   &SearchCache,
 ) -> ResultS {
     let program_dir = get_program_directory()?;
@@ -411,14 +410,14 @@ struct OpenOptions {
 
 fn search_impl(
     mut warnings: Vec<String>,
-    search_options: SearchOptions,
+    search_context: SearchContext,
     open_options: OpenOptions
 ) -> Result<Vec<String>, String> {
-    let SearchOptions { ref docset, ref flags, ref query } = search_options;
+    let SearchContext { ref docset, ref options, ref query } = search_context;
 
     if open_options.open_number.is_none() {
         // This lets you know whether flag messed up your query
-        println!("Searching for `{}`...", search_options.query);
+        println!("Searching for `{}`...", search_context.query);
     }
 
     // Some flags do nothing if --open was not specified.
@@ -430,19 +429,19 @@ fn search_impl(
 
     let width = if let Some(w) = open_options.page_width { w } else { get_terminal_width() };
 
-    if flags.precise {
+    if options.precise {
         let (exact_results, vague_results) =
-        if let Some(cache) = try_use_cache(&search_options) {
+        if let Some(cache) = try_use_cache(&search_context) {
             (cache.exact_results, cache.vague_results)
         } else {
-            let (exact, vague) = search_docset_precisely(docset, query, flags.case_insensitive)?;
+            let (exact, vague) = search_docset_precisely(docset, query, options.case_insensitive)?;
 
             let search_cache = SearchCache {
                 exact_results: Cow::Borrowed(&exact),
                 vague_results: Cow::Borrowed(&vague),
             };
 
-            let _ = cache_search_results(&search_options, &search_cache)
+            let _ = cache_search_results(&search_context, &search_cache)
                 .map_err(|err| {
                     warnings.push(format!("Could not write cache: {err}."));
                 });
@@ -459,17 +458,17 @@ fn search_impl(
                 }
                 n if n <= exact_results_offset => {
                     let result = &exact_results[n - 1];
-                    let fragment = if flags.ignore_fragment {
+                    let fragment = if open_options.ignore_fragment {
                         None
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment, width, flags.line_numbers)?;
+                    print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
                     return Ok(warnings);
                 }
                 n => {
                     let result = &vague_results[n - exact_results_offset - 1];
-                    print_page_from_docset(docset, &result.item, None, width, flags.line_numbers)?;
+                    print_page_from_docset(docset, &result.item, None, width, options.line_numbers)?;
                     return Ok(warnings);
                 }
             }
@@ -493,17 +492,17 @@ fn search_impl(
 
         Ok(warnings)
     } else {
-        let results = if let Some(cache) = try_use_cache(&search_options) {
+        let results = if let Some(cache) = try_use_cache(&search_context) {
             cache.exact_results
         } else {
-            let exact  = search_docset_in_filenames(docset, query, flags.case_insensitive)?;
+            let exact  = search_docset_in_filenames(docset, query, options.case_insensitive)?;
 
             let search_cache = SearchCache {
                 exact_results: Cow::Borrowed(&exact),
                 vague_results: Cow::Owned(vec![]),
             };
 
-            let _ = cache_search_results(&search_options, &search_cache)
+            let _ = cache_search_results(&search_context, &search_cache)
                 .map_err(|err| {
                     warnings.push(format!("Could not write cache: {err}."));
                 });
@@ -518,12 +517,12 @@ fn search_impl(
                 }
                 n => {
                     let result = &results[n - 1];
-                    let fragment = if flags.ignore_fragment {
+                    let fragment = if open_options.ignore_fragment {
                         None
                     } else {
                         result.fragment.as_ref()
                     };
-                    print_page_from_docset(docset, &result.item, fragment, width, flags.line_numbers)?;
+                    print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
                     return Ok(warnings);
                 }
             }
@@ -605,18 +604,17 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
         }
     };
 
-    let search_flags = SearchFlags {
+    let search_flags = SearchOptions {
         precise: flag_precise,
         case_insensitive: flag_case_insensitive,
         whole: flag_whole,
-        ignore_fragment: flag_open_ignore_fragment,
         line_numbers: flag_open_line_numbers
     };
 
-    let search_options = SearchOptions {
+    let search_options = SearchContext {
         query:  Cow::Borrowed(&query),
         docset: Cow::Borrowed(&docset),
-        flags:  Cow::Borrowed(&search_flags),
+        options:  Cow::Borrowed(&search_flags),
     };
 
     let open_number = flag_open.parse::<usize>().ok();

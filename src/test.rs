@@ -13,7 +13,7 @@ use crate::debug_println;
 use crate::open::open;
 use crate::remove::remove;
 use crate::download::download;
-use crate::search::{SearchOptions, try_use_cache, search};
+use crate::search::{SearchContext, try_use_cache, search};
 use crate::list::list;
 use crate::fetch::fetch;
 
@@ -77,7 +77,7 @@ fn test_search_should_use_cache(args: &str) {
         let cache_options_file = File::open(cache_options_path).unwrap();
         let cache_options_reader = BufReader::new(cache_options_file);
 
-        let cached_search_options: SearchOptions = serde_json::from_reader(cache_options_reader).unwrap();
+        let cached_search_options: SearchContext = serde_json::from_reader(cache_options_reader).unwrap();
 
         assert!(try_use_cache(&cached_search_options).is_some());
     }
