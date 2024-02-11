@@ -16,29 +16,26 @@ fn show_remove_help() -> ResultS {
 
 {GREEN}OPTIONS{RESET}
         --purge-all                 Remove all installed docsets.
-        --help                      Display help message."
-    );
+        --help                      Display help message.");
     Ok(())
 }
 
-fn is_name_allowed<S: AsRef<str>>(docset_name: &S) -> bool {
-    let docset = docset_name.as_ref();
-
+fn is_name_allowed(docset_name: &str) -> bool {
     let has_slashes = {
         #[cfg(target_family = "windows")]
-        { docset.contains('\\') || docset.contains('/') }
+        { docset_name.contains('\\') || docset_name.contains('/') }
 
         #[cfg(target_family = "unix")]
         { docset.contains('/') }
     };
 
-    let starts_with_tilde = docset.starts_with('~');
-    let starts_with_dot = docset.starts_with('.');
+    let is_bad = has_slashes ||
+        docset_name.starts_with('~') ||
+        docset_name.contains('$') ||
+        docset_name.starts_with('.') ||
+        docset_name.contains("..");
 
-    let has_dollars = docset.contains('$');
-    let has_dots = docset.contains("..");
-
-    !(has_slashes || starts_with_tilde || has_dollars || starts_with_dot || has_dots)
+    !is_bad
 }
 
 pub(crate) fn remove<Args>(mut args: Args) -> ResultS
@@ -96,14 +93,14 @@ mod tests {
 
     #[test]
     fn test_sanitize_names() {
-         let bad_name_path = "/what";
-         let bad_name_home = "~";
-         let bad_name_dots = "..";
-         let bad_name_env  = "$HOME";
+        let bad_name_path = "/what";
+        let bad_name_home = "~";
+        let bad_name_dots = "..";
+        let bad_name_env  = "$HOME";
 
-         let good_name_simple  = "hello";
-         let good_name_version = "qt~6.1";
-         let good_name_long    = "scala~2.13_reflection";
+        let good_name_simple  = "hello";
+        let good_name_version = "qt~6.1";
+        let good_name_long    = "scala~2.13_reflection";
 
         assert!(!is_name_allowed(&bad_name_path));
         assert!(!is_name_allowed(&bad_name_home));

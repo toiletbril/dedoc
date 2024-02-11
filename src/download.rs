@@ -32,8 +32,7 @@ fn show_download_help() -> ResultS {
     -f, --force                     Force the download and overwrite files.
     -u, --update-all                Update docsets whose local version is older than the one in
                                     fetched `docs.json`.
-        --help                      Display help message."
-    );
+        --help                      Display help message.");
     Ok(())
 }
 
@@ -67,7 +66,6 @@ fn download_db_and_index_json_with_progress(
 
             let mut file_writer = BufWriter::new(file);
             let mut response_reader = BufReader::new(response);
-
             let mut buffer = [0; 1024 * 4];
             let mut file_size = 0;
 
@@ -109,8 +107,7 @@ fn sanitize_html_line(html_line: String) -> String {
     let length = html_line.len();
     let bytes = html_line.as_bytes();
 
-    let mut sanitized_line = String::new();
-
+    let mut sanitized_line_buffer = String::new();
     let mut state = State::Default;
     let mut position = 0;
 
@@ -122,7 +119,7 @@ fn sanitize_html_line(html_line: String) -> String {
                 if ch == '<' {
                     state = State::InTag;
                 }
-                sanitized_line.push(ch);
+                sanitized_line_buffer.push(ch);
             }
             State::InTag => {
                 match ch {
@@ -137,9 +134,9 @@ fn sanitize_html_line(html_line: String) -> String {
                     }
                     '>' => {
                         state = State::Default;
-                        sanitized_line.push(ch);
+                        sanitized_line_buffer.push(ch);
                     }
-                    _ => sanitized_line.push(ch)
+                    _ => sanitized_line_buffer.push(ch)
                 }
             }
             State::InKey => {
@@ -157,7 +154,7 @@ fn sanitize_html_line(html_line: String) -> String {
         position += ch.len_utf8();
     }
 
-    sanitized_line
+    sanitized_line_buffer
 }
 
 fn build_docset_from_map_with_progress<'de, M>(docset_name: &str, mut map: M) -> ResultS
@@ -282,10 +279,9 @@ where
             print_warning!("\
 Your `docs.json` was updated more than a week ago. Run `fetch` to retrieve a new list of available docsets.");
         }
-        let local_docsets = get_local_docsets()?;
-        for ref docset in local_docsets {
+        for ref docset in get_local_docsets()? {
             if is_docset_old(docset, &docs)? {
-                println!("Downloading `{docset}`...");
+                println!("Updating `{docset}`...");
                 download_db_and_index_json_with_progress(docset, &docs)?;
                 println!("Extracting to `{}`...", get_docset_path(docset)?.display());
                 build_docset_from_db_json(docset)?;
@@ -318,8 +314,7 @@ Your `docs.json` was updated more than a week ago. Run `fetch` to retrieve a new
         if !flag_force && is_docset_downloaded(docset)? && !is_docset_old(docset, &docs)? {
             print_warning!("\
 Docset `{docset}` is already downloaded and is of recent version. \
-If you still want to re-download it, re-run this command with `--force`"
-            );
+If you still want to re-download it, re-run this command with `--force`");
             continue;
         } else if is_docset_in_docs_or_print_warning(docset, &docs) {
             println!("Downloading `{docset}`...");

@@ -89,19 +89,16 @@ pub(crate) fn try_use_cache<'a>(search_options: &SearchContext) -> Option<Search
         let cache_options_reader = BufReader::new(cache_options_file);
 
         let cached_search_options: SearchContext = serde_json::from_reader(cache_options_reader).ok()?;
-
         if cached_search_options != *search_options {
             return None;
         }
     }
 
     let cache_path = program_dir.join("search_cache.json");
-
     let cache_file = File::open(cache_path).ok()?;
     let cache_reader = BufReader::new(cache_file);
 
     let cache: SearchCache = serde_json::from_reader(cache_reader).ok()?;
-
     Some(cache)
 }
 
@@ -117,7 +114,6 @@ fn cache_search_results(
             .map_err(|err| format!("Could not create cache options at `{}`: {err}", cache_options_path.display()))?;
 
         let cache_options_writer = BufWriter::new(cache_options_file);
-
         serde_json::to_writer(cache_options_writer, &search_options)
             .map_err(|err| format!("Could not write cache options at `{}`: {err}", cache_options_path.display()))?;
     }
@@ -128,7 +124,6 @@ fn cache_search_results(
             .map_err(|err| format!("Could not create cache at `{}`: {err}", cache_path.display()))?;
 
         let cache_writer = BufWriter::new(cache_file);
-
         serde_json::to_writer(cache_writer, &search_cache)
             .map_err(|err| format!("Could not write cache at `{}`: {err}", cache_path.display()))?;
     }
@@ -165,18 +160,15 @@ fn search_docset_in_filenames(
         .map_err(|err| format!("Could not check if `{}` exists: {err}", index_json_path.display()))?;
 
     if !index_exists {
-        let message = format!("\
+        return Err(format!("\
 Index file does not exist for `{docset_name}`. Docsets that were downloaded prior to version `0.2.0` are incompatible. \
-Please redownload the docset with `download {docset_name} --force`."
-        );
-        return Err(message);
+Please redownload the docset with `download {docset_name} --force`."));
     }
 
     let file = File::open(&index_json_path)
         .map_err(|err| format!("Could not open `{}`: {err}", index_json_path.display()))?;
 
     let reader = BufReader::new(file);
-
     let index: IndexJson = serde_json::from_reader(reader)
         .map_err(|err| format!("Could not deserialize `{}`: {err}", index_json_path.display()))?;
 
@@ -191,9 +183,7 @@ Please redownload the docset with `download {docset_name} --force`."
 
             if lowercase_name.contains(&query) || lowercase_path.contains(&query) {
                 let (item, fragment) = split_to_item_and_fragment(entry.path)?;
-
                 let exact_match = ExactResult { item, fragment };
-
                 items.push(exact_match);
             }
         }
@@ -201,9 +191,7 @@ Please redownload the docset with `download {docset_name} --force`."
         for entry in index.entries {
             if entry.name.contains(query) || entry.path.contains(query) {
                 let (item, fragment) = split_to_item_and_fragment(entry.path)?;
-
                 let exact_match = ExactResult { item, fragment };
-
                 items.push(exact_match);
             }
         }
@@ -276,7 +264,6 @@ fn search_docset_precisely(
                 .map_err(|err| format!("Could not read file: {err}"))?;
 
             let os_file_name = entry.file_name();
-
             let file_type = entry
                 .file_type()
                 .map_err(|err| format!("Could not read file type of {os_file_name:?}: {err}"))?;
@@ -290,7 +277,6 @@ fn search_docset_precisely(
             }
 
             let mut file_name = os_file_name.to_string_lossy().to_string();
-
             if !file_name.ends_with(DOC_PAGE_EXTENSION) {
                 continue;
             }
@@ -308,8 +294,6 @@ fn search_docset_precisely(
             } else {
                 let file = File::open(&file_path)
                     .map_err(|err| format!("Could not open `{}`: {err}", file_path.display()))?;
-
-                let query_len = query.len();
 
                 let mut contexts = vec![];
 
@@ -329,7 +313,7 @@ fn search_docset_precisely(
 
                     if let Some(index) = display_context.find(query) {
                         let context =
-                            get_context_around_query(&string_buffer, index, query_len);
+                            get_context_around_query(&string_buffer, index, query.len());
 
                         contexts.push(context);
                     }
@@ -354,12 +338,7 @@ fn search_docset_precisely(
     exact_files.sort_unstable();
     vague_results.sort_unstable();
 
-    let items = (
-        exact_files,
-        vague_results,
-    );
-
-    Ok(items)
+    Ok((exact_files, vague_results))
 }
 
 const TAB: &str = "    ";
@@ -402,6 +381,8 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
 }
 
 struct OpenOptions {
+    // If it's None, --open was not specified. If it's Some(None), the value of the flag could not
+    // be parsed.
     open_number: Option<Option<usize>>,
     ignore_fragment: bool,
     page_width: Option<usize>,
@@ -626,8 +607,7 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
     };
 
     let mut page_width = None;
-    let maybe_columns = flag_open_columns.parse::<usize>().ok();
-    if let Some(col_number) = maybe_columns {
+    if let Ok(col_number) = flag_open_columns.parse::<usize>() {
         if col_number == 0 {
             page_width = Some(999);
         } else if col_number > 10 {
@@ -645,8 +625,7 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
     };
 
     // Print warnings only after search results
-    let warnings = search_impl(warnings, search_options, open_options)?;
-    for warning in warnings {
+    for warning in search_impl(warnings, search_options, open_options)? {
         print_warning!("{}", warning);
     }
 

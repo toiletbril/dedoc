@@ -9,6 +9,7 @@
 * open an issue on html2text fragments
 
 * features to lower binary size
+* refactor help to be generated
 
 * interactively search whole docset
     * literally open a manpage out of html with own pager

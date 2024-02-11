@@ -41,8 +41,7 @@ dedoc {version}
 
 License GPLv3: GNU GPL version 3.
 This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law."
-    );
+There is NO WARRANTY, to the extent permitted by law.");
     Ok(())
 }
 
@@ -64,8 +63,7 @@ fn show_help() -> ResultS {
     -c, --force-colors              Forcefully enable colors.
         --color <on/off/auto>       Control output colors.
     -v, --version                   Display version.
-        --help                      Display help message."
-    );
+        --help                      Display help message.");
     Ok(())
 }
 

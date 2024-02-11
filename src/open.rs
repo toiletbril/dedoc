@@ -21,8 +21,7 @@ fn show_open_help() -> ResultS {
     -h, --html                      Interpret arguments as a path to HTML file and translate it to markdown.
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number output lines.
-        --help                      Display help message."
-    );
+        --help                      Display help message.");
     Ok(())
 }
 
@@ -48,8 +47,7 @@ where
 
     let mut width = get_terminal_width();
 
-    let maybe_columns = flag_columns.parse::<usize>().ok();
-    if let Some(col_number) = maybe_columns {
+    if let Ok(col_number) = flag_columns.parse::<usize>() {
         if col_number == 0 {
             width = 999;
         } else if col_number > 10 {
@@ -77,17 +75,13 @@ where
         return show_open_help();
     };
 
-    let docs = deserialize_docs_json()?;
-
-    if is_docset_in_docs_or_print_warning(&docset, &docs) {
+    if is_docset_in_docs_or_print_warning(&docset, &deserialize_docs_json()?) {
         let query = args.collect::<Vec<String>>().join(" ");
-
         if query.is_empty() {
             return Err("No page specified. Try `open --help` for more information.".to_string());
         }
 
         let (item, fragment) = split_to_item_and_fragment(query)?;
-
         print_page_from_docset(&docset, &item, fragment.as_ref(), width, flag_number_lines)?;
     }
 

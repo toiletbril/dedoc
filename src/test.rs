@@ -28,14 +28,12 @@ fn show_test_help() -> ResultS {
 
 {GREEN}OPTIONS{RESET}
     -f, --force                     Run all tests, including `download` and `fetch`.
-        --help                      Display help message."
-    );
+        --help                      Display help message.");
     Ok(())
 }
 
 fn reset_state_and_cache() {
     debug_println!("Removing cache...");
-
     let program_directory = get_program_directory().unwrap();
 
     let _ = remove_file(program_directory.join("docs.json"));
@@ -72,15 +70,13 @@ fn test_search_should_use_cache(args: &str) {
 
     run_with_args(search, args, "print search results");
 
-    {
-        let cache_options_path = program_directory.join("search_cache_options.json");
-        let cache_options_file = File::open(cache_options_path).unwrap();
-        let cache_options_reader = BufReader::new(cache_options_file);
+    let cache_options_path = program_directory.join("search_cache_options.json");
+    let cache_options_file = File::open(cache_options_path).unwrap();
+    let cache_options_reader = BufReader::new(cache_options_file);
 
-        let cached_search_options: SearchContext = serde_json::from_reader(cache_options_reader).unwrap();
+    let cached_search_options: SearchContext = serde_json::from_reader(cache_options_reader).unwrap();
 
-        assert!(try_use_cache(&cached_search_options).is_some());
-    }
+    assert!(try_use_cache(&cached_search_options).is_some());
 
     debug_println!("Search sucessfully created cache.");
 }

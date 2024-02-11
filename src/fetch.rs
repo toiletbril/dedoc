@@ -24,8 +24,7 @@ fn show_fetch_help() -> ResultS {
 
 {GREEN}OPTIONS{RESET}
     -f, --force                     Force the download and overwrite `docs.json`.
-        --help                      Display help message."
-    );
+        --help                      Display help message.");
     Ok(())
 }
 
@@ -82,12 +81,9 @@ where
 
     if flag_help { return show_fetch_help(); }
     if !flag_force && is_docs_json_exists()? && !is_docs_json_old()? {
-        let message = format!(
-            "\
+        println!("\
 {YELLOW}WARNING{RESET}: It seems that your `docs.json` was updated less than a week ago. \
-Run `fetch --force` to ignore this warning."
-        );
-        println!("{}", message);
+Run `fetch --force` to ignore this warning.");
         return Ok(());
     }
 
@@ -95,15 +91,13 @@ Run `fetch --force` to ignore this warning."
     let docs = fetch_docs()?;
 
     let program_path = get_program_directory()?;
-    let docs_json_path = program_path.join("docs.json");
-
     if !program_path.exists() {
         create_program_directory()?;
     }
+    let docs_json_path = program_path.join("docs.json");
 
     println!("Writing `{}`...", docs_json_path.display());
     serialize_and_overwrite_docs(docs_json_path, docs)?;
-
     println!("{BOLD}Fetching has successfully finished{RESET}.");
 
     Ok(())

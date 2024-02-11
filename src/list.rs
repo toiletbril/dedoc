@@ -17,8 +17,7 @@ fn show_list_help() -> ResultS {
     -a, --all                       Show all version-specific docsets.
     -n, --newlines                  Print each docset on a separate line.
     -s, --search <query>            Filter docsets based on a query.
-        --help                      Display help message."
-    );
+        --help                      Display help message.");
     Ok(())
 }
 

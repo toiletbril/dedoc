@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fs::{create_dir_all, File, read_dir};
 use std::fmt::Display;
 use std::sync::Once;
@@ -153,16 +155,13 @@ pub(crate) fn get_flag_error(flag_error: &FlagError) -> String {
 }
 
 pub(crate) fn get_terminal_width() -> usize {
-    let result = terminal_size::terminal_size();
-
-    if let Some((terminal_size::Width(w), _)) = result {
+    if let Some((terminal_size::Width(w), _)) = terminal_size::terminal_size() {
         if w < 120 {
             return w as usize;
         } else {
             return 120;
         }
     }
-
     DEFAULT_WIDTH
 }
 
@@ -183,7 +182,7 @@ pub(crate) fn split_to_item_and_fragment(path: String) -> Result<(String, Option
 }
 
 fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
-    let mut style = String::new();
+    let mut style_buffer = String::new();
     let mut temp_style;
 
     for annotation in tagged_string_tags {
@@ -219,10 +218,10 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String {
             _ => continue
         };
 
-        style.push_str(&temp_style)
+        style_buffer.push_str(&temp_style)
     }
 
-    style
+    style_buffer
 }
 
 // This function ignores fragment's character case, to support --case-insensitive
@@ -288,7 +287,6 @@ pub(crate) fn print_docset_file(
             current_fragment_line = line;
             is_fragment_found = true;
         }
-
         if let Some(line) = next_fragment {
             next_fragment_line = line;
             has_next_fragment = true;
@@ -316,9 +314,9 @@ pub(crate) fn print_docset_file(
             .tagged_strings()
             .collect();
 
-        let mut line_is_empty = true;
         let is_only_tag = tagged_strings.len() == 1;
 
+        let mut line_is_empty = true;
         let mut line_buffer = String::new();
 
         if number_lines {
@@ -354,11 +352,9 @@ pub(crate) fn print_docset_file(
         if !line_is_empty {
             skipped_empty_lines = true;
         }
-
         if skipped_empty_lines {
             println!("{}", line_buffer);
         }
-
         line_buffer.clear();
     }
 
@@ -384,11 +380,8 @@ pub(crate) fn print_page_from_docset(
     let page_path = PathBuf::from(page_path_string);
 
     if !page_path.is_file() {
-        let message = format!(
-            "\
-No page matching `{page}`. Did you specify the name from `search` correctly?"
-        );
-        return Err(message);
+        return Err(format!("\
+No page matching `{page}`. Did you specify the name from `search` correctly?"));
     }
 
     print_docset_file(page_path, fragment, width, number_lines)
@@ -427,7 +420,6 @@ pub(crate) fn get_home_directory() -> Result<PathBuf, String> {
     }
 
     let home_path = internal()?;
-
     if home_path.is_dir() {
         unsafe {
             HOME_DIR_INIT.call_once(|| {
@@ -450,7 +442,6 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String> {
 
 pub(crate) fn create_program_directory() -> ResultS {
     let program_path = get_program_directory()?;
-
     if !program_path.exists() {
         create_dir_all(&program_path)
             .map_err(|err| format!("Could not create `{}`: {err}", program_path.display()))?;
@@ -494,8 +485,7 @@ pub(crate) fn write_to_logfile(message: impl Display) -> Result<PathBuf, String>
         File::options().append(true).open(&log_file_path)
     } else {
         File::create(&log_file_path)
-    }
-    .map_err(|err| format!("Could not open `{}`: {err}", log_file_path.display()))?;
+    }.map_err(|err| format!("Could not open `{}`: {err}", log_file_path.display()))?;
 
     writeln!(log_file, "{}", message)
         .map_err(|err| format!("Could not write `{}`: {err}", log_file_path.display()))?;
@@ -552,17 +542,15 @@ pub(crate) fn is_docset_in_docs(docset_name: &str, docs: &[DocsEntry]) -> Search
 }
 
 pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>{
-    let docset_path = get_docset_path(docset_name)?;
-    let mtime_path = docset_path.join(MTIME_FILENAME);
-
+    let mtime_path = get_docset_path(docset_name)?.join(MTIME_FILENAME);
     let mtime_exists = mtime_path.try_exists()
         .map_err(|err| format!("Could not check `{}`: {err}", mtime_path.display()))?;
-
     if !mtime_exists {
         // Could not determine mtime. Since that docset belongs to older version of dedoc, assume
         // that the docset is old.
         return Ok(0);
     }
+
     let mut mtime_file = File::open(&mtime_path)
         .map_err(|err| format!("Could not open `{}`: {err}", mtime_path.display()))?;
     let mut mtime_string = String::new();
@@ -574,11 +562,11 @@ pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>{
     Ok(mtime)
 }
 
+#[inline]
 pub(crate) fn is_docset_old(docset_name: &str, docs: &[DocsEntry]) -> Result<bool, String> {
     if let Some(entry) = find_docset_in_docs(docset_name, docs) {
         return Ok(entry.mtime > get_docset_mtime(docset_name)?)
     }
-
     Err("Docset `{docset_name}` is not downloaded.".to_string())
 }
 
@@ -587,14 +575,13 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String> {
     let docsets_dir_exists = docsets_path.try_exists()
         .map_err(|err| format!("Could not check `{}`: {err}", docsets_path.display()))?;
 
-    let mut result = vec![];
-
     if !docsets_dir_exists {
-        return Ok(result);
+        return Err("Docset folder does not exist".to_string());
     }
-
     let docsets_dir = read_dir(docsets_path)
         .map_err(|err| err.to_string())?;
+
+    let mut result = vec![];
 
     for entry in docsets_dir {
         let entry = entry
@@ -622,12 +609,21 @@ pub(crate) fn is_docset_downloaded(docset_name: &String) -> Result<bool, String>
 
 #[inline]
 pub(crate) fn is_docs_json_exists() -> Result<bool, String> {
-    let docs_json_path = get_program_directory()?.join("docs.json");
-    Ok(docs_json_path.exists())
+    Ok(get_program_directory()?.join("docs.json").exists())
 }
 
 #[inline]
 pub(crate) fn get_docset_path(docset_name: &str) -> Result<PathBuf, String> {
-    let docsets_path = get_program_directory()?.join("docsets");
-    Ok(docsets_path.join(docset_name))
+    Ok(get_program_directory()?.join("docsets").join(docset_name))
+}
+
+#[inline]
+pub(crate) fn get_docset_path_checked(docset_name: &str) -> Result<PathBuf, String> {
+    let docset_path = get_program_directory()?.join("docsets").join(docset_name);
+    if docset_path.try_exists()
+        .map_err(|err| format!("Could not check if `{}` exists: {err}", docset_path.display()))?
+    {
+        return Err(format!("`{docset_name}` does not exist."));
+    }
+    Ok(docset_path)
 }
