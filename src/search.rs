@@ -402,7 +402,7 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
 }
 
 struct OpenOptions {
-    open_number: Option<usize>,
+    open_number: Option<Option<usize>>,
     ignore_fragment: bool,
     page_width: Option<usize>,
     line_numbers: bool,
@@ -452,30 +452,31 @@ fn search_impl(
         let exact_results_offset = exact_results.len();
 
         if let Some(open_number) = open_options.open_number {
-            match open_number {
-                n if n < 1 || n > exact_results_offset + vague_results.len() => {
-                    warnings.push(format!("`--open {n}` is out of bounds."));
+            if let Some(open_number) = open_number {
+                match open_number {
+                    n if n < 1 || n > exact_results_offset + vague_results.len() => {
+                        warnings.push(format!("`--open {n}` is out of bounds."));
+                    }
+                    n if n <= exact_results_offset => {
+                        let result = &exact_results[n - 1];
+                        let fragment = if open_options.ignore_fragment {
+                            None
+                        } else {
+                            result.fragment.as_ref()
+                        };
+                        print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
+                        return Ok(warnings);
+                    }
+                    n => {
+                        let result = &vague_results[n - exact_results_offset - 1];
+                        print_page_from_docset(docset, &result.item, None, width, options.line_numbers)?;
+                        return Ok(warnings);
+                    }
                 }
-                n if n <= exact_results_offset => {
-                    let result = &exact_results[n - 1];
-                    let fragment = if open_options.ignore_fragment {
-                        None
-                    } else {
-                        result.fragment.as_ref()
-                    };
-                    print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
-                    return Ok(warnings);
-                }
-                n => {
-                    let result = &vague_results[n - exact_results_offset - 1];
-                    print_page_from_docset(docset, &result.item, None, width, options.line_numbers)?;
-                    return Ok(warnings);
-                }
+            } else {
+                warnings.push(format!("`--open` requires a number."));
             }
-        } else {
-            warnings.push(format!("`--open` requires a number."));
         }
-
         if !exact_results.is_empty() {
             println!("{BOLD}Exact matches in `{docset}`{RESET}:");
             print_search_results(&exact_results, 1)?;
@@ -511,25 +512,26 @@ fn search_impl(
         };
 
         if let Some(open_number) = open_options.open_number {
-            match open_number {
-                n if n < 1 || n > results.len() => {
-                    warnings.push(format!("`--open {n}` is out of bounds."));
+            if let Some(open_number) = open_number {
+                match open_number {
+                    n if n < 1 || n > results.len() => {
+                        warnings.push(format!("`--open {n}` is out of bounds."));
+                    }
+                    n => {
+                        let result = &results[n - 1];
+                        let fragment = if open_options.ignore_fragment {
+                            None
+                        } else {
+                            result.fragment.as_ref()
+                        };
+                        print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
+                        return Ok(warnings);
+                    }
                 }
-                n => {
-                    let result = &results[n - 1];
-                    let fragment = if open_options.ignore_fragment {
-                        None
-                    } else {
-                        result.fragment.as_ref()
-                    };
-                    print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
-                    return Ok(warnings);
-                }
+            } else {
+                warnings.push(format!("`--open` requires a number."));
             }
-        } else {
-            warnings.push(format!("`--open` requires a number."));
         }
-
         if !results.is_empty() {
             println!("{BOLD}Exact matches in `{docset}`{RESET}:");
             print_search_results(&results, 1)?;
@@ -617,7 +619,11 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
         options:  Cow::Borrowed(&search_flags),
     };
 
-    let open_number = flag_open.parse::<usize>().ok();
+    let open_number = if flag_open.is_empty() {
+        None
+    } else {
+        Some(flag_open.parse::<usize>().ok())
+    };
 
     let mut page_width = None;
     let maybe_columns = flag_open_columns.parse::<usize>().ok();
