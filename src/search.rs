@@ -61,7 +61,15 @@ struct SearchOptions {
     case_insensitive: bool,
     precise: bool,
     whole: bool,
-    line_numbers: bool
+}
+
+struct OpenOptions {
+    // If it's None, --open was not specified. If it's Some(None), the value of the flag could not
+    // be parsed.
+    open_number: Option<Option<usize>>,
+    ignore_fragment: bool,
+    page_width: Option<usize>,
+    line_numbers: bool,
 }
 
 // Sometimes search results are big, and it's cheaper to check a small file if current search
@@ -380,15 +388,6 @@ fn print_search_results(search_results: &[ExactResult], mut start_index: usize) 
     Ok(())
 }
 
-struct OpenOptions {
-    // If it's None, --open was not specified. If it's Some(None), the value of the flag could not
-    // be parsed.
-    open_number: Option<Option<usize>>,
-    ignore_fragment: bool,
-    page_width: Option<usize>,
-    line_numbers: bool,
-}
-
 fn search_impl(
     mut warnings: Vec<String>,
     search_context: SearchContext,
@@ -403,7 +402,8 @@ fn search_impl(
 
     // Some flags do nothing if --open was not specified.
     if open_options.open_number.is_none() &&
-       (open_options.ignore_fragment || open_options.line_numbers || open_options.page_width.is_some())
+       (open_options.ignore_fragment || open_options.line_numbers ||
+        open_options.page_width.is_some())
     {
         warnings.push("`--open` was not specified and some flags were ignored.".to_string());
     }
@@ -445,12 +445,12 @@ fn search_impl(
                         } else {
                             result.fragment.as_ref()
                         };
-                        print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
+                        print_page_from_docset(docset, &result.item, fragment, width, open_options.line_numbers)?;
                         return Ok(warnings);
                     }
                     n => {
                         let result = &vague_results[n - exact_results_offset - 1];
-                        print_page_from_docset(docset, &result.item, None, width, options.line_numbers)?;
+                        print_page_from_docset(docset, &result.item, None, width, open_options.line_numbers)?;
                         return Ok(warnings);
                     }
                 }
@@ -505,7 +505,7 @@ fn search_impl(
                         } else {
                             result.fragment.as_ref()
                         };
-                        print_page_from_docset(docset, &result.item, fragment, width, options.line_numbers)?;
+                        print_page_from_docset(docset, &result.item, fragment, width, open_options.line_numbers)?;
                         return Ok(warnings);
                     }
                 }
@@ -591,7 +591,6 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
         precise: flag_precise,
         case_insensitive: flag_case_insensitive,
         whole: flag_whole,
-        line_numbers: flag_open_line_numbers
     };
 
     let search_options = SearchContext {
@@ -607,11 +606,13 @@ The list of available documents has not yet been downloaded. Please run `fetch` 
     };
 
     let mut page_width = None;
-    if let Ok(col_number) = flag_open_columns.parse::<usize>() {
-        if col_number == 0 {
+    if let Ok(c) = flag_open_columns.parse::<usize>() {
+        if c == 0 {
             page_width = Some(999);
-        } else if col_number > 10 {
-            page_width = Some(col_number);
+        } else if c > 10 {
+            page_width = Some(c);
+        } else {
+            warnings.push("Invalid number of columns.".to_string());
         }
     } else if !flag_open_columns.is_empty() {
         warnings.push("Invalid number of columns.".to_string());
