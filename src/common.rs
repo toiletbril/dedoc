@@ -369,57 +369,10 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"
     print_docset_file(page_path, fragment, width)
 }
 
-static mut HOME_DIR: Option<PathBuf> = None;
-static HOME_DIR_INIT: Once = Once::new();
-
-pub(crate) fn get_home_directory() -> Result<PathBuf, String> {
-    unsafe {
-        if let Some(home_dir) = HOME_DIR.as_ref() {
-            return Ok(home_dir.clone());
-        }
-    }
-
-    fn internal() -> Result<PathBuf, String> {
-        #[cfg(target_family = "unix")]
-        let home = std::env::var("HOME");
-
-        #[cfg(target_family = "windows")]
-        let home = std::env::var("userprofile");
-
-        if let Ok(home) = home {
-            Ok(home.into())
-        } else {
-            let user = std::env::var("USER").map_err(|err| err.to_string())?;
-
-            #[cfg(target_family = "unix")]
-            let home = format!("/home/{user}");
-
-            #[cfg(target_family = "windows")]
-            let home = format!("C:\\Users\\{user}");
-
-            Ok(home.into())
-        }
-    }
-
-    let home_path = internal()?;
-
-    if home_path.is_dir() {
-        unsafe {
-            HOME_DIR_INIT.call_once(|| {
-                HOME_DIR = Some(home_path.clone());
-            });
-        }
-        Ok(home_path)
-    } else {
-        Err("Could not figure out home directory".to_string())
-    }
-}
-
 #[inline]
 pub(crate) fn get_program_directory() -> Result<PathBuf, String> {
-    let path = get_home_directory()?;
-    let dot_program = format!(".{PROGRAM_NAME}");
-    let program_path = path.join(dot_program);
+    let data_dir : PathBuf = dirs::data_dir().unwrap();
+    let program_path = data_dir.join(PROGRAM_NAME);
     Ok(program_path)
 }
 
