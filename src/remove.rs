@@ -26,7 +26,7 @@ fn is_name_allowed(docset_name: &str) -> bool {
         { docset_name.contains('\\') || docset_name.contains('/') }
 
         #[cfg(target_family = "unix")]
-        { docset.contains('/') }
+        { docset_name.contains('/') }
     };
 
     let is_bad = has_slashes ||
