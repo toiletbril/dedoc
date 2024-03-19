@@ -25,13 +25,14 @@ use crate::print_warning;
 fn show_download_help() -> ResultS {
     println!("\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} download{RESET} [-f] <docset1> [docset2, ..]
-    Download or update a docset. Available docsets can be displayed using `list`.
+    {BOLD}{PROGRAM_NAME} download{RESET} [-fu] <docset1> [docset2, ..]
+    Download or update a docset. Available docsets can be displayed using
+    `list`.
 
 {GREEN}OPTIONS{RESET}
     -f, --force                     Force the download and overwrite files.
-    -u, --update-all                Update docsets whose local version is older than the one in
-                                    fetched `docs.json`.
+    -u, --update-all                Try to update all local docsets whose
+                                    version is older than in `docs.json`.
         --help                      Display help message.");
     Ok(())
 }

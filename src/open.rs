@@ -14,11 +14,12 @@ use crate::print_warning;
 fn show_open_help() -> ResultS {
     println!("\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} open{RESET} [-hc] <docset> <page>
+    {BOLD}{PROGRAM_NAME} open{RESET} [-hcn] <docset> <page>
     Print a page. Pages can be searched using `search`.
 
 {GREEN}OPTIONS{RESET}
-    -h, --html                      Interpret arguments as a path to HTML file and translate it to markdown.
+    -h, --html                      Interpret arguments as a path to HTML file
+                                    and translate it to markdown.
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number output lines.
         --help                      Display help message.");

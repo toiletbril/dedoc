@@ -30,7 +30,7 @@ fn show_search_help() -> ResultS {
     -w, --whole                     Search for the whole sentence.
     -i, --ignore-case               Ignore character case.
     -p, --precise                   Look inside files (like `grep`).
-    -o, --open <number>             Open n-th result.
+    -o, --open <number>             Open N-th result.
         --help                      Display help message.
 
   Options that work with `--open`:
@@ -210,7 +210,7 @@ Please redownload the docset with `download {docset_name} --force`."));
     Ok(items)
 }
 
-fn get_context_around_query(html_line: &String, index: usize, query_len: usize) -> String {
+fn get_context_around_query(html_line: &str, index: usize, query_len: usize) -> String {
     const BOUND_OFFSET: usize = (80 - 6 - 8) / 2; // (80 columns - ["...".len() * 2] - [TAB.len() * 2]) / 2 sides
 
     let lower_bound = index.saturating_sub(BOUND_OFFSET);

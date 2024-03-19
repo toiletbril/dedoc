@@ -23,7 +23,8 @@ fn show_fetch_help() -> ResultS {
     Fetch latest `docs.json` which lists available languages and frameworks.
 
 {GREEN}OPTIONS{RESET}
-    -f, --force                     Force the download and overwrite `docs.json`.
+    -f, --force                     Force the download and overwrite
+                                    `docs.json`.
         --help                      Display help message.");
     Ok(())
 }
