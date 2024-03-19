@@ -4,7 +4,7 @@ use std::fs::{create_dir_all, File, read_dir};
 use std::fmt::Display;
 use std::sync::Once;
 use std::io::{BufReader, Write, Read};
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::time::{Duration, SystemTime};
 
 use html2text::render::text_renderer::{RichAnnotation, TaggedLine, TaggedString, TaggedLineElement::*};
@@ -158,9 +158,8 @@ pub(crate) fn get_terminal_width() -> usize {
     if let Some((terminal_size::Width(w), _)) = terminal_size::terminal_size() {
         if w < 120 {
             return w as usize;
-        } else {
-            return 120;
         }
+        return 120;
     }
     DEFAULT_WIDTH
 }
@@ -387,57 +386,69 @@ No page matching `{page}`. Did you specify the name from `search` correctly?"));
     print_docset_file(page_path, fragment, width, number_lines)
 }
 
-static mut HOME_DIR: Option<PathBuf> = None;
-static HOME_DIR_INIT: Once = Once::new();
+fn get_home_directory() -> Result<PathBuf, String> {
+    #[cfg(target_family = "unix")]
+    let home_env = std::env::var("HOME");
+    #[cfg(target_family = "windows")]
+    let home_env = std::env::var("userprofile");
 
-pub(crate) fn get_home_directory() -> Result<PathBuf, String> {
+    let home: PathBuf = if let Ok(home_path) = home_env {
+        PathBuf::from(home_path)
+    } else {
+        let user = std::env::var("USER").map_err(|err| err.to_string())?;
+        if cfg!(target_family = "unix") {
+            format!("/home/{user}").into()
+        } else if cfg!(target_family = "windows") {
+            format!("C:\\Users\\{user}").into()
+        } else {
+            return Err("TempleOS is not supported".to_string())
+        }
+    };
+
+    match home.try_exists() {
+        Ok(true) => Ok(home),
+        Ok(false) => Err("Your home directory does not exist".to_string()),
+        Err(err) => Err(format!("Could not figure out home directory: {err}"))
+    }
+}
+
+static mut PROGRAM_DIRECTORY: Option<PathBuf> = None;
+static PROGRAM_DIRECTORY_INIT: Once = Once::new();
+
+pub(crate) fn get_program_directory() -> Result<PathBuf, String> {
     unsafe {
-        if let Some(home_dir) = HOME_DIR.as_ref() {
-            return Ok(home_dir.clone());
+        if let Some(program_dir) = PROGRAM_DIRECTORY.as_ref() {
+            return Ok(program_dir.clone());
         }
     }
 
     fn internal() -> Result<PathBuf, String> {
-        #[cfg(target_family = "unix")]
-        let home = std::env::var("HOME");
-
-        #[cfg(target_family = "windows")]
-        let home = std::env::var("userprofile");
-
-        if let Ok(home) = home {
-            Ok(home.into())
-        } else {
-            let user = std::env::var("USER").map_err(|err| err.to_string())?;
-
-            #[cfg(target_family = "unix")]
-            let home = format!("/home/{user}");
-
-            #[cfg(target_family = "windows")]
-            let home = format!("C:\\Users\\{user}");
-
-            Ok(home.into())
+        if let Ok(path_string) = std::env::var("DEDOC_HOME") {
+            match Path::new(&path_string).try_exists() {
+                Ok(true) => return Ok(path_string.into()),
+                Ok(false) => {
+                    print_warning!("\
+Path specified in $DEDOC_HOME (`{path_string}`) does not exist, falling back to the home directory.");
+                }
+                Err(err) => {
+                    print_warning!("\
+Could not check whether path specified in $DEDOC_HOME (`{path_string}`) exists: {err}");
+                }
+            }
         }
+        let path = get_home_directory()?;
+        let dot_program = format!(".{PROGRAM_NAME}");
+        Ok(path.join(dot_program))
     }
 
-    let home_path = internal()?;
-    if home_path.is_dir() {
-        unsafe {
-            HOME_DIR_INIT.call_once(|| {
-                HOME_DIR = Some(home_path.clone());
-            });
-        }
-        Ok(home_path)
-    } else {
-        Err("Could not figure out home directory".to_string())
+    let program_dir = internal()?;
+    unsafe {
+        PROGRAM_DIRECTORY_INIT.call_once(|| {
+            PROGRAM_DIRECTORY = Some(program_dir.clone());
+        });
     }
-}
 
-#[inline]
-pub(crate) fn get_program_directory() -> Result<PathBuf, String> {
-    let path = get_home_directory()?;
-    let dot_program = format!(".{PROGRAM_NAME}");
-    let program_path = path.join(dot_program);
-    Ok(program_path)
+    Ok(program_dir)
 }
 
 pub(crate) fn create_program_directory() -> ResultS {
