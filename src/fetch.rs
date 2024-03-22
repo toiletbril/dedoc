@@ -103,7 +103,7 @@ pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
     println!("{YELLOW}WARNING{RESET}: It seems that your `docs.json` was \
               updated less than a week ago. Run `fetch --force` to ignore this \
               warning.");
-    return Ok(());
+    return Err("Nothing to do.".to_string());
   }
 
   println!("Fetching `{DEFAULT_DOCS_JSON_LINK}`...");

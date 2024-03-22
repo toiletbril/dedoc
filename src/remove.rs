@@ -16,7 +16,7 @@ fn show_remove_help() -> ResultS
            "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} remove{RESET} <docset1> [docset2, ...]
-    Delete a docset. Only docsets downloaded by {PROGRAM_NAME} can be removed.
+    Delete a local docset.
 
 {GREEN}OPTIONS{RESET}
         --purge-all                 Remove all installed docsets.

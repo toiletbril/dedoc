@@ -728,10 +728,10 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
   {
     if is_docset_in_docs_or_print_warning(&docset, &docs)
     {
-      print_warning!("Docset `{docset}` is not downloaded. Try running \
-                      `{PROGRAM_NAME} download {docset}`.");
+      return Err(format!("Docset `{docset}` is not downloaded. Try running \
+                          `{PROGRAM_NAME} download {docset}`."));
     }
-    return Ok(());
+    return Err("Nothing to do.".to_string());
   }
 
   let mut warnings = vec![];

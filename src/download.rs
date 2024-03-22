@@ -362,8 +362,7 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
 
     match successful_downloads
     {
-      0 =>
-      {}
+      0 => return Err("Nothing to do.".to_string()),
       1 => println!(
         "{BOLD}{successful_downloads} item was successfully updated{RESET}."
       ),
@@ -400,10 +399,8 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
       print_warning!("Docset `{docset}` is already downloaded and is of recent \
                       version. If you still want to re-download it, re-run \
                       this command with `--force`");
-      continue;
     }
-
-    if is_docset_in_docs_or_print_warning(docset, &docs)
+    else if is_docset_in_docs_or_print_warning(docset, &docs)
     {
       println!("Downloading `{docset}`...");
       download_db_and_index_json_with_progress(docset, &docs)?;
@@ -415,8 +412,7 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
 
   match successful_downloads
   {
-    0 =>
-    {}
+    0 => return Err("Nothing to do.".to_string()),
     1 => println!("{BOLD}Install has successfully finished{RESET}."),
     _ => println!(
       "{BOLD}{successful_downloads} items were successfully installed{RESET}."

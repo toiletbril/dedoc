@@ -17,25 +17,21 @@ use toiletcli::flags::{FlagError, FlagErrorType};
 
 use serde::{Deserialize, Serialize};
 
-pub(crate) type ResultS = Result<(), String>;
-
-pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 #[cfg(debug_assertions)]
 pub(crate) const PROGRAM_NAME: &str = "dedoc_debug";
 #[cfg(not(debug_assertions))]
 pub(crate) const PROGRAM_NAME: &str = "dedoc";
 
+pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub(crate) const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
 pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
-
 pub(crate) const DEFAULT_USER_AGENT: &str = "dedoc";
+pub(crate) const DEFAULT_PROGRAM_DIR_ENV_VARIABLE: &str = "DEDOC_HOME";
+pub(crate) const DEFAULT_WIDTH: usize = 80;
 
 pub(crate) const MTIME_FILENAME: &str = ".dedoc_mtime";
-
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
-
-pub(crate) const DEFAULT_WIDTH: usize = 80;
 
 pub(crate) const RED: Color = Color::Red;
 pub(crate) const GREEN: Color = Color::Green;
@@ -47,6 +43,8 @@ pub(crate) const GRAYEST: Color = Color::Byte(234);
 pub(crate) const BOLD: Style = Style::Bold;
 pub(crate) const UNDERLINE: Style = Style::Underlined;
 pub(crate) const RESET: Style = Style::Reset;
+
+pub(crate) type ResultS = Result<(), String>;
 
 #[macro_export]
 macro_rules! debug_println
@@ -223,34 +221,14 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String
     temp_style = match *annotation
     {
       RichAnnotation::Default => continue,
-      RichAnnotation::Link(_) =>
-      {
-        format!("{}", Color::Blue)
-      }
-      RichAnnotation::Image(_) =>
-      {
-        format!("{}", Color::BrightBlue)
-      }
-      RichAnnotation::Emphasis =>
-      {
-        format!("{}", Style::Bold)
-      }
-      RichAnnotation::Strong =>
-      {
-        format!("{}", Style::Bold)
-      }
-      RichAnnotation::Strikeout =>
-      {
-        format!("{}", Style::Strikethrough)
-      }
-      RichAnnotation::Code =>
-      {
-        format!("{}", Color::BrightBlack)
-      }
-      RichAnnotation::Preformat(_) =>
-      {
-        format!("{}{}", LIGHT_GRAY, GRAYEST.bg())
-      }
+      RichAnnotation::Link(_) => format!("{}", Color::Blue),
+      RichAnnotation::Image(_) => format!("{}", Color::BrightBlue),
+      RichAnnotation::Emphasis => format!("{}", Style::Bold),
+      RichAnnotation::Strong => format!("{}", Style::Bold),
+      RichAnnotation::Strikeout => format!("{}", Style::Strikethrough),
+      RichAnnotation::Code => format!("{}", Color::BrightBlack),
+      RichAnnotation::Preformat(_) => format!("{}{}", LIGHT_GRAY, GRAYEST.bg()),
+
       RichAnnotation::Colour(Colour { r, g, b }) =>
       {
         format!("{}", Color::RGB(r, g, b))
@@ -510,20 +488,23 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String>
 
   fn internal() -> Result<PathBuf, String>
   {
-    if let Ok(path_string) = std::env::var("DEDOC_HOME")
+    if let Ok(path_string) = std::env::var(DEFAULT_PROGRAM_DIR_ENV_VARIABLE)
     {
       match Path::new(&path_string).try_exists()
       {
         Ok(true) => return Ok(path_string.into()),
         Ok(false) =>
         {
-          print_warning!("Path specified in $DEDOC_HOME (`{path_string}`) does \
-                          not exist, falling back to the home directory.");
+          print_warning!("Path specified in \
+                          ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
+                          (`{path_string}`) does not exist, falling back to \
+                          the home directory.");
         }
         Err(err) =>
         {
           print_warning!("Could not check whether path specified in \
-                          $DEDOC_HOME(`{path_string}`) exists: {err}");
+                          ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
+                          (`{path_string}`) exists: {err}");
         }
       }
     }
@@ -769,19 +750,4 @@ pub(crate) fn is_docs_json_exists() -> Result<bool, String>
 pub(crate) fn get_docset_path(docset_name: &str) -> Result<PathBuf, String>
 {
   Ok(get_program_directory()?.join("docsets").join(docset_name))
-}
-
-#[inline]
-pub(crate) fn get_docset_path_checked(docset_name: &str)
-                                      -> Result<PathBuf, String>
-{
-  let docset_path = get_program_directory()?.join("docsets").join(docset_name);
-  if docset_path.try_exists().map_err(|err| {
-                                format!("Could not check if `{}` exists: {err}",
-                                        docset_path.display())
-                              })?
-  {
-    return Err(format!("`{docset_name}` does not exist."));
-  }
-  Ok(docset_path)
 }
