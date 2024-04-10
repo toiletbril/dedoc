@@ -168,6 +168,9 @@ pub(crate) fn get_flag_error(flag_error: &FlagError) -> String
     FlagErrorType::NoValueProvided => {
       format!("No value provided for `{}` flag", flag_error.flag)
     }
+    FlagErrorType::ExtraValueProvided => {
+      format!("Flag `{}` does not take a value", flag_error.flag)
+    }
     FlagErrorType::Unknown => {
       format!("Unknown flag `{}`", flag_error.flag)
     }
