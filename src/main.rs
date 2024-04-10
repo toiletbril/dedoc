@@ -140,7 +140,7 @@ fn main() -> ExitCode
       if !err.ends_with(['.', '?', ')']) {
         err += ". Try `--help` for more information.";
       }
-      println!("{RED}ERROR{RESET}: {err}");
+      eprintln!("{RED}ERROR{RESET}: {err}");
       ExitCode::FAILURE
     }
     _ => ExitCode::SUCCESS,
