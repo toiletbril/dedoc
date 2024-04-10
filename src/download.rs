@@ -67,14 +67,14 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
       let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}",
                                   file_name, entry.mtime);
 
-      let response =
-        get(&download_link).header_append("user-agent", &user_agent)
-                           .send()
-                           .map_err(|err| {
-                             format!(
+      let response = get(&download_link).header_append("user-agent",
+                                                       &user_agent)
+                                        .send()
+                                        .map_err(|err| {
+                                          format!(
                                "Could not download `{download_link}`: {err}"
                              )
-                           })?;
+                                        })?;
 
       let mut file_writer = BufWriter::new(file);
       let mut response_reader = BufReader::new(response);

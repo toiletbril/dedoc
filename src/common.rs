@@ -641,7 +641,10 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
                 })?;
 
   if !docsets_dir_exists {
-    return Err("Docset folder does not exist".to_string());
+    if let Err(err) = create_dir_all(&docsets_path) {
+      return Err(format!("Could not create `{}` directory: {err}",
+                         docsets_path.display()));
+    }
   }
   let docsets_dir = read_dir(docsets_path).map_err(|err| err.to_string())?;
 
