@@ -48,8 +48,10 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   }
 
   if !is_docs_json_exists()? {
-    return Err("The list of available documents has not yet been downloaded. \
-                Please run `{PROGRAM_NAME} fetch` first.".to_string());
+    return Err(
+        format!("The list of available documents has not yet been downloaded. \
+                 Please run `{PROGRAM_NAME} fetch` first.")
+      );
   }
 
   let mut first_result = true;
