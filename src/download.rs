@@ -71,7 +71,9 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
         get(&download_link).header_append("user-agent", &user_agent)
                            .send()
                            .map_err(|err| {
-                             format!("Could not GET {download_link}: {err}")
+                             format!(
+                               "Could not download `{download_link}`: {err}"
+                             )
                            })?;
 
       let mut file_writer = BufWriter::new(file);

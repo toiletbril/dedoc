@@ -41,7 +41,7 @@ fn fetch_docs() -> Result<Vec<DocsEntry>, String>
     .header_append("user-agent", user_agent)
     .send()
     .map_err(|err| {
-      format!("Could not GET `{DEFAULT_DOCS_JSON_LINK}`: {err:?}")
+      format!("Could not fetch `{DEFAULT_DOCS_JSON_LINK}`: {err}")
     })?;
 
   let body =
