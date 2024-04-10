@@ -119,8 +119,7 @@ pub(crate) fn try_use_cache<'a>(search_options: &SearchContext)
   let cache_file = File::open(cache_path).ok()?;
   let cache_reader = BufReader::new(cache_file);
 
-  let cache: SearchCache = serde_json::from_reader(cache_reader).ok()?;
-  Some(cache)
+  serde_json::from_reader(cache_reader).ok()
 }
 
 fn cache_search_results(search_options: &SearchContext,
@@ -131,12 +130,14 @@ fn cache_search_results(search_options: &SearchContext,
 
   {
     let cache_options_path = program_dir.join("search_cache_options.json");
-    let cache_options_file = File::create(&cache_options_path).map_err(|err| {
-                               format!(
+    #[rustfmt::skip]
+    let cache_options_file = File::create(&cache_options_path)
+      .map_err(|err| {
+        format!(
           "Could not create cache options at `{}`: {err}",
           cache_options_path.display()
         )
-                             })?;
+      })?;
 
     let cache_options_writer = BufWriter::new(cache_options_file);
     serde_json::to_writer(cache_options_writer, &search_options).map_err(
@@ -700,7 +701,7 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
                                    page_width,
                                    line_numbers: flag_open_line_numbers };
 
-  // Print warnings only after search results
+  // Print warnings only after search results.
   for warning in search_impl(warnings, search_options, open_options)? {
     print_warning!("{}", warning);
   }

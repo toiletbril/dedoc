@@ -34,6 +34,7 @@ pub(crate) const MTIME_FILENAME: &str = ".dedoc_mtime";
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
 
 pub(crate) const RED: Color = Color::Red;
+pub(crate) const CYAN: Color = Color::Cyan;
 pub(crate) const GREEN: Color = Color::Green;
 pub(crate) const YELLOW: Color = Color::Yellow;
 pub(crate) const LIGHT_GRAY: Color = Color::Byte(248);
@@ -53,7 +54,7 @@ macro_rules! debug_println
   {
     #[cfg(debug_assertions)]
     {
-      eprint!("{}:{}: {RED}", file!(), line!());
+      eprint!("{}:{}: {}", file!(), line!(), toiletcli::colors::Color::Cyan);
       eprintln!($($e),+);
       eprint!("{RESET}");
     }
