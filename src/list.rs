@@ -43,13 +43,11 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   ];
 
   parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
-  if flag_help
-  {
+  if flag_help {
     return show_list_help();
   }
 
-  if !is_docs_json_exists()?
-  {
+  if !is_docs_json_exists()? {
     return Err("The list of available documents has not yet been downloaded. \
                 Please run `{PROGRAM_NAME} fetch` first.".to_string());
   }
@@ -61,28 +59,22 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   let separator = if flag_newlines { "\n" } else { ", " };
 
   // Show everything when searching :3c
-  if should_filter
-  {
+  if should_filter {
     flag_all = true;
   }
 
-  if flag_local
-  {
-    for ref entry in local_docsets
-    {
-      if should_filter && !entry.contains(&flag_search)
-      {
+  if flag_local {
+    for ref entry in local_docsets {
+      if should_filter && !entry.contains(&flag_search) {
         continue;
       }
-      if !first_result
-      {
+      if !first_result {
         print!("{}", separator);
       }
       print!("{GREEN}{} [downloaded]{RESET}", entry);
       first_result = false;
     }
-    if !first_result
-    {
+    if !first_result {
       println!();
     }
 
@@ -93,34 +85,26 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   let docs_names =
     docs.iter().map(|entry| entry.slug.to_string()).collect::<Vec<String>>();
 
-  for ref entry in docs_names
-  {
-    if should_filter && !entry.contains(&flag_search)
-    {
+  for ref entry in docs_names {
+    if should_filter && !entry.contains(&flag_search) {
       continue;
     }
     // slug has ~ if it's version-specific
-    if !flag_local && !flag_all && entry.contains('~')
-    {
+    if !flag_local && !flag_all && entry.contains('~') {
       continue;
     }
-    if !first_result
-    {
+    if !first_result {
       print!("{}", separator);
     }
-    if local_docsets.contains(entry)
-    {
+    if local_docsets.contains(entry) {
       print!("{GREEN}{} [downloaded]{RESET}", entry);
-    }
-    else
-    {
+    } else {
       print!("{}", entry);
     }
     first_result = false;
   }
   // Print a final newline only if something was found
-  if !first_result
-  {
+  if !first_result {
     println!();
   }
 

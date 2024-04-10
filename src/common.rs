@@ -160,18 +160,14 @@ macro_rules! print_warning
 
 pub(crate) fn get_flag_error(flag_error: &FlagError) -> String
 {
-  match flag_error.error_type
-  {
-    FlagErrorType::CannotCombine =>
-    {
+  match flag_error.error_type {
+    FlagErrorType::CannotCombine => {
       format!("Flag `{}` cannot be combined", flag_error.flag)
     }
-    FlagErrorType::NoValueProvided =>
-    {
+    FlagErrorType::NoValueProvided => {
       format!("No value provided for `{}` flag", flag_error.flag)
     }
-    FlagErrorType::Unknown =>
-    {
+    FlagErrorType::Unknown => {
       format!("Unknown flag `{}`", flag_error.flag)
     }
   }
@@ -179,10 +175,8 @@ pub(crate) fn get_flag_error(flag_error: &FlagError) -> String
 
 pub(crate) fn get_terminal_width() -> usize
 {
-  if let Some((terminal_size::Width(w), _)) = terminal_size::terminal_size()
-  {
-    if w < 120
-    {
+  if let Some((terminal_size::Width(w), _)) = terminal_size::terminal_size() {
+    if w < 120 {
       return w as usize;
     }
     return 120;
@@ -197,12 +191,9 @@ pub(crate) fn split_to_item_and_fragment(
 {
   let mut path_split = path.split('#');
 
-  let item = if let Some(item) = path_split.next()
-             {
+  let item = if let Some(item) = path_split.next() {
                Ok(item)
-             }
-             else
-             {
+             } else {
                Err(format!("Invalid page path: {}", path))
              }?.to_owned();
 
@@ -216,10 +207,8 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String
   let mut style_buffer = String::new();
   let mut temp_style;
 
-  for annotation in tagged_string_tags
-  {
-    temp_style = match *annotation
-    {
+  for annotation in tagged_string_tags {
+    temp_style = match *annotation {
       RichAnnotation::Default => continue,
       RichAnnotation::Link(_) => format!("{}", Color::Blue),
       RichAnnotation::Image(_) => format!("{}", Color::BrightBlue),
@@ -229,12 +218,10 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String
       RichAnnotation::Code => format!("{}", Color::BrightBlack),
       RichAnnotation::Preformat(_) => format!("{}{}", LIGHT_GRAY, GRAYEST.bg()),
 
-      RichAnnotation::Colour(Colour { r, g, b }) =>
-      {
+      RichAnnotation::Colour(Colour { r, g, b }) => {
         format!("{}", Color::RGB(r, g, b))
       }
-      RichAnnotation::BgColour(Colour { r, g, b }) =>
-      {
+      RichAnnotation::BgColour(Colour { r, g, b }) => {
         Color::RGB(r, g, b).to_string()
       }
       _ => continue,
@@ -257,25 +244,20 @@ fn get_fragment_bounds(tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
   let mut current_fragment_line = None;
   let mut found_fragment = false;
 
-  for (line_number, tagged_line) in tagged_lines.iter().enumerate()
-  {
-    for tagged_line_element in tagged_line.iter()
-    {
-      match tagged_line_element
-      {
+  for (line_number, tagged_line) in tagged_lines.iter().enumerate() {
+    for tagged_line_element in tagged_line.iter() {
+      match tagged_line_element {
         FragmentStart(temp_fragment)
           if temp_fragment.to_lowercase() == lowercase_fragment =>
         {
           current_fragment_line = Some(line_number);
           found_fragment = true;
         }
-        FragmentStart(_) if found_fragment =>
-        {
+        FragmentStart(_) if found_fragment => {
           let next_fragment_line = Some(line_number);
           return (current_fragment_line, next_fragment_line);
         }
-        _ =>
-        {}
+        _ => {}
       }
     }
   }
@@ -308,48 +290,40 @@ pub(crate) fn print_docset_file(path: PathBuf,
 
   // If there is a fragment, determine current fragment offset and print
   // everything until the next fragment.
-  if let Some(fragment) = fragment
-  {
+  if let Some(fragment) = fragment {
     let (current_fragment, next_fragment) =
       get_fragment_bounds(&rich_page, fragment);
 
-    if let Some(line) = current_fragment
-    {
+    if let Some(line) = current_fragment {
       current_fragment_line = line;
       is_fragment_found = true;
     }
-    if let Some(line) = next_fragment
-    {
+    if let Some(line) = next_fragment {
       next_fragment_line = line;
       has_next_fragment = true;
     }
 
     // @@@: figure out better way to short-circuit search when it fails a test
     #[cfg(debug_assertions)]
-    if !is_fragment_found
-    {
+    if !is_fragment_found {
       return Err(format!(
         "debug: #{fragment} is specified but wasn't found in the page"
       ));
     }
   }
 
-  if is_fragment_found
-  {
+  if is_fragment_found {
     println!("{GRAYER}...{RESET}")
   }
 
   let mut skipped_empty_lines = false;
   let mut line_number = 0;
 
-  for (i, rich_line) in rich_page.iter().enumerate()
-  {
-    if is_fragment_found && i < current_fragment_line
-    {
+  for (i, rich_line) in rich_page.iter().enumerate() {
+    if is_fragment_found && i < current_fragment_line {
       continue;
     }
-    if has_next_fragment && i > next_fragment_line
-    {
+    if has_next_fragment && i > next_fragment_line {
       break;
     }
 
@@ -361,34 +335,28 @@ pub(crate) fn print_docset_file(path: PathBuf,
     let mut line_is_empty = true;
     let mut line_buffer = String::new();
 
-    if number_lines
-    {
+    if number_lines {
       line_number += 1;
       line_buffer += &format!("{GRAYER}{line_number:>5}{RESET}  ");
     }
 
-    for tagged_string in tagged_strings
-    {
+    for tagged_string in tagged_strings {
       let style = get_tag_style(&tagged_string.tag);
 
-      if !tagged_string.s.is_empty()
-      {
+      if !tagged_string.s.is_empty() {
         line_is_empty = false;
       }
 
       line_buffer += style.as_str();
       line_buffer += &tagged_string.s;
 
-      if is_only_tag
-      {
+      if is_only_tag {
         // Pad preformat to terminal width for cool background.
-        if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first()
-        {
+        if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
           let padding_amount =
             actual_width.saturating_sub(tagged_string.s.len());
 
-          for _ in 0..padding_amount
-          {
+          for _ in 0..padding_amount {
             line_buffer += " ";
           }
         }
@@ -397,19 +365,16 @@ pub(crate) fn print_docset_file(path: PathBuf,
       line_buffer += &Style::Reset.to_string();
     }
 
-    if !line_is_empty
-    {
+    if !line_is_empty {
       skipped_empty_lines = true;
     }
-    if skipped_empty_lines
-    {
+    if skipped_empty_lines {
       println!("{}", line_buffer);
     }
     line_buffer.clear();
   }
 
-  if has_next_fragment
-  {
+  if has_next_fragment {
     println!("{GRAYER}...{RESET}")
   }
 
@@ -429,8 +394,7 @@ pub(crate) fn print_page_from_docset(docset_name: &str,
     docset_path.join(page).display().to_string() + "." + DOC_PAGE_EXTENSION;
   let page_path = PathBuf::from(page_path_string);
 
-  if !page_path.is_file()
-  {
+  if !page_path.is_file() {
     return Err(format!("No page matching `{page}`. Did you specify the name \
                         from `search` correctly?"));
   }
@@ -445,29 +409,20 @@ fn get_home_directory() -> Result<PathBuf, String>
   #[cfg(target_family = "windows")]
   let home_env = std::env::var("userprofile");
 
-  let home: PathBuf = if let Ok(home_path) = home_env
-  {
+  let home: PathBuf = if let Ok(home_path) = home_env {
     PathBuf::from(home_path)
-  }
-  else
-  {
+  } else {
     let user = std::env::var("USER").map_err(|err| err.to_string())?;
-    if cfg!(target_family = "unix")
-    {
+    if cfg!(target_family = "unix") {
       format!("/home/{user}").into()
-    }
-    else if cfg!(target_family = "windows")
-    {
+    } else if cfg!(target_family = "windows") {
       format!("C:\\Users\\{user}").into()
-    }
-    else
-    {
+    } else {
       return Err("TempleOS is not supported".to_string());
     }
   };
 
-  match home.try_exists()
-  {
+  match home.try_exists() {
     Ok(true) => Ok(home),
     Ok(false) => Err("Your home directory does not exist".to_string()),
     Err(err) => Err(format!("Could not figure out home directory: {err}")),
@@ -480,28 +435,23 @@ static PROGRAM_DIRECTORY_INIT: Once = Once::new();
 pub(crate) fn get_program_directory() -> Result<PathBuf, String>
 {
   unsafe {
-    if let Some(program_dir) = PROGRAM_DIRECTORY.as_ref()
-    {
+    if let Some(program_dir) = PROGRAM_DIRECTORY.as_ref() {
       return Ok(program_dir.clone());
     }
   }
 
   fn internal() -> Result<PathBuf, String>
   {
-    if let Ok(path_string) = std::env::var(DEFAULT_PROGRAM_DIR_ENV_VARIABLE)
-    {
-      match Path::new(&path_string).try_exists()
-      {
+    if let Ok(path_string) = std::env::var(DEFAULT_PROGRAM_DIR_ENV_VARIABLE) {
+      match Path::new(&path_string).try_exists() {
         Ok(true) => return Ok(path_string.into()),
-        Ok(false) =>
-        {
+        Ok(false) => {
           print_warning!("Path specified in \
                           ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
                           (`{path_string}`) does not exist, falling back to \
                           the home directory.");
         }
-        Err(err) =>
-        {
+        Err(err) => {
           print_warning!("Could not check whether path specified in \
                           ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
                           (`{path_string}`) exists: {err}");
@@ -526,20 +476,16 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String>
 pub(crate) fn create_program_directory() -> ResultS
 {
   let program_path = get_program_directory()?;
-  if !program_path.exists()
-  {
+  if !program_path.exists() {
     create_dir_all(&program_path).map_err(|err| {
                                    format!("Could not create `{}`: {err}",
                                            program_path.display())
                                  })?;
   }
 
-  if program_path.is_dir()
-  {
+  if program_path.is_dir() {
     Ok(())
-  }
-  else
-  {
+  } else {
     Err("Could not create {program_path:?}".to_string())
   }
 }
@@ -554,12 +500,9 @@ pub(crate) fn is_docs_json_old() -> Result<bool, String>
   let modified_time = metadata.modified().map_err(|err| err.to_string())?;
   let elapsed_time = SystemTime::now().duration_since(modified_time)
                                       .map_err(|err| err.to_string())?;
-  if elapsed_time > WEEK
-  {
+  if elapsed_time > WEEK {
     Ok(true)
-  }
-  else
-  {
+  } else {
     Ok(false)
   }
 }
@@ -568,12 +511,9 @@ pub(crate) fn write_to_logfile(message: impl Display)
                                -> Result<PathBuf, String>
 {
   let log_file_path = get_program_directory()?.join("logs.txt");
-  let mut log_file = if log_file_path.exists()
-                     {
+  let mut log_file = if log_file_path.exists() {
                        File::options().append(true).open(&log_file_path)
-                     }
-                     else
-                     {
+                     } else {
                        File::create(&log_file_path)
                      }.map_err(|err| {
                         format!("Could not open `{}`: {err}",
@@ -606,19 +546,16 @@ pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str,
                                                  docs: &[DocsEntry])
                                                  -> bool
 {
-  match is_docset_in_docs(docset_name, docs)
-  {
+  match is_docset_in_docs(docset_name, docs) {
     SearchMatch::Exact => return true,
-    SearchMatch::Vague(vague_matches) =>
-    {
+    SearchMatch::Vague(vague_matches) => {
       let end_index = std::cmp::min(3, vague_matches.len());
       let first_three = &vague_matches[..end_index];
 
       print_warning!("Unknown docset `{docset_name}`. Did you mean `{}`?",
                      first_three.join("`/`"));
     }
-    SearchMatch::None =>
-    {
+    SearchMatch::None => {
       print_warning!("Unknown docset `{docset_name}`. Did you run \
                       `{PROGRAM_NAME} fetch`?");
     }
@@ -634,24 +571,18 @@ pub(crate) fn is_docset_in_docs(docset_name: &str,
 {
   let mut vague_matches = vec![];
 
-  for entry in docs.iter()
-  {
-    if entry.slug.contains(docset_name)
-    {
-      if entry.slug == *docset_name
-      {
+  for entry in docs.iter() {
+    if entry.slug.contains(docset_name) {
+      if entry.slug == *docset_name {
         return SearchMatch::Exact;
       }
       vague_matches.push(entry.slug.clone());
     }
   }
 
-  if vague_matches.is_empty()
-  {
+  if vague_matches.is_empty() {
     SearchMatch::None
-  }
-  else
-  {
+  } else {
     SearchMatch::Vague(vague_matches)
   }
 }
@@ -664,8 +595,7 @@ pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>
               .map_err(|err| {
                 format!("Could not check `{}`: {err}", mtime_path.display())
               })?;
-  if !mtime_exists
-  {
+  if !mtime_exists {
     // Could not determine mtime. Since that docset belongs to older version of
     // dedoc, assume that the docset is old.
     return Ok(0);
@@ -691,8 +621,7 @@ pub(crate) fn is_docset_old(docset_name: &str,
                             docs: &[DocsEntry])
                             -> Result<bool, String>
 {
-  if let Some(entry) = find_docset_in_docs(docset_name, docs)
-  {
+  if let Some(entry) = find_docset_in_docs(docset_name, docs) {
     return Ok(entry.mtime > get_docset_mtime(docset_name)?);
   }
   Err("Docset `{docset_name}` is not downloaded.".to_string())
@@ -707,16 +636,14 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
                   format!("Could not check `{}`: {err}", docsets_path.display())
                 })?;
 
-  if !docsets_dir_exists
-  {
+  if !docsets_dir_exists {
     return Err("Docset folder does not exist".to_string());
   }
   let docsets_dir = read_dir(docsets_path).map_err(|err| err.to_string())?;
 
   let mut result = vec![];
 
-  for entry in docsets_dir
-  {
+  for entry in docsets_dir {
     let entry = entry.map_err(|err| err.to_string())?;
 
     let holy_result_option_please_stop =

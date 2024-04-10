@@ -53,8 +53,7 @@ fn fetch_docs() -> Result<Vec<DocsEntry>, String>
       let result = write_to_logfile(format!(
         "Error while parsing JSON body: {err}\n\n{body}"
       ));
-      let log_file_message = match result
-      {
+      let log_file_message = match result {
         Ok(path) => format!("Log file is saved at `{}`.", path.display()),
         Err(err) => format!("Unable to write log file: {err}."),
       };
@@ -94,12 +93,10 @@ pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
 
   parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
 
-  if flag_help
-  {
+  if flag_help {
     return show_fetch_help();
   }
-  if !flag_force && is_docs_json_exists()? && !is_docs_json_old()?
-  {
+  if !flag_force && is_docs_json_exists()? && !is_docs_json_old()? {
     println!("{YELLOW}WARNING{RESET}: It seems that your `docs.json` was \
               updated less than a week ago. Run `fetch --force` to ignore this \
               warning.");
@@ -110,8 +107,7 @@ pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
   let docs = fetch_docs()?;
 
   let program_path = get_program_directory()?;
-  if !program_path.exists()
-  {
+  if !program_path.exists() {
     create_program_directory()?;
   }
   let docs_json_path = program_path.join("docs.json");

@@ -62,13 +62,10 @@ fn run_with_args<O>(command: fn(IntoIter<String>) -> Result<O, String>,
   debug_println!("Running with args: `{args_str}`, should {should_do}");
 
   let command_result = command(args);
-  if let Err(err) = &command_result
-  {
+  if let Err(err) = &command_result {
     debug_println!("{BOLD}*** Test failed with: {err} ***");
     false
-  }
-  else
-  {
+  } else {
     true
   }
 }
@@ -108,12 +105,10 @@ pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
   let args =
     parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
 
-  if flag_help
-  {
+  if flag_help {
     return show_test_help();
   }
-  if flag_full
-  {
+  if flag_full {
     reset_state_and_cache();
 
     run_with_args(fetch, "", "fetch docs.json");
@@ -123,9 +118,7 @@ pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
                   "backbone bower",
                   "remove backbone and bower if they exist");
     run_with_args(download, "backbone bower", "download docsets");
-  }
-  else
-  {
+  } else {
     debug_println!(
       "Skipping `fetch` and `download`. Use `-f` flag to avoid skipping."
     );

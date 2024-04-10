@@ -62,11 +62,9 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
   let args =
     parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
 
-  if flag_purge_all
-  {
+  if flag_purge_all {
     let local_docsets = get_local_docsets()?;
-    for docset in local_docsets
-    {
+    for docset in local_docsets {
       let docset_path = get_docset_path(&docset)?;
       println!("Removing `{docset}` from `{}`...", docset_path.display());
       remove_dir_all(&docset_path).map_err(|err| {
@@ -77,33 +75,26 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
     return Ok(());
   }
 
-  if flag_help || args.is_empty()
-  {
+  if flag_help || args.is_empty() {
     return show_remove_help();
   }
 
-  for docset in args.iter()
-  {
-    if !is_name_allowed(docset)
-    {
+  for docset in args.iter() {
+    if !is_name_allowed(docset) {
       print_warning!("`{docset}` contains forbidden characters.");
       continue;
     }
 
-    if is_docset_downloaded(docset)?
-    {
+    if is_docset_downloaded(docset)? {
       let docset_path = get_docset_path(docset)?;
-      if docset_path.exists()
-      {
+      if docset_path.exists() {
         println!("Removing `{docset}` from `{}`...", docset_path.display());
         remove_dir_all(&docset_path).map_err(|err| {
                                       format!("Unable to remove `{}`: {err}",
                                               docset_path.display())
                                     })?;
       }
-    }
-    else
-    {
+    } else {
       print_warning!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
     }
   }

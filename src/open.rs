@@ -47,58 +47,44 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
 
   let args =
     parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
-  if flag_help || args.is_empty()
-  {
+  if flag_help || args.is_empty() {
     return show_open_help();
   }
 
   let mut width = get_terminal_width();
 
-  if let Ok(col_number) = flag_columns.parse::<usize>()
-  {
-    if col_number == 0
-    {
+  if let Ok(col_number) = flag_columns.parse::<usize>() {
+    if col_number == 0 {
       width = 999;
-    }
-    else if col_number > 10
-    {
+    } else if col_number > 10 {
       width = col_number;
     }
-  }
-  else if !flag_columns.is_empty()
-  {
+  } else if !flag_columns.is_empty() {
     print_warning!("Invalid number of columns.");
   }
 
-  if flag_html
-  {
+  if flag_html {
     let path = PathBuf::from(args.join(" "));
     print_docset_file(path, None, width, flag_number_lines)?;
     return Ok(());
   }
 
-  if !is_docs_json_exists()?
-  {
+  if !is_docs_json_exists()? {
     return Err("The list of available documents has not yet been downloaded. \
                 Please run `{PROGRAM_NAME} fetch` first.".to_string());
   }
 
   let mut args = args.into_iter();
 
-  let docset = if let Some(docset_name) = args.next()
-  {
+  let docset = if let Some(docset_name) = args.next() {
     docset_name
-  }
-  else
-  {
+  } else {
     return show_open_help();
   };
 
-  if is_docset_in_docs_or_print_warning(&docset, &deserialize_docs_json()?)
-  {
+  if is_docset_in_docs_or_print_warning(&docset, &deserialize_docs_json()?) {
     let query = args.collect::<Vec<String>>().join(" ");
-    if query.is_empty()
-    {
+    if query.is_empty() {
       return Err("No page specified. Try `open --help` for more information."
                    .to_string());
     }

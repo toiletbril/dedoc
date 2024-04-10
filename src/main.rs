@@ -97,37 +97,27 @@ fn entry<Args>(mut args: Args) -> ResultS
                                                        })?
                                                        .to_lowercase();
 
-  if flag_color_force
-  {
+  if flag_color_force {
     unsafe { overwrite_should_use_colors(true) }
-  }
-  else if !flag_color.is_empty()
-  {
-    match flag_color.as_str()
-    {
-      "y" | "yes" | "on" =>
-      unsafe { overwrite_should_use_colors(true) },
-      "n" | "no" | "off" =>
-      unsafe { overwrite_should_use_colors(false) },
-      other =>
-      {
+  } else if !flag_color.is_empty() {
+    match flag_color.as_str() {
+      "y" | "yes" | "on" => unsafe { overwrite_should_use_colors(true) },
+      "n" | "no" | "off" => unsafe { overwrite_should_use_colors(false) },
+      other => {
         return Err(format!(
           "Argument `{other}` for `--color <on/off/auto>` is invalid."
         ));
       }
     }
   }
-  if flag_version
-  {
+  if flag_version {
     return show_version();
   }
-  if flag_help || subcommand.is_empty()
-  {
+  if flag_help || subcommand.is_empty() {
     return show_help();
   }
 
-  match subcommand.as_str()
-  {
+  match subcommand.as_str() {
     "ft" | "fetch" => fetch(args),
     "ls" | "list" => list(args),
     "dl" | "download" => download(args),
@@ -145,12 +135,9 @@ fn main() -> ExitCode
   let mut args = std::env::args();
   let _ = &args.next().expect("Program path is provided");
 
-  match entry(&mut args)
-  {
-    Err(mut err) =>
-    {
-      if !err.ends_with(['.', '?', ')'])
-      {
+  match entry(&mut args) {
+    Err(mut err) => {
+      if !err.ends_with(['.', '?', ')']) {
         err += ". Try `--help` for more information.";
       }
       println!("{RED}ERROR{RESET}: {err}");

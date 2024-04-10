@@ -46,8 +46,7 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
 {
   let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
 
-  if let Some(entry) = find_docset_in_docs(docset_name, docs)
-  {
+  if let Some(entry) = find_docset_in_docs(docset_name, docs) {
     let docset_path = get_docset_path(docset_name)?;
     if !docset_path.try_exists().map_err(|err| {
       format!("Could not check if {} exists: {err}", docset_path.display())
@@ -58,8 +57,7 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
       })?;
     }
 
-    for (i, file_name) in ["db.json", "index.json"].iter().enumerate()
-    {
+    for (i, file_name) in ["db.json", "index.json"].iter().enumerate() {
       let file_path = docset_path.join(file_name);
 
       let file = File::create(&file_path).map_err(|err| {
@@ -81,10 +79,8 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
       let mut buffer = [0; 1024 * 4];
       let mut file_size = 0;
 
-      while let Ok(size) = response_reader.read(&mut buffer)
-      {
-        if size == 0
-        {
+      while let Ok(size) = response_reader.read(&mut buffer) {
+        if size == 0 {
           break;
         }
 
@@ -132,20 +128,15 @@ fn sanitize_html_line(html_line: String) -> String
 
   let html_line_chars = html_line.chars();
 
-  for ch in html_line_chars
-  {
-    match state
-    {
-      State::Default =>
-      {
-        if ch == '<'
-        {
+  for ch in html_line_chars {
+    match state {
+      State::Default => {
+        if ch == '<' {
           state = State::InTag;
         }
         sanitized_line_buffer.push(ch);
       }
-      State::InTag => match ch
-      {
+      State::InTag => match ch {
         'd'
           if position + 15 < length &&
              bytes[position..position + 15] == *b"data-language=\"" =>
@@ -164,24 +155,19 @@ fn sanitize_html_line(html_line: String) -> String
         {
           state = State::InKey;
         }
-        '>' =>
-        {
+        '>' => {
           state = State::Default;
           sanitized_line_buffer.push(ch);
         }
         _ => sanitized_line_buffer.push(ch),
       },
-      State::InKey =>
-      {
-        if ch == '\"'
-        {
+      State::InKey => {
+        if ch == '\"' {
           state = State::InValue;
         }
       }
-      State::InValue =>
-      {
-        if ch == '\"'
-        {
+      State::InValue => {
+        if ch == '\"' {
           state = State::InTag;
         }
       }
@@ -204,16 +190,7 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
   {
     const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
     filename.chars()
-            .map(|c| {
-              if FORBIDDEN_CHARS.contains(&c)
-              {
-                '_'
-              }
-              else
-              {
-                c
-              }
-            })
+            .map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c })
             .collect::<String>()
   }
 
@@ -227,8 +204,7 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
     let file_path = sanitize_filename_for_windows(file_path);
     let file_path = PathBuf::from(file_path);
 
-    if let Some(parent) = file_path.parent()
-    {
+    if let Some(parent) = file_path.parent() {
       create_dir_all(docset_path.join(parent)).map_err(|err| {
         format!("Could not create `{}`: {err}", parent.display())
       })?;
@@ -336,32 +312,25 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
   let docs = deserialize_docs_json()?;
   let mut successful_downloads = 0;
 
-  if flag_update_all
-  {
-    if is_docs_json_old()?
-    {
+  if flag_update_all {
+    if is_docs_json_old()? {
       print_warning!("Your `docs.json` was updated more than a week ago. Run \
                       `{PROGRAM_NAME} fetch` to retrieve a new list of available
                       docsets.");
     }
-    for ref docset in get_local_docsets()?
-    {
-      if is_docset_old(docset, &docs)?
-      {
+    for ref docset in get_local_docsets()? {
+      if is_docset_old(docset, &docs)? {
         println!("Updating `{docset}`...");
         download_db_and_index_json_with_progress(docset, &docs)?;
         println!("Extracting to `{}`...", get_docset_path(docset)?.display());
         build_docset_from_db_json(docset)?;
         successful_downloads += 1;
-      }
-      else
-      {
+      } else {
         print_warning!("`{docset}` is recent, skipping...");
       }
     }
 
-    match successful_downloads
-    {
+    match successful_downloads {
       0 => return Err("Nothing to do.".to_string()),
       1 => println!(
         "{BOLD}{successful_downloads} item was successfully updated{RESET}."
@@ -373,22 +342,18 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
     return Ok(());
   }
 
-  if flag_help || args.is_empty()
-  {
+  if flag_help || args.is_empty() {
     return show_download_help();
   }
 
-  if !is_docs_json_exists()?
-  {
+  if !is_docs_json_exists()? {
     return Err("The list of available documents has not yet been downloaded. Please run \
                 `{PROGRAM_NAME} fetch` first.".to_string());
   }
 
-  for docset in args.iter()
-  {
+  for docset in args.iter() {
     // Don't print warnings when using with ls -n
-    if docset == "[downloaded]"
-    {
+    if docset == "[downloaded]" {
       continue;
     }
 
@@ -399,9 +364,7 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
       print_warning!("Docset `{docset}` is already downloaded and is of recent \
                       version. If you still want to re-download it, re-run \
                       this command with `--force`");
-    }
-    else if is_docset_in_docs_or_print_warning(docset, &docs)
-    {
+    } else if is_docset_in_docs_or_print_warning(docset, &docs) {
       println!("Downloading `{docset}`...");
       download_db_and_index_json_with_progress(docset, &docs)?;
       println!("Extracting to `{}`...", get_docset_path(docset)?.display());
@@ -410,8 +373,7 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
     }
   }
 
-  match successful_downloads
-  {
+  match successful_downloads {
     0 => return Err("Nothing to do.".to_string()),
     1 => println!("{BOLD}Install has successfully finished{RESET}."),
     _ => println!(
