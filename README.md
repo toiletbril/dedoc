@@ -4,7 +4,8 @@ Search and view [DevDocs](https://devdocs.io/) from your terminal. Offline.
 **Without browser**. Without Python, Javascript or other inconveniences. Even
 without desktop environment.
 
-App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`.
+App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`. You can also
+define `$DEDOC_HOME` environment variable to a directory of your choice.
 
 Pages are displayed as markdown documents, and can be piped to `less`,
 [`glow`](https://github.com/charmbracelet/glow) if you're fancy, or any other

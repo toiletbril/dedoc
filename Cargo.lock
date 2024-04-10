@@ -95,7 +95,7 @@ dependencies = [
 
 [[package]]
 name = "dedoc"
-version = "0.2.2"
+version = "0.2.4"
 dependencies = [
  "attohttpc",
  "html2text",
@@ -743,9 +743,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "toiletcli"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ca5f964dd0f2d9fc81b29c11356c659fa296c90d3ee31d1e167ada41ff496d4"
+checksum = "5f5f1026aed9eb04fc67c0b3a7b1dd97c2c045c1e04beecf677841d41d3b9c6f"
 dependencies = [
  "atty",
 ]

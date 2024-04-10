@@ -1,0 +1,8 @@
+# this atrocity requires rustfmt-nightly
+indent_style = "visual"
+brace_style = "alwaysnextline"
+max_width = 80
+tab_spaces = 2
+use_small_heuristics = "max"
+binop_separator = "back"
+wrap_comments = true
