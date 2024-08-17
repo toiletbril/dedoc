@@ -450,31 +450,36 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String>
       match Path::new(&path_string).try_exists() {
         Ok(true) => return Ok(path_string.into()),
         Ok(false) => {
-          print_warning!("Path specified in \
-                          ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
-                          (`{path_string}`) does not exist, falling back to \
-                          the home directory.");
+          return Err(format!(
+            "Path specified in ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
+             (`{path_string}`) does not exist. Please create it manually."
+          ));
         }
         Err(err) => {
-          print_warning!("Could not check whether path specified in \
-                          ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
-                          (`{path_string}`) exists: {err}");
+          return Err(format!("Could not check whether path specified in \
+                              ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
+                              (`{path_string}`) exists: {err}"));
         }
       }
     }
     let path = get_home_directory()?;
     let dot_program = format!(".{PROGRAM_NAME}");
+    debug_println!("{}", path.join(&dot_program).display());
     Ok(path.join(dot_program))
   }
 
-  let program_dir = internal()?;
   unsafe {
-    PROGRAM_DIRECTORY_INIT.call_once(|| {
-                            PROGRAM_DIRECTORY = Some(program_dir.clone());
+    let mut err = None;
+    PROGRAM_DIRECTORY_INIT.call_once(|| match internal() {
+                            Ok(d) => PROGRAM_DIRECTORY = Some(d),
+                            Err(e) => err = Some(e),
                           });
+    if let Some(msg) = err {
+      Err(msg)
+    } else {
+      Ok(PROGRAM_DIRECTORY.as_ref().expect("directory is set").clone())
+    }
   }
-
-  Ok(program_dir)
 }
 
 pub(crate) fn create_program_directory() -> ResultS
