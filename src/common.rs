@@ -415,20 +415,29 @@ fn get_home_directory() -> Result<PathBuf, String>
 
   let home: PathBuf = if let Ok(home_path) = home_env {
     PathBuf::from(home_path)
+  } else if cfg!(target_family = "unix") {
+    let user =
+      std::env::var("USER").map_err(|err| {
+                             format!("Could not get $USER variable: {err}")
+                           })?;
+    format!("/home/{user}").into()
+  } else if cfg!(target_family = "windows") {
+    let user = std::env::var("USERNAME").map_err(|err| {
+                 format!("Could not get $USERNAME variable: {err}")
+               })?;
+    format!("C:\\Users\\{user}").into()
   } else {
-    let user = std::env::var("USER").map_err(|err| err.to_string())?;
-    if cfg!(target_family = "unix") {
-      format!("/home/{user}").into()
-    } else if cfg!(target_family = "windows") {
-      format!("C:\\Users\\{user}").into()
-    } else {
-      return Err("TempleOS is not supported".to_string());
-    }
+    unreachable!();
   };
 
   match home.try_exists() {
     Ok(true) => Ok(home),
-    Ok(false) => Err("Your home directory does not exist".to_string()),
+    Ok(false) => {
+      Err(format!("Your home directory (`{}`) does not exist. This may be \
+                   caused due to user name and home folder's name mismatch. \
+                   Making a symlink may help.",
+                  home.display()))
+    }
     Err(err) => Err(format!("Could not figure out home directory: {err}")),
   }
 }
@@ -495,7 +504,7 @@ pub(crate) fn create_program_directory() -> ResultS
   if program_path.is_dir() {
     Ok(())
   } else {
-    Err("Could not create {program_path:?}".to_string())
+    Err("Could not create `{program_path:?}`".to_string())
   }
 }
 

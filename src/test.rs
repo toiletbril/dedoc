@@ -1,5 +1,4 @@
 #![allow(unused)]
-#![cfg(debug_assertions)]
 
 use std::fs::{remove_dir_all, remove_file, File};
 use std::io::BufReader;
@@ -23,13 +22,14 @@ use toiletcli::flags::{parse_flags, FlagType};
 fn show_test_help() -> ResultS
 {
   println!(
-    "\
+           "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} test{RESET} [-f] <docset> <page>
     Run the testing suite.
 
 {GREEN}OPTIONS{RESET}
-    -f, --force                     Run all tests, including `download` and `fetch`.
+    -f, --force                     Run all tests, including `download` and
+                                    `fetch`.
         --help                      Display help message."
   );
   Ok(())
@@ -58,11 +58,9 @@ fn run_with_args<O>(command: fn(IntoIter<String>) -> Result<O, String>,
                     should_do: &str)
                     -> bool
 {
-  let args = create_args(args_str);
   debug_println!("Running with args: `{args_str}`, should {should_do}");
 
-  let command_result = command(args);
-  if let Err(err) = &command_result {
+  if let Err(err) = command(create_args(args_str)) {
     debug_println!("{BOLD}*** Test failed with: {err} ***");
     false
   } else {

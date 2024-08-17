@@ -287,11 +287,9 @@ fn build_docset_from_db_json(docset_name: &String) -> ResultS
   })?;
 
   remove_file(&db_json_path).map_err(|err| {
-                              format!(
-      "Could not remove `{}` after building {docset_name}: {err}",
-      db_json_path.display()
-    )
-                            })?;
+    format!("Could not remove `{}` after building {docset_name}: {err}",
+            db_json_path.display())
+  })?;
 
   Ok(())
 }
