@@ -59,7 +59,7 @@ macro_rules! debug_println
       eprint!("{RESET}");
     }
     #[cfg(not(debug_assertions))]
-    { () }
+    {}
   };
 }
 
@@ -74,7 +74,7 @@ macro_rules! dedoc_dbg
       dbg!($($e),+);
     }
     #[cfg(not(debug_assertions))]
-    { () }
+    {}
   };
 }
 
@@ -560,25 +560,36 @@ pub(crate) fn find_docset_in_docs<'a>(docset_name: &str,
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
+pub(crate) fn make_sure_docset_is_in_docs(docset_name: &str,
+                                          docs: &[DocsEntry])
+                                          -> ResultS
+{
+  match is_docset_in_docs(docset_name, docs) {
+    SearchMatch::Vague(vague_matches) => {
+      let end_index = std::cmp::min(3, vague_matches.len());
+      let first_three = &vague_matches[..end_index];
+      Err(format!("Unknown docset `{docset_name}`. Did you mean `{}`?",
+                  first_three.join("`/`")))
+    }
+    SearchMatch::None => {
+      Err(format!("Unknown docset `{docset_name}`. Did you run \
+                   `{PROGRAM_NAME} fetch`?"))
+    }
+    _ => Ok(()),
+  }
+}
+
+// Returns `true` when docset exists in `docs.json`, print a warning otherwise.
 pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str,
                                                  docs: &[DocsEntry])
                                                  -> bool
 {
-  match is_docset_in_docs(docset_name, docs) {
-    SearchMatch::Exact => return true,
-    SearchMatch::Vague(vague_matches) => {
-      let end_index = std::cmp::min(3, vague_matches.len());
-      let first_three = &vague_matches[..end_index];
-
-      print_warning!("Unknown docset `{docset_name}`. Did you mean `{}`?",
-                     first_three.join("`/`"));
-    }
-    SearchMatch::None => {
-      print_warning!("Unknown docset `{docset_name}`. Did you run \
-                      `{PROGRAM_NAME} fetch`?");
-    }
+  if let Err(err) = make_sure_docset_is_in_docs(docset_name, docs) {
+    print_warning!("{}", err);
+    false
+  } else {
+    true
   }
-  false
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in

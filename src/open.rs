@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
-use crate::common::ResultS;
 use crate::common::{
   deserialize_docs_json, get_flag_error, get_terminal_width,
-  is_docs_json_exists, is_docset_in_docs_or_print_warning, print_docset_file,
-  print_page_from_docset, split_to_item_and_fragment,
+  is_docs_json_exists, print_docset_file, print_page_from_docset,
+  split_to_item_and_fragment,
 };
+use crate::common::{make_sure_docset_is_in_docs, ResultS};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 use crate::print_warning;
 
@@ -84,20 +84,20 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
     return show_open_help();
   };
 
-  if is_docset_in_docs_or_print_warning(&docset, &deserialize_docs_json()?) {
-    let query = args.collect::<Vec<String>>().join(" ");
-    if query.is_empty() {
-      return Err("No page specified. Try `open --help` for more information."
-                   .to_string());
-    }
+  make_sure_docset_is_in_docs(&docset, &deserialize_docs_json()?)?;
 
-    let (item, fragment) = split_to_item_and_fragment(query)?;
-    print_page_from_docset(&docset,
-                           &item,
-                           fragment.as_ref(),
-                           width,
-                           flag_number_lines)?;
+  let query = args.collect::<Vec<String>>().join(" ");
+  if query.is_empty() {
+    return Err("No page specified. Try `open --help` for more information."
+                 .to_string());
   }
+
+  let (item, fragment) = split_to_item_and_fragment(query)?;
+  print_page_from_docset(&docset,
+                         &item,
+                         fragment.as_ref(),
+                         width,
+                         flag_number_lines)?;
 
   Ok(())
 }

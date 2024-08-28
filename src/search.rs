@@ -10,13 +10,12 @@ use serde::{Deserialize, Serialize};
 use toiletcli::flags;
 use toiletcli::flags::*;
 
-use crate::common::ResultS;
 use crate::common::{
   deserialize_docs_json, get_docset_path, get_flag_error,
   get_program_directory, get_terminal_width, is_docs_json_exists,
-  is_docset_downloaded, is_docset_in_docs_or_print_warning,
-  print_page_from_docset, split_to_item_and_fragment,
+  is_docset_downloaded, print_page_from_docset, split_to_item_and_fragment,
 };
+use crate::common::{make_sure_docset_is_in_docs, ResultS};
 use crate::common::{
   BOLD, DOC_PAGE_EXTENSION, GRAY, GRAYER, GRAYEST, GREEN, LIGHT_GRAY,
   PROGRAM_NAME, RESET,
@@ -505,7 +504,7 @@ fn search_impl(mut warnings: Vec<String>,
       if let Some(open_number) = open_number {
         match open_number {
           n if n < 1 || n > exact_results_offset + vague_results.len() => {
-            warnings.push(format!("`--open {n}` is out of bounds."));
+            return Err(format!("`--open {n}` is out of bounds."));
           }
           n if n <= exact_results_offset => {
             let result = &exact_results[n - 1];
@@ -532,7 +531,7 @@ fn search_impl(mut warnings: Vec<String>,
           }
         }
       } else {
-        warnings.push(format!("`--open` requires a number."));
+        return Err(format!("`--open` requires a number."));
       }
     }
     if !exact_results.is_empty() {
@@ -572,7 +571,7 @@ fn search_impl(mut warnings: Vec<String>,
       if let Some(open_number) = open_number {
         match open_number {
           n if n < 1 || n > results.len() => {
-            warnings.push(format!("`--open {n}` is out of bounds."));
+            return Err(format!("`--open {n}` is out of bounds."));
           }
           n => {
             let result = &results[n - 1];
@@ -590,7 +589,7 @@ fn search_impl(mut warnings: Vec<String>,
           }
         }
       } else {
-        warnings.push(format!("`--open` requires a number."));
+        return Err(format!("`--open` requires a number."));
       }
     }
     if !results.is_empty() {
@@ -648,11 +647,9 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
   let docs = deserialize_docs_json()?;
 
   if !is_docset_downloaded(&docset)? {
-    if is_docset_in_docs_or_print_warning(&docset, &docs) {
-      return Err(format!("Docset `{docset}` is not downloaded. Try running \
-                          `{PROGRAM_NAME} download {docset}`."));
-    }
-    return Err("Nothing to do.".to_string());
+    make_sure_docset_is_in_docs(&docset, &docs)?;
+    return Err(format!("Docset `{docset}` is not downloaded. Try running \
+                        `{PROGRAM_NAME} download {docset}`."));
   }
 
   let mut warnings = vec![];
@@ -690,7 +687,7 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
     } else if c > 10 {
       page_width = Some(c);
     } else {
-      warnings.push("Invalid number of columns.".to_string());
+      warnings.push("Invalid number of columns (less than 10).".to_string());
     }
   } else if !flag_open_columns.is_empty() {
     warnings.push("Invalid number of columns.".to_string());

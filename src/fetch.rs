@@ -14,7 +14,7 @@ use crate::common::{
 use crate::common::{DocsEntry, ResultS};
 use crate::common::{
   BOLD, DEFAULT_DOCS_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET,
-  VERSION, YELLOW,
+  VERSION,
 };
 
 fn show_fetch_help() -> ResultS
@@ -97,10 +97,9 @@ pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
     return show_fetch_help();
   }
   if !flag_force && is_docs_json_exists()? && !is_docs_json_old()? {
-    println!("{YELLOW}WARNING{RESET}: It seems that your `docs.json` was \
-              updated less than a week ago. Run `fetch --force` to ignore this \
-              warning.");
-    return Err("Nothing to do.".to_string());
+    return Err(format!("It seems that your `docs.json` was updated less than \
+                        a week ago. Run `fetch --force` to ignore this \
+                        warning."));
   }
 
   println!("Fetching `{DEFAULT_DOCS_JSON_LINK}`...");

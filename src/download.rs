@@ -1,5 +1,5 @@
 use std::fs::{create_dir_all, remove_file, File};
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{stdout, BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
 
 use attohttpc::get;
@@ -7,6 +7,7 @@ use attohttpc::get;
 use serde::de::{Error, MapAccess, Visitor};
 use serde::Deserializer;
 
+use toiletcli::common::should_use_colors;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
@@ -67,14 +68,13 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
       let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}",
                                   file_name, entry.mtime);
 
-      let response = get(&download_link).header_append("user-agent",
-                                                       &user_agent)
-                                        .send()
-                                        .map_err(|err| {
-                                          format!(
-                               "Could not download `{download_link}`: {err}"
-                             )
-                                        })?;
+      let response =
+        get(&download_link).header_append("user-agent", &user_agent)
+                           .send()
+                           .map_err(|err| {
+                             format!("Could not download \
+                                            `{download_link}`: {err}")
+                           })?;
 
       let mut file_writer = BufWriter::new(file);
       let mut response_reader = BufReader::new(response);
@@ -92,6 +92,9 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
         file_size += size;
 
         print!("\rReceived {file_size} bytes, file {} of 2...", i + 1);
+        if should_use_colors() {
+          let _ = stdout().flush();
+        }
       }
       println!();
     }
@@ -229,7 +232,10 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
       format!("Could not write to `{}`: {err}", file_path.display())
     })?;
 
-    print!("Unpacked {unpacked_amount} files...\r");
+    print!("\rUnpacked {unpacked_amount} files...");
+    if should_use_colors() {
+      let _ = stdout().flush();
+    }
 
     unpacked_amount += 1;
   }
@@ -315,8 +321,8 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
   if flag_update_all {
     if is_docs_json_old()? {
       print_warning!("Your `docs.json` was updated more than a week ago. Run \
-                      `{PROGRAM_NAME} fetch` to retrieve a new list of available
-                      docsets.");
+                      `{PROGRAM_NAME} fetch` to retrieve a new list of \
+                      available docsets.");
     }
     for ref docset in get_local_docsets()? {
       if is_docset_old(docset, &docs)? {
