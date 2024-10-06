@@ -730,9 +730,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "toiletcli"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f5f1026aed9eb04fc67c0b3a7b1dd97c2c045c1e04beecf677841d41d3b9c6f"
+checksum = "7a3d69030fe88854fc3df54d116ec57362aaf7d8b1eed0ac4b66c73f0a52bf4f"
 dependencies = [
  "atty",
 ]

@@ -448,7 +448,7 @@ static PROGRAM_DIRECTORY_INIT: Once = Once::new();
 pub(crate) fn get_program_directory() -> Result<PathBuf, String>
 {
   unsafe {
-    if let Some(program_dir) = PROGRAM_DIRECTORY.as_ref() {
+    if let Some(ref program_dir) = PROGRAM_DIRECTORY {
       return Ok(program_dir.clone());
     }
   }
@@ -485,8 +485,10 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String>
                           });
     if let Some(msg) = err {
       Err(msg)
+    } else if let Some(ref dir) = PROGRAM_DIRECTORY {
+      Ok(dir.to_path_buf())
     } else {
-      Ok(PROGRAM_DIRECTORY.as_ref().expect("directory is set").clone())
+      unreachable!()
     }
   }
 }

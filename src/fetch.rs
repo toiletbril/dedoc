@@ -67,8 +67,10 @@ fn serialize_and_overwrite_docs(path: PathBuf,
                                 docs: Vec<DocsEntry>)
                                 -> Result<(), String>
 {
-  let file =
-    File::create(&path).map_err(|err| format!("`{}`: {err}", path.display()))?;
+  let file = File::create(&path).map_err(|err| {
+                                  format!("Could not create `{}`: {err}",
+                                          path.display())
+                                })?;
 
   let writer = BufWriter::new(file);
 
