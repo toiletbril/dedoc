@@ -16,7 +16,9 @@ fn show_list_help() -> ResultS
     Show available docsets.
 
 {GREEN}OPTIONS{RESET}
-    -l, --local                     Show only local docsets.
+    -l, --local                     Only show local docsets.
+    -o, --non-local                 Only show docsets that haven't been
+                                    downloaded.
     -a, --all                       Show all version-specific docsets.
     -n, --newlines                  Print each docset on a separate line.
     -s, --search <query>            Filter docsets based on a query.
@@ -30,6 +32,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
 {
   let mut flag_all;
   let mut flag_local;
+  let mut flag_nonlocal;
   let mut flag_newlines;
   let mut flag_search;
   let mut flag_help;
@@ -37,6 +40,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   let mut flags = flags![
     flag_all: BoolFlag,      ["-a", "--all"],
     flag_local: BoolFlag,    ["-l", "--local"],
+    flag_nonlocal: BoolFlag, ["-o", "--non-local"],
     flag_newlines: BoolFlag, ["-n", "--newlines"],
     flag_search: StringFlag, ["-s", "--search"],
     flag_help: BoolFlag,     ["--help"]
@@ -60,9 +64,14 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   let should_filter = !flag_search.is_empty();
   let separator = if flag_newlines { "\n" } else { ", " };
 
-  // Show everything when searching :3c
+  // show everything when searching :3c
   if should_filter {
     flag_all = true;
+  }
+
+  if flag_local && flag_nonlocal {
+    return Err("Both -o and -l are enabled. Please make a final decision."
+               .to_string());
   }
 
   if flag_local {
@@ -95,17 +104,23 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     if !flag_local && !flag_all && entry.contains('~') {
       continue;
     }
-    if !first_result {
-      print!("{}", separator);
-    }
     if local_docsets.contains(entry) {
+      if flag_nonlocal {
+        continue;
+      }
+      if !first_result {
+        print!("{}", separator);
+      }
       print!("{GREEN}{} [downloaded]{RESET}", entry);
     } else {
+      if !first_result {
+        print!("{}", separator);
+      }
       print!("{}", entry);
     }
     first_result = false;
   }
-  // Print a final newline only if something was found
+  // a final newline only if something was found
   if !first_result {
     println!();
   }

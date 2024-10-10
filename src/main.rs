@@ -80,8 +80,8 @@ fn show_help() -> ResultS
 fn entry<Args>(mut args: Args) -> ResultS
   where Args: Iterator<Item = String>
 {
-  debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
-  debug_println!("Run `test` to perform tests.");
+  debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}. Run `test` \
+                  to perform tests.");
 
   let mut flag_version;
   let mut flag_color;

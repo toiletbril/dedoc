@@ -7,7 +7,6 @@ use attohttpc::get;
 use serde::de::{Error, MapAccess, Visitor};
 use serde::Deserializer;
 
-use toiletcli::common::should_use_colors;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
@@ -22,6 +21,8 @@ use crate::common::{
   PROGRAM_NAME, RESET, VERSION,
 };
 use crate::print_warning;
+
+const DOWNLOAD_BUFFER_SIZE: usize = 1024 * 32;
 
 fn show_download_help() -> ResultS
 {
@@ -78,7 +79,8 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
 
       let mut file_writer = BufWriter::new(file);
       let mut response_reader = BufReader::new(response);
-      let mut buffer = [0; 1024 * 4];
+
+      let mut buffer = [0; DOWNLOAD_BUFFER_SIZE];
       let mut file_size = 0;
 
       while let Ok(size) = response_reader.read(&mut buffer) {
@@ -92,9 +94,9 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
         file_size += size;
 
         print!("\rReceived {file_size} bytes, file {} of 2...", i + 1);
-        if should_use_colors() {
-          let _ = stdout().flush();
-        }
+
+        stdout().flush()
+                .map_err(|err| format!("Could not flush stdout:{err}"))?;
       }
       println!();
     }
@@ -233,9 +235,7 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
     })?;
 
     print!("\rUnpacked {unpacked_amount} files...");
-    if should_use_colors() {
-      let _ = stdout().flush();
-    }
+    stdout().flush().map_err(|err| format!("Could not flush stdout:{err}"))?;
 
     unpacked_amount += 1;
   }

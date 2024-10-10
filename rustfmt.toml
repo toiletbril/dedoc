@@ -1,4 +1,3 @@
-# this atrocity requires rustfmt-nightly
 indent_style = "visual"
 brace_style = "alwaysnextline"
 max_width = 80
