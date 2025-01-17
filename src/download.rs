@@ -330,8 +330,6 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
         println!("Extracting to `{}`...", get_docset_path(docset)?.display());
         build_docset_from_db_json(docset)?;
         successful_downloads += 1;
-      } else {
-        print_warning!("`{docset}` is recent, skipping...");
       }
     }
 

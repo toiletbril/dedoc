@@ -654,7 +654,22 @@ pub(crate) fn is_docset_old(docset_name: &str,
   if let Some(entry) = find_docset_in_docs(docset_name, docs) {
     return Ok(entry.mtime > get_docset_mtime(docset_name)?);
   }
-  Err("Docset `{docset_name}` is not downloaded.".to_string())
+  match is_docset_in_docs(docset_name, docs) {
+    SearchMatch::Vague(vague_matches) => {
+      let end_index = std::cmp::min(3, vague_matches.len());
+      let first_three = &vague_matches[..end_index];
+      print_warning!("Unable to find already downloaded `{docset_name}` in the \
+                      recent `docs.json`. Its name was possibly changed to \
+                      `{}`.",
+                     first_three.join("`/`"));
+    }
+    SearchMatch::None => {
+      print_warning!("Unable to find downloaded `{docset_name}` recent \
+                      `docs.json`.")
+    }
+    SearchMatch::Exact => unreachable!(),
+  };
+  Ok(false)
 }
 
 pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
