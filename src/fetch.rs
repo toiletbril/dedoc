@@ -2,20 +2,18 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
-use attohttpc::get;
-
 use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  create_program_directory, get_flag_error, get_program_directory,
-  is_docs_json_exists, is_docs_json_old, write_to_logfile,
+  create_program_directory, get_default_user_agent, get_flag_error,
+  get_program_directory, is_docs_json_exists, is_docs_json_old,
+  write_to_logfile,
 };
 use crate::common::{DocsEntry, ResultS};
-use crate::common::{
-  BOLD, DEFAULT_DOCS_JSON_LINK, DEFAULT_USER_AGENT, GREEN, PROGRAM_NAME, RESET,
-  VERSION,
-};
+use crate::common::{BOLD, DEFAULT_DOCS_JSON_LINK, GREEN, PROGRAM_NAME, RESET};
+
+use ureq::get;
 
 fn show_fetch_help() -> ResultS
 {
@@ -35,17 +33,16 @@ fn show_fetch_help() -> ResultS
 
 fn fetch_docs() -> Result<Vec<DocsEntry>, String>
 {
-  let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
-
   let response = get(DEFAULT_DOCS_JSON_LINK)
-    .header_append("user-agent", user_agent)
-    .send()
+    .set("User-Agent", &get_default_user_agent())
+    .set("Accept-Encoding", "gzip")
+    .call()
     .map_err(|err| {
       format!("Could not fetch `{DEFAULT_DOCS_JSON_LINK}`: {err}")
     })?;
 
   let body =
-    response.text()
+    response.into_string()
             .map_err(|err| format!("Unable to read response body: {err}"))?;
 
   let docs: Vec<DocsEntry> =

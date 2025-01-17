@@ -2,7 +2,7 @@ use std::fs::{create_dir_all, remove_file, File};
 use std::io::{stdout, BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
 
-use attohttpc::get;
+use ureq::get;
 
 use serde::de::{Error, MapAccess, Visitor};
 use serde::Deserializer;
@@ -11,14 +11,14 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, find_docset_in_docs, get_docset_path, get_flag_error,
-  get_local_docsets, is_docs_json_exists, is_docs_json_old,
-  is_docset_downloaded, is_docset_in_docs_or_print_warning, is_docset_old,
+  deserialize_docs_json, find_docset_in_docs, get_default_user_agent,
+  get_docset_path, get_flag_error, get_local_docsets, is_docs_json_exists,
+  is_docs_json_old, is_docset_downloaded, is_docset_in_docs_or_print_warning,
+  is_docset_old,
 };
 use crate::common::{DocsEntry, ResultS};
 use crate::common::{
-  BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, MTIME_FILENAME,
-  PROGRAM_NAME, RESET, VERSION,
+  BOLD, DEFAULT_DB_JSON_LINK, GREEN, MTIME_FILENAME, PROGRAM_NAME, RESET,
 };
 use crate::print_warning;
 
@@ -46,8 +46,6 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
                                             docs: &[DocsEntry])
                                             -> ResultS
 {
-  let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
-
   if let Some(entry) = find_docset_in_docs(docset_name, docs) {
     let docset_path = get_docset_path(docset_name)?;
     if !docset_path.try_exists().map_err(|err| {
@@ -70,11 +68,12 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
                                   file_name, entry.mtime);
 
       let response =
-        get(&download_link).header_append("user-agent", &user_agent)
-                           .send()
+        get(&download_link).set("User-Agent", &get_default_user_agent())
+                           .call()
+                           .map(|x| x.into_reader())
                            .map_err(|err| {
-                             format!("Could not download \
-                                            `{download_link}`: {err}")
+                             format!("Could not download `{download_link}`: \
+                                      {err}")
                            })?;
 
       let mut file_writer = BufWriter::new(file);

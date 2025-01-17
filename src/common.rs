@@ -26,7 +26,6 @@ pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub(crate) const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
 pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
-pub(crate) const DEFAULT_USER_AGENT: &str = "dedoc";
 pub(crate) const DEFAULT_PROGRAM_DIR_ENV_VARIABLE: &str = "DEDOC_HOME";
 pub(crate) const DEFAULT_WIDTH: usize = 80;
 
@@ -711,4 +710,10 @@ pub(crate) fn is_docs_json_exists() -> Result<bool, String>
 pub(crate) fn get_docset_path(docset_name: &str) -> Result<PathBuf, String>
 {
   Ok(get_program_directory()?.join("docsets").join(docset_name))
+}
+
+#[inline]
+pub(crate) fn get_default_user_agent() -> String
+{
+  format!("{PROGRAM_NAME}/{VERSION}")
 }
