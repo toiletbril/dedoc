@@ -1,8 +1,8 @@
 use std::fs::{create_dir_all, remove_file, File};
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{stdout, BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
 
-use attohttpc::get;
+use ureq::get;
 
 use serde::de::{Error, MapAccess, Visitor};
 use serde::Deserializer;
@@ -11,16 +11,18 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, find_docset_in_docs, get_docset_path, get_flag_error,
-  get_local_docsets, is_docs_json_exists, is_docs_json_old,
-  is_docset_downloaded, is_docset_in_docs_or_print_warning, is_docset_old,
+  deserialize_docs_json, find_docset_in_docs, get_default_user_agent,
+  get_docset_path, get_flag_error, get_local_docsets, is_docs_json_exists,
+  is_docs_json_old, is_docset_downloaded, is_docset_in_docs_or_print_warning,
+  is_docset_old,
 };
 use crate::common::{DocsEntry, ResultS};
 use crate::common::{
-  BOLD, DEFAULT_DB_JSON_LINK, DEFAULT_USER_AGENT, GREEN, MTIME_FILENAME,
-  PROGRAM_NAME, RESET, VERSION,
+  BOLD, DEFAULT_DB_JSON_LINK, GREEN, MTIME_FILENAME, PROGRAM_NAME, RESET,
 };
 use crate::print_warning;
+
+const DOWNLOAD_BUFFER_SIZE: usize = 1024 * 32;
 
 fn show_download_help() -> ResultS
 {
@@ -44,8 +46,6 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
                                             docs: &[DocsEntry])
                                             -> ResultS
 {
-  let user_agent = format!("{DEFAULT_USER_AGENT}/{VERSION}");
-
   if let Some(entry) = find_docset_in_docs(docset_name, docs) {
     let docset_path = get_docset_path(docset_name)?;
     if !docset_path.try_exists().map_err(|err| {
@@ -67,18 +67,19 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
       let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}",
                                   file_name, entry.mtime);
 
-      let response = get(&download_link).header_append("user-agent",
-                                                       &user_agent)
-                                        .send()
-                                        .map_err(|err| {
-                                          format!(
-                               "Could not download `{download_link}`: {err}"
-                             )
-                                        })?;
+      let response =
+        get(&download_link).set("User-Agent", &get_default_user_agent())
+                           .call()
+                           .map(|x| x.into_reader())
+                           .map_err(|err| {
+                             format!("Could not download `{download_link}`: \
+                                      {err}")
+                           })?;
 
       let mut file_writer = BufWriter::new(file);
       let mut response_reader = BufReader::new(response);
-      let mut buffer = [0; 1024 * 4];
+
+      let mut buffer = [0; DOWNLOAD_BUFFER_SIZE];
       let mut file_size = 0;
 
       while let Ok(size) = response_reader.read(&mut buffer) {
@@ -92,6 +93,9 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
         file_size += size;
 
         print!("\rReceived {file_size} bytes, file {} of 2...", i + 1);
+
+        stdout().flush()
+                .map_err(|err| format!("Could not flush stdout:{err}"))?;
       }
       println!();
     }
@@ -229,7 +233,8 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
       format!("Could not write to `{}`: {err}", file_path.display())
     })?;
 
-    print!("Unpacked {unpacked_amount} files...\r");
+    print!("\rUnpacked {unpacked_amount} files...");
+    stdout().flush().map_err(|err| format!("Could not flush stdout:{err}"))?;
 
     unpacked_amount += 1;
   }
@@ -287,11 +292,9 @@ fn build_docset_from_db_json(docset_name: &String) -> ResultS
   })?;
 
   remove_file(&db_json_path).map_err(|err| {
-                              format!(
-      "Could not remove `{}` after building {docset_name}: {err}",
-      db_json_path.display()
-    )
-                            })?;
+    format!("Could not remove `{}` after building {docset_name}: {err}",
+            db_json_path.display())
+  })?;
 
   Ok(())
 }
@@ -317,8 +320,8 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
   if flag_update_all {
     if is_docs_json_old()? {
       print_warning!("Your `docs.json` was updated more than a week ago. Run \
-                      `{PROGRAM_NAME} fetch` to retrieve a new list of available
-                      docsets.");
+                      `{PROGRAM_NAME} fetch` to retrieve a new list of \
+                      available docsets.");
     }
     for ref docset in get_local_docsets()? {
       if is_docset_old(docset, &docs)? {

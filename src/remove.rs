@@ -7,7 +7,7 @@ use crate::common::ResultS;
 use crate::common::{
   get_docset_path, get_flag_error, get_local_docsets, is_docset_downloaded,
 };
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET, YELLOW};
+use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 use crate::print_warning;
 
 fn show_remove_help() -> ResultS
@@ -95,7 +95,7 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
                                     })?;
       }
     } else {
-      print_warning!("{YELLOW}WARNING{RESET}: `{docset}` is not installed.");
+      print_warning!("`{docset}` is not installed.");
     }
   }
 

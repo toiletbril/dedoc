@@ -26,7 +26,6 @@ pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub(crate) const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
 pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
-pub(crate) const DEFAULT_USER_AGENT: &str = "dedoc";
 pub(crate) const DEFAULT_PROGRAM_DIR_ENV_VARIABLE: &str = "DEDOC_HOME";
 pub(crate) const DEFAULT_WIDTH: usize = 80;
 
@@ -59,7 +58,7 @@ macro_rules! debug_println
       eprint!("{RESET}");
     }
     #[cfg(not(debug_assertions))]
-    { () }
+    {}
   };
 }
 
@@ -74,7 +73,7 @@ macro_rules! dedoc_dbg
       dbg!($($e),+);
     }
     #[cfg(not(debug_assertions))]
-    { () }
+    {}
   };
 }
 
@@ -415,20 +414,29 @@ fn get_home_directory() -> Result<PathBuf, String>
 
   let home: PathBuf = if let Ok(home_path) = home_env {
     PathBuf::from(home_path)
+  } else if cfg!(target_family = "unix") {
+    let user =
+      std::env::var("USER").map_err(|err| {
+                             format!("Could not get $USER variable: {err}")
+                           })?;
+    format!("/home/{user}").into()
+  } else if cfg!(target_family = "windows") {
+    let user = std::env::var("USERNAME").map_err(|err| {
+                 format!("Could not get $USERNAME variable: {err}")
+               })?;
+    format!("C:\\Users\\{user}").into()
   } else {
-    let user = std::env::var("USER").map_err(|err| err.to_string())?;
-    if cfg!(target_family = "unix") {
-      format!("/home/{user}").into()
-    } else if cfg!(target_family = "windows") {
-      format!("C:\\Users\\{user}").into()
-    } else {
-      return Err("TempleOS is not supported".to_string());
-    }
+    unreachable!();
   };
 
   match home.try_exists() {
     Ok(true) => Ok(home),
-    Ok(false) => Err("Your home directory does not exist".to_string()),
+    Ok(false) => {
+      Err(format!("Your home directory (`{}`) does not exist. This may be \
+                   caused due to user name and home folder's name mismatch. \
+                   Making a symlink may help.",
+                  home.display()))
+    }
     Err(err) => Err(format!("Could not figure out home directory: {err}")),
   }
 }
@@ -439,7 +447,7 @@ static PROGRAM_DIRECTORY_INIT: Once = Once::new();
 pub(crate) fn get_program_directory() -> Result<PathBuf, String>
 {
   unsafe {
-    if let Some(program_dir) = PROGRAM_DIRECTORY.as_ref() {
+    if let Some(ref program_dir) = PROGRAM_DIRECTORY {
       return Ok(program_dir.clone());
     }
   }
@@ -450,31 +458,38 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String>
       match Path::new(&path_string).try_exists() {
         Ok(true) => return Ok(path_string.into()),
         Ok(false) => {
-          print_warning!("Path specified in \
-                          ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
-                          (`{path_string}`) does not exist, falling back to \
-                          the home directory.");
+          return Err(format!(
+            "Path specified in ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
+             (`{path_string}`) does not exist. Please create it manually."
+          ));
         }
         Err(err) => {
-          print_warning!("Could not check whether path specified in \
-                          ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
-                          (`{path_string}`) exists: {err}");
+          return Err(format!("Could not check whether path specified in \
+                              ${DEFAULT_PROGRAM_DIR_ENV_VARIABLE} \
+                              (`{path_string}`) exists: {err}"));
         }
       }
     }
     let path = get_home_directory()?;
     let dot_program = format!(".{PROGRAM_NAME}");
+    debug_println!("{}", path.join(&dot_program).display());
     Ok(path.join(dot_program))
   }
 
-  let program_dir = internal()?;
   unsafe {
-    PROGRAM_DIRECTORY_INIT.call_once(|| {
-                            PROGRAM_DIRECTORY = Some(program_dir.clone());
+    let mut err = None;
+    PROGRAM_DIRECTORY_INIT.call_once(|| match internal() {
+                            Ok(d) => PROGRAM_DIRECTORY = Some(d),
+                            Err(e) => err = Some(e),
                           });
+    if let Some(msg) = err {
+      Err(msg)
+    } else if let Some(ref dir) = PROGRAM_DIRECTORY {
+      Ok(dir.to_path_buf())
+    } else {
+      unreachable!()
+    }
   }
-
-  Ok(program_dir)
 }
 
 pub(crate) fn create_program_directory() -> ResultS
@@ -490,7 +505,7 @@ pub(crate) fn create_program_directory() -> ResultS
   if program_path.is_dir() {
     Ok(())
   } else {
-    Err("Could not create {program_path:?}".to_string())
+    Err("Could not create `{program_path:?}`".to_string())
   }
 }
 
@@ -546,25 +561,36 @@ pub(crate) fn find_docset_in_docs<'a>(docset_name: &str,
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
+pub(crate) fn make_sure_docset_is_in_docs(docset_name: &str,
+                                          docs: &[DocsEntry])
+                                          -> ResultS
+{
+  match is_docset_in_docs(docset_name, docs) {
+    SearchMatch::Vague(vague_matches) => {
+      let end_index = std::cmp::min(3, vague_matches.len());
+      let first_three = &vague_matches[..end_index];
+      Err(format!("Unknown docset `{docset_name}`. Did you mean `{}`?",
+                  first_three.join("`/`")))
+    }
+    SearchMatch::None => {
+      Err(format!("Unknown docset `{docset_name}`. Did you run \
+                   `{PROGRAM_NAME} fetch`?"))
+    }
+    _ => Ok(()),
+  }
+}
+
+// Returns `true` when docset exists in `docs.json`, print a warning otherwise.
 pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str,
                                                  docs: &[DocsEntry])
                                                  -> bool
 {
-  match is_docset_in_docs(docset_name, docs) {
-    SearchMatch::Exact => return true,
-    SearchMatch::Vague(vague_matches) => {
-      let end_index = std::cmp::min(3, vague_matches.len());
-      let first_three = &vague_matches[..end_index];
-
-      print_warning!("Unknown docset `{docset_name}`. Did you mean `{}`?",
-                     first_three.join("`/`"));
-    }
-    SearchMatch::None => {
-      print_warning!("Unknown docset `{docset_name}`. Did you run \
-                      `{PROGRAM_NAME} fetch`?");
-    }
+  if let Err(err) = make_sure_docset_is_in_docs(docset_name, docs) {
+    print_warning!("{}", err);
+    false
+  } else {
+    true
   }
-  false
 }
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in
@@ -684,4 +710,10 @@ pub(crate) fn is_docs_json_exists() -> Result<bool, String>
 pub(crate) fn get_docset_path(docset_name: &str) -> Result<PathBuf, String>
 {
   Ok(get_program_directory()?.join("docsets").join(docset_name))
+}
+
+#[inline]
+pub(crate) fn get_default_user_agent() -> String
+{
+  format!("{PROGRAM_NAME}/{VERSION}")
 }

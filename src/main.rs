@@ -8,7 +8,7 @@ mod common;
 
 use common::get_flag_error;
 use common::ResultS;
-use common::{BOLD, GRAY, GREEN, PROGRAM_NAME, RED, RESET, UNDERLINE, VERSION};
+use common::{BOLD, GREEN, PROGRAM_NAME, RED, RESET, UNDERLINE, VERSION};
 
 mod download;
 mod fetch;
@@ -29,6 +29,10 @@ use search::search;
 
 #[cfg(debug_assertions)]
 use test::debug_test;
+
+#[cfg(not(unix))]
+#[cfg(not(windows))]
+const OS: ! = panic!("Temple OS is not supported.");
 
 fn show_version() -> ResultS
 {
@@ -51,18 +55,18 @@ There is NO WARRANTY, to the extent permitted by law."
 fn show_help() -> ResultS
 {
   println!(
-    "\
+           "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
     Search DevDocs pages from terminal.
 
 {GREEN}SUBCOMMANDS{RESET}
-    fetch{GRAY}, ft{RESET}                       Fetch available docsets.
-    list{GRAY}, ls{RESET}                        Show docsets available for download.
-    download{GRAY}, dl{RESET}                    Download and update docsets.
-    remove{GRAY}, rm{RESET}                      Delete local docsets.
-    search{GRAY}, ss{RESET}                      List pages that match your query.
-    open{GRAY}, op{RESET}                        Display specified pages.
+    ft, fetch                       Fetch available docsets.
+    ls, list                        Show docsets available for download.
+    dl, download                    Download and update docsets.
+    rm, remove                      Delete local docsets.
+    ss, search                      List pages that match your query.
+    op, open                        Display specified pages.
 
 {GREEN}OPTIONS{RESET}
     -c, --force-colors              Forcefully enable colors.
@@ -76,8 +80,8 @@ fn show_help() -> ResultS
 fn entry<Args>(mut args: Args) -> ResultS
   where Args: Iterator<Item = String>
 {
-  debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
-  debug_println!("Run `test` to perform tests.");
+  debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}. Run `test` \
+                  to perform tests.");
 
   let mut flag_version;
   let mut flag_color;
@@ -101,6 +105,7 @@ fn entry<Args>(mut args: Args) -> ResultS
     unsafe { overwrite_should_use_colors(true) }
   } else if !flag_color.is_empty() {
     match flag_color.as_str() {
+      "auto" => {}
       "y" | "yes" | "on" => unsafe { overwrite_should_use_colors(true) },
       "n" | "no" | "off" => unsafe { overwrite_should_use_colors(false) },
       other => {

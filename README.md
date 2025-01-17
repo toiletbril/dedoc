@@ -1,11 +1,12 @@
 # dedoc
 
-Search and view [DevDocs](https://devdocs.io/) from your terminal. Offline.
+Search and view [DevDocs](https://devdocs.io/) offline from your terminal.
 **Without browser**. Without Python, Javascript or other inconveniences. Even
 without desktop environment.
 
 App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`. You can also
-define `$DEDOC_HOME` environment variable to a directory of your choice.
+define `$DEDOC_HOME` environment variable to an existing directory of your
+choice.
 
 Pages are displayed as markdown documents, and can be piped to `less`,
 [`glow`](https://github.com/charmbracelet/glow) if you're fancy, or any other
@@ -116,9 +117,9 @@ $ dedoc search rust bufreader -o 2
 This will be as fast as `open`, due to search caching. `-c` flag here works the
 same way as in `open`.
 
-You would probably like to use `ss` instead of `search`, pipe output to a pager
-or markdown reader, like `less` and forcefully enable colors for it with `-c`,
-turning the final command into:
+You would probably like to forcefully enable colors for non-terminals with `-c`,
+use `ss` instead of `search` and pipe output to a pager or markdown reader, like
+`less` with `-r` to reinterpret colors, turning the final command into:
 ```console
 $ dedoc -c ss rust bufreader -o 2 | less -r
 ```
