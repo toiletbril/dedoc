@@ -69,6 +69,7 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
 
       let response =
         get(&download_link).set("User-Agent", &get_default_user_agent())
+                           .set("Accept-Encoding", "gzip")
                            .call()
                            .map(|x| x.into_reader())
                            .map_err(|err| {
