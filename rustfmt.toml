@@ -1,6 +1,6 @@
 indent_style = "visual"
 brace_style = "alwaysnextline"
-max_width = 80
+max_width = 100
 tab_spaces = 2
 use_small_heuristics = "max"
 binop_separator = "back"

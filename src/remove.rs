@@ -4,9 +4,7 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{
-  get_docset_path, get_flag_error, get_local_docsets, is_docset_downloaded,
-};
+use crate::common::{get_docset_path, get_flag_error, get_local_docsets, is_docset_downloaded};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
 use crate::print_warning;
 
@@ -59,8 +57,7 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
     flag_purge_all: BoolFlag, ["--purge-all"]
   ];
 
-  let args =
-    parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
+  let args = parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
 
   if flag_purge_all {
     let local_docsets = get_local_docsets()?;
@@ -68,8 +65,7 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
       let docset_path = get_docset_path(&docset)?;
       println!("Removing `{docset}` from `{}`...", docset_path.display());
       remove_dir_all(&docset_path).map_err(|err| {
-                                    format!("Unable to remove `{}`: {err}",
-                                            docset_path.display())
+                                    format!("Unable to remove `{}`: {err}", docset_path.display())
                                   })?;
     }
     return Ok(());
@@ -90,8 +86,7 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
       if docset_path.exists() {
         println!("Removing `{docset}` from `{}`...", docset_path.display());
         remove_dir_all(&docset_path).map_err(|err| {
-                                      format!("Unable to remove `{}`: {err}",
-                                              docset_path.display())
+                                      format!("Unable to remove `{}`: {err}", docset_path.display())
                                     })?;
       }
     } else {

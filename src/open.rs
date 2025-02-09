@@ -4,13 +4,11 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, get_flag_error, get_terminal_width,
-  is_docs_json_exists, is_docset_downloaded, print_docset_file,
-  print_page_from_docset, split_to_item_and_fragment,
+  deserialize_docs_json, get_flag_error, get_terminal_width, is_docs_json_exists,
+  is_docset_downloaded, print_docset_file, print_page_from_docset, split_to_item_and_fragment,
 };
 use crate::common::{make_sure_docset_is_in_docs, ResultS};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
-use crate::print_warning;
 
 fn show_open_help() -> ResultS
 {
@@ -45,22 +43,23 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
     flag_help: BoolFlag,         ["--help"]
   ];
 
-  let args =
-    parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
+  let args = parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
   if flag_help || args.is_empty() {
     return show_open_help();
   }
 
   let mut width = get_terminal_width();
 
-  if let Ok(col_number) = flag_columns.parse::<usize>() {
-    if col_number == 0 {
+  if let Ok(c) = flag_columns.parse::<usize>() {
+    if c == 0 {
       width = 999;
-    } else if col_number > 10 {
-      width = col_number;
+    } else if c > 10 {
+      width = c;
+    } else {
+      return Err("Invalid number of columns (less than 10).".to_string());
     }
   } else if !flag_columns.is_empty() {
-    print_warning!("Invalid number of columns.");
+    return Err("Invalid number of columns.".to_string());
   }
 
   if flag_html {
@@ -70,10 +69,10 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
   }
 
   if !is_docs_json_exists()? {
-    return Err(
-        format!("The list of available documents has not yet been downloaded. \
-                 Please run `{PROGRAM_NAME} fetch` first.")
-      );
+    return Err(format!(
+      "The list of available documents has not yet been downloaded. \
+                 Please run `{PROGRAM_NAME} fetch` first."
+    ));
   }
 
   let mut args = args.into_iter();
@@ -92,16 +91,11 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
 
   let query = args.collect::<Vec<String>>().join(" ");
   if query.is_empty() {
-    return Err("No page specified. Try `open --help` for more information."
-                 .to_string());
+    return Err("No page specified. Try `open --help` for more information.".to_string());
   }
 
   let (item, fragment) = split_to_item_and_fragment(query)?;
-  print_page_from_docset(&docset,
-                         &item,
-                         fragment.as_ref(),
-                         width,
-                         flag_number_lines)?;
+  print_page_from_docset(&docset, &item, fragment.as_ref(), width, flag_number_lines)?;
 
   Ok(())
 }

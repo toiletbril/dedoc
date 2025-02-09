@@ -47,10 +47,7 @@ fn reset_state_and_cache()
 
 fn create_args(args: &str) -> IntoIter<String>
 {
-  args.split_whitespace()
-      .map(|s| s.to_string())
-      .collect::<Vec<String>>()
-      .into_iter()
+  args.split_whitespace().map(|s| s.to_string()).collect::<Vec<String>>().into_iter()
 }
 
 fn run_with_args<O>(command: fn(IntoIter<String>) -> Result<O, String>,
@@ -79,8 +76,7 @@ fn test_search_should_use_cache(args: &str)
   let cache_options_file = File::open(cache_options_path).unwrap();
   let cache_options_reader = BufReader::new(cache_options_file);
 
-  let cached_search_options: SearchContext =
-    serde_json::from_reader(cache_options_reader).unwrap();
+  let cached_search_options: SearchContext = serde_json::from_reader(cache_options_reader).unwrap();
 
   assert!(try_use_cache(&cached_search_options).is_some());
 
@@ -100,8 +96,7 @@ pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
     flag_help: BoolFlag, ["--help"]
   ];
 
-  let args =
-    parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
+  let args = parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
 
   if flag_help {
     return show_test_help();
@@ -112,14 +107,10 @@ pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
     run_with_args(fetch, "", "fetch docs.json");
     run_with_args(fetch, "", "show a fetch warning");
 
-    run_with_args(remove,
-                  "backbone bower",
-                  "remove backbone and bower if they exist");
+    run_with_args(remove, "backbone bower", "remove backbone and bower if they exist");
     run_with_args(download, "backbone bower", "download docsets");
   } else {
-    debug_println!(
-      "Skipping `fetch` and `download`. Use `-f` flag to avoid skipping."
-    );
+    debug_println!("Skipping `fetch` and `download`. Use `-f` flag to avoid skipping.");
   }
 
   run_with_args(download, "erl", "suggest three erlang versions");
@@ -134,25 +125,17 @@ pub(crate) fn debug_test<Args>(mut args: Args) -> ResultS
   let search_results =
     [run_with_args(search, "backbone -o 1", "open first page"),
      run_with_args(search, "backbone -o 100", "open 100th page"),
-     run_with_args(search,
-                   "backbone -i collection-at",
-                   "list search results in correct casing"),
-     run_with_args(search,
-                   "backbone -i collection-at -o 1",
-                   "open first page"),
+     run_with_args(search, "backbone -i collection-at", "list search results in correct casing"),
+     run_with_args(search, "backbone -i collection-at -o 1", "open first page"),
      run_with_args(search, "backbone -p map", "list precise search results"),
-     run_with_args(search,
-                   "backbone -pi underscore",
-                   "list underscore.js with right case"),
+     run_with_args(search, "backbone -pi underscore", "list underscore.js with right case"),
      // This fails, because for some reason html2text fails to find fragments
      // that are inside of <li> tags :(
      run_with_args(search, "backbone -o 150", "show model-values"),
      run_with_args(search, "bower", "list bower results"),
      run_with_args(search, "bower -o 18", "show update"),
      run_with_args(search, "bower -o 3", "show cache"),
-     run_with_args(search,
-                   "bower hahaha nothing",
-                   "should result in no matches")];
+     run_with_args(search, "bower hahaha nothing", "should result in no matches")];
 
   let times_search_failed = search_results.iter().filter(|res| !*res).count();
   debug_println!("Search tests completed, {times_search_failed} tests failed.");

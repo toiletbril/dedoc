@@ -72,6 +72,7 @@ name = "dedoc"
 version = "0.2.7"
 dependencies = [
  "html2text",
+ "libc",
  "serde",
  "serde_json",
  "terminal_size",

@@ -139,8 +139,9 @@ pub(crate) fn deserialize_docs_json() -> Result<Vec<DocsEntry>, String>
 
   let reader = BufReader::new(file);
 
-  let docs = serde_json::from_reader(reader)
-    .map_err(|err| format!("{err}. Maybe `docs.json` was modified?"))?;
+  let docs = serde_json::from_reader(reader).map_err(|err| {
+                                              format!("{err}. Maybe `docs.json` was modified?")
+                                            })?;
 
   Ok(docs)
 }
@@ -179,18 +180,16 @@ pub(crate) fn get_flag_error(flag_error: &FlagError) -> String
 pub(crate) fn get_terminal_width() -> usize
 {
   if let Some((terminal_size::Width(w), _)) = terminal_size::terminal_size() {
-    if w < 120 {
+    if w < 144 {
       return w as usize;
     }
-    return 120;
+    return 144;
   }
   DEFAULT_WIDTH
 }
 
 #[inline]
-pub(crate) fn split_to_item_and_fragment(
-  path: String)
-  -> Result<(String, Option<String>), String>
+pub(crate) fn split_to_item_and_fragment(path: String) -> Result<(String, Option<String>), String>
 {
   let mut path_split = path.split('#');
 
@@ -224,9 +223,7 @@ fn get_tag_style(tagged_string_tags: &Vec<RichAnnotation>) -> String
       RichAnnotation::Colour(Colour { r, g, b }) => {
         format!("{}", Color::RGB(r, g, b))
       }
-      RichAnnotation::BgColour(Colour { r, g, b }) => {
-        Color::RGB(r, g, b).to_string()
-      }
+      RichAnnotation::BgColour(Colour { r, g, b }) => Color::RGB(r, g, b).to_string(),
       _ => continue,
     };
 
@@ -250,9 +247,7 @@ fn get_fragment_bounds(tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
   for (line_number, tagged_line) in tagged_lines.iter().enumerate() {
     for tagged_line_element in tagged_line.iter() {
       match tagged_line_element {
-        FragmentStart(temp_fragment)
-          if temp_fragment.to_lowercase() == lowercase_fragment =>
-        {
+        FragmentStart(temp_fragment) if temp_fragment.to_lowercase() == lowercase_fragment => {
           current_fragment_line = Some(line_number);
           found_fragment = true;
         }
@@ -274,10 +269,8 @@ pub(crate) fn print_docset_file(path: PathBuf,
                                 number_lines: bool)
                                 -> Result<bool, String>
 {
-  let file = File::open(&path).map_err(|err| {
-                                format!("Could not open `{}`: {err}",
-                                        path.display())
-                              })?;
+  let file =
+    File::open(&path).map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
   let reader = BufReader::new(file);
 
   // If we are outputting line numbers, leave 7 columns for ourselves.
@@ -294,8 +287,7 @@ pub(crate) fn print_docset_file(path: PathBuf,
   // If there is a fragment, determine current fragment offset and print
   // everything until the next fragment.
   if let Some(fragment) = fragment {
-    let (current_fragment, next_fragment) =
-      get_fragment_bounds(&rich_page, fragment);
+    let (current_fragment, next_fragment) = get_fragment_bounds(&rich_page, fragment);
 
     if let Some(line) = current_fragment {
       current_fragment_line = line;
@@ -309,9 +301,7 @@ pub(crate) fn print_docset_file(path: PathBuf,
     // @@@: figure out better way to short-circuit search when it fails a test
     #[cfg(debug_assertions)]
     if !is_fragment_found {
-      return Err(format!(
-        "debug: #{fragment} is specified but wasn't found in the page"
-      ));
+      return Err(format!("debug: #{fragment} is specified but wasn't found in the page"));
     }
   }
 
@@ -356,8 +346,7 @@ pub(crate) fn print_docset_file(path: PathBuf,
       if is_only_tag {
         // Pad preformat to terminal width for cool background.
         if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
-          let padding_amount =
-            actual_width.saturating_sub(tagged_string.s.len());
+          let padding_amount = actual_width.saturating_sub(tagged_string.s.len());
 
           for _ in 0..padding_amount {
             line_buffer += " ";
@@ -393,8 +382,7 @@ pub(crate) fn print_page_from_docset(docset_name: &str,
 {
   let docset_path = get_docset_path(docset_name)?;
 
-  let page_path_string =
-    docset_path.join(page).display().to_string() + "." + DOC_PAGE_EXTENSION;
+  let page_path_string = docset_path.join(page).display().to_string() + "." + DOC_PAGE_EXTENSION;
   let page_path = PathBuf::from(page_path_string);
 
   if !page_path.is_file() {
@@ -415,15 +403,11 @@ fn get_home_directory() -> Result<PathBuf, String>
   let home: PathBuf = if let Ok(home_path) = home_env {
     PathBuf::from(home_path)
   } else if cfg!(target_family = "unix") {
-    let user =
-      std::env::var("USER").map_err(|err| {
-                             format!("Could not get $USER variable: {err}")
-                           })?;
+    let user = std::env::var("USER").map_err(|err| format!("Could not get $USER variable: {err}"))?;
     format!("/home/{user}").into()
   } else if cfg!(target_family = "windows") {
-    let user = std::env::var("USERNAME").map_err(|err| {
-                 format!("Could not get $USERNAME variable: {err}")
-               })?;
+    let user =
+      std::env::var("USERNAME").map_err(|err| format!("Could not get $USERNAME variable: {err}"))?;
     format!("C:\\Users\\{user}").into()
   } else {
     unreachable!();
@@ -497,8 +481,7 @@ pub(crate) fn create_program_directory() -> ResultS
   let program_path = get_program_directory()?;
   if !program_path.exists() {
     create_dir_all(&program_path).map_err(|err| {
-                                   format!("Could not create `{}`: {err}",
-                                           program_path.display())
+                                   format!("Could not create `{}`: {err}", program_path.display())
                                  })?;
   }
 
@@ -514,11 +497,10 @@ const WEEK: Duration = Duration::from_secs(60 * 60 * 24 * 7);
 pub(crate) fn is_docs_json_old() -> Result<bool, String>
 {
   let program_path = get_program_directory()?;
-  let metadata =
-    program_path.join("docs.json").metadata().map_err(|err| err.to_string())?;
+  let metadata = program_path.join("docs.json").metadata().map_err(|err| err.to_string())?;
   let modified_time = metadata.modified().map_err(|err| err.to_string())?;
-  let elapsed_time = SystemTime::now().duration_since(modified_time)
-                                      .map_err(|err| err.to_string())?;
+  let elapsed_time =
+    SystemTime::now().duration_since(modified_time).map_err(|err| err.to_string())?;
   if elapsed_time > WEEK {
     Ok(true)
   } else {
@@ -526,21 +508,17 @@ pub(crate) fn is_docs_json_old() -> Result<bool, String>
   }
 }
 
-pub(crate) fn write_to_logfile(message: impl Display)
-                               -> Result<PathBuf, String>
+pub(crate) fn write_to_logfile(message: impl Display) -> Result<PathBuf, String>
 {
   let log_file_path = get_program_directory()?.join("logs.txt");
-  let mut log_file = if log_file_path.exists() {
-                       File::options().append(true).open(&log_file_path)
-                     } else {
-                       File::create(&log_file_path)
-                     }.map_err(|err| {
-                        format!("Could not open `{}`: {err}",
-                                log_file_path.display())
-                      })?;
+  let mut log_file =
+    if log_file_path.exists() {
+      File::options().append(true).open(&log_file_path)
+    } else {
+      File::create(&log_file_path)
+    }.map_err(|err| format!("Could not open `{}`: {err}", log_file_path.display()))?;
   writeln!(log_file, "{}", message).map_err(|err| {
-                                     format!("Could not write `{}`: {err}",
-                                             log_file_path.display())
+                                     format!("Could not write `{}`: {err}", log_file_path.display())
                                    })?;
   Ok(log_file_path)
 }
@@ -561,16 +539,13 @@ pub(crate) fn find_docset_in_docs<'a>(docset_name: &str,
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
-pub(crate) fn make_sure_docset_is_in_docs(docset_name: &str,
-                                          docs: &[DocsEntry])
-                                          -> ResultS
+pub(crate) fn make_sure_docset_is_in_docs(docset_name: &str, docs: &[DocsEntry]) -> ResultS
 {
   match is_docset_in_docs(docset_name, docs) {
     SearchMatch::Vague(vague_matches) => {
       let end_index = std::cmp::min(3, vague_matches.len());
       let first_three = &vague_matches[..end_index];
-      Err(format!("Unknown docset `{docset_name}`. Did you mean `{}`?",
-                  first_three.join("`/`")))
+      Err(format!("Unknown docset `{docset_name}`. Did you mean `{}`?", first_three.join("`/`")))
     }
     SearchMatch::None => {
       Err(format!("Unknown docset `{docset_name}`. Did you run \
@@ -581,9 +556,7 @@ pub(crate) fn make_sure_docset_is_in_docs(docset_name: &str,
 }
 
 // Returns `true` when docset exists in `docs.json`, print a warning otherwise.
-pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str,
-                                                 docs: &[DocsEntry])
-                                                 -> bool
+pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str, docs: &[DocsEntry]) -> bool
 {
   if let Err(err) = make_sure_docset_is_in_docs(docset_name, docs) {
     print_warning!("{}", err);
@@ -595,9 +568,7 @@ pub(crate) fn is_docset_in_docs_or_print_warning(docset_name: &str,
 
 // `exact` is a perfect match, `vague` are files that contain `docset_name` in
 // their path.
-pub(crate) fn is_docset_in_docs(docset_name: &str,
-                                docs: &[DocsEntry])
-                                -> SearchMatch
+pub(crate) fn is_docset_in_docs(docset_name: &str, docs: &[DocsEntry]) -> SearchMatch
 {
   let mut vague_matches = vec![];
 
@@ -622,9 +593,7 @@ pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>
   let mtime_path = get_docset_path(docset_name)?.join(MTIME_FILENAME);
   let mtime_exists =
     mtime_path.try_exists()
-              .map_err(|err| {
-                format!("Could not check `{}`: {err}", mtime_path.display())
-              })?;
+              .map_err(|err| format!("Could not check `{}`: {err}", mtime_path.display()))?;
   if !mtime_exists {
     // Could not determine mtime. Since that docset belongs to older version of
     // dedoc, assume that the docset is old.
@@ -632,24 +601,22 @@ pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>
   }
 
   let mut mtime_file = File::open(&mtime_path).map_err(|err| {
-                         format!("Could not open `{}`: {err}",
-                                 mtime_path.display())
-                       })?;
+                                                format!("Could not open `{}`: {err}",
+                                                        mtime_path.display())
+                                              })?;
   let mut mtime_string = String::new();
-  let _ = mtime_file.read_to_string(&mut mtime_string).map_err(|err| {
-    format!("Could not read `{}`: {err}", mtime_path.display())
-  })?;
-  let mtime = mtime_string.parse::<u64>().map_err(|err| {
-    format!("Could not parse mtime of `{}`: {err}", mtime_path.display())
-  })?;
+  let _ = mtime_file.read_to_string(&mut mtime_string)
+                    .map_err(|err| format!("Could not read `{}`: {err}", mtime_path.display()))?;
+  let mtime = mtime_string.parse::<u64>()
+                          .map_err(|err| {
+                            format!("Could not parse mtime of `{}`: {err}", mtime_path.display())
+                          })?;
 
   Ok(mtime)
 }
 
 #[inline]
-pub(crate) fn is_docset_old(docset_name: &str,
-                            docs: &[DocsEntry])
-                            -> Result<bool, String>
+pub(crate) fn is_docset_old(docset_name: &str, docs: &[DocsEntry]) -> Result<bool, String>
 {
   if let Some(entry) = find_docset_in_docs(docset_name, docs) {
     return Ok(entry.mtime > get_docset_mtime(docset_name)?);
@@ -677,14 +644,11 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
   let docsets_path = get_program_directory()?.join("docsets");
   let docsets_dir_exists =
     docsets_path.try_exists()
-                .map_err(|err| {
-                  format!("Could not check `{}`: {err}", docsets_path.display())
-                })?;
+                .map_err(|err| format!("Could not check `{}`: {err}", docsets_path.display()))?;
 
   if !docsets_dir_exists {
     if let Err(err) = create_dir_all(&docsets_path) {
-      return Err(format!("Could not create `{}` directory: {err}",
-                         docsets_path.display()));
+      return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
     }
   }
   let docsets_dir = read_dir(docsets_path).map_err(|err| err.to_string())?;
@@ -694,8 +658,7 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
   for entry in docsets_dir {
     let entry = entry.map_err(|err| err.to_string())?;
 
-    let holy_result_option_please_stop =
-      entry.file_name().to_string_lossy().to_string();
+    let holy_result_option_please_stop = entry.file_name().to_string_lossy().to_string();
 
     result.push(holy_result_option_please_stop);
   }
@@ -707,8 +670,7 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
 }
 
 #[inline]
-pub(crate) fn is_docset_downloaded(docset_name: &String)
-                                   -> Result<bool, String>
+pub(crate) fn is_docset_downloaded(docset_name: &String) -> Result<bool, String>
 {
   get_docset_path(docset_name)?
     .try_exists()

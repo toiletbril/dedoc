@@ -52,10 +52,10 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   }
 
   if !is_docs_json_exists()? {
-    return Err(
-        format!("The list of available documents has not yet been downloaded. \
-                 Please run `{PROGRAM_NAME} fetch` first.")
-      );
+    return Err(format!(
+      "The list of available documents has not yet been downloaded. \
+                 Please run `{PROGRAM_NAME} fetch` first."
+    ));
   }
 
   let mut first_result = true;
@@ -70,8 +70,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   }
 
   if flag_local && flag_nonlocal {
-    return Err("Both -o and -l are enabled. Please make a final decision."
-               .to_string());
+    return Err("Both -o and -l are enabled. Please make a final decision.".to_string());
   }
 
   if flag_local {
@@ -93,8 +92,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   }
 
   let docs = deserialize_docs_json()?;
-  let docs_names =
-    docs.iter().map(|entry| entry.slug.to_string()).collect::<Vec<String>>();
+  let docs_names = docs.iter().map(|entry| entry.slug.to_string()).collect::<Vec<String>>();
 
   for ref entry in docs_names {
     if should_filter && !entry.contains(&flag_search) {
