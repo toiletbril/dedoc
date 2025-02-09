@@ -124,4 +124,19 @@ use `ss` instead of `search` and pipe output to a pager or markdown reader, like
 $ dedoc -c ss rust bufreader -o 2 | less -r
 ```
 
+## Script support
+
+There is a `render` subcommand, which allows you to render the entire docset to
+markdown. By default, all docsets are stored in HTML files and are rendered on
+the fly, to support toggling the colors and dynamic output size. By using the
+subcommand, the docset will be rendered without colors and with the width
+specified in `-c` (144 by default) into a directory specified in `-d`
+(`~/.dedoc/rendered/<docset>` by default). You can render all at once with `--all`
+and re-render as much as you want.
+
+Some commands support `--porcelain`, to make life slightly easier when parsing
+the output.
+
+You may take a look at the [example script](./dedoc-fzf.sh) for an inspiration.
+
 Happy coding!

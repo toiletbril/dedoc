@@ -302,7 +302,8 @@ pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
       has_next_fragment = true;
     }
 
-    // @@@: figure out better way to short-circuit search when it fails a test
+    // @@@: figure out better way to short-circuit search when it fails a test.
+    // @@@: search for a line number?
     #[cfg(debug_assertions)]
     if !is_fragment_found {
       return Err(format!("debug: #{fragment} is specified but wasn't found in the {}",

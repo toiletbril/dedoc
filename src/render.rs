@@ -2,8 +2,6 @@ use std::fs::{create_dir, create_dir_all, read_dir, File};
 use std::io::{stdout, Write};
 use std::path::Path;
 
-use toiletcli::common::overwrite_should_use_colors;
-use toiletcli::escapes::Erase;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
@@ -27,9 +25,11 @@ fn show_render_help() -> ResultS
 {GREEN}OPTIONS{RESET}
     -c, --columns                   Change output width in columns. Default is
                                     144.
-    -d, --output-dir                Specify output directory.
-        --all                       Render all docsets. In case of -d, a
-                                    subdirectory will be created for each docset.
+    -d, --output-dir                Specify output directory. Default is
+                                    `~/.dedoc/rendered/<docset>`.
+        --all                       Render all docsets. In case of `-d`, a
+                                    subdirectory will be created for each
+                                    docset anyway.
         --help                      Display help message."
   );
   Ok(())
@@ -37,10 +37,12 @@ fn show_render_help() -> ResultS
 
 fn render_docset(docset: &str, output_dir: &Path, page_width: usize) -> ResultS
 {
-  fn render_docset_recurse(docset_path: &Path,
+  fn render_docset_recurse(docset: &str,
+                           docset_path: &Path,
                            path: &Path,
                            output_dir: &Path,
-                           page_width: usize)
+                           page_width: usize,
+                           counter: &mut usize)
                            -> ResultS
   {
     let docset_dir = read_dir(&path).map_err(|err| {
@@ -68,7 +70,7 @@ fn render_docset(docset: &str, output_dir: &Path, page_width: usize) -> ResultS
                                             md_dir_path.display())
                                   })?;
         }
-        render_docset_recurse(docset_path, &entry.path(), output_dir, page_width)?;
+        render_docset_recurse(docset, docset_path, &entry.path(), output_dir, page_width, counter)?;
         continue;
       }
 
@@ -76,14 +78,14 @@ fn render_docset(docset: &str, output_dir: &Path, page_width: usize) -> ResultS
         continue;
       }
 
+      print!("\rRendered {} files from `{}` into `{}`...", counter, docset, output_dir.display());
+      stdout().flush().map_err(|err| format!("Could not flush stdout: {err}"))?;
+
       let md_dir = md_dir.parent().expect("uhh");
       let mut md_file_path = md_dir.join(entry.file_name().to_string_lossy().to_string());
       md_file_path.set_extension("md");
 
       let file_path = output_dir.join(md_file_path);
-
-      print!("\rRendering `{}`...{}", file_path.display(), Erase::LineAfter);
-      stdout().flush().map_err(|err| format!("Could not flush stdout: {err}"))?;
 
       let mut file = File::create(&file_path).map_err(|err| {
                                                format!("Could not create `{}`: {}",
@@ -91,18 +93,24 @@ fn render_docset(docset: &str, output_dir: &Path, page_width: usize) -> ResultS
                                                        err.to_string())
                                              })?;
 
-      file.write(&translate_docset_file_to_markdown(entry.path(), None, page_width, false, false)?.0.as_bytes()).map_err(|err| format!("Could not write to `{}`: {}", file_path.display(), err.to_string()))?;
+      file.write(&translate_docset_file_to_markdown(entry.path(), None, page_width, false, false)?.0.as_bytes())
+        .map_err(|err| format!("Could not write to `{}`: {}", file_path.display(), err.to_string()))?;
 
       let _ = file.flush();
+      *counter += 1;
     }
 
     Ok(())
   }
 
-  render_docset_recurse(&get_docset_path(docset)?,
+  let mut counter = 0;
+
+  render_docset_recurse(docset,
+                        &get_docset_path(docset)?,
                         &get_docset_path(docset)?,
                         output_dir,
-                        page_width)?;
+                        page_width,
+                        &mut counter)?;
   println!();
 
   Ok(())
@@ -152,7 +160,9 @@ pub(crate) fn render<Args>(mut args: Args) -> ResultS
                       format!("Could not check if `{}` exists: {err}", main_output_dir.display())
                     })?
   {
-    return Err("`{}` already exists. Please remove it before running the command.".to_string());
+    return Err(format!("`{}` already exists. Please remove it before running the \
+                        command to avoid flooding unrelated directories.",
+                       main_output_dir.display()));
   }
 
   let local_docsets = get_local_docsets()?;
@@ -171,42 +181,33 @@ pub(crate) fn render<Args>(mut args: Args) -> ResultS
       directories.push(main_output_dir.join(docset));
     }
 
-    {
-      let mut info_str = "The following directories will be created:".to_string();
-      for dir in &directories {
-        info_str = format!("{} {}", &info_str, dir.display());
-      }
-      print_warning!("{}", info_str);
-    }
-
-    create_dir(&main_output_dir).map_err(|err| {
-                                  format!("Could not create output directory `{}`: {err}",
-                                          main_output_dir.display())
-                                })?;
+    create_dir_all(&main_output_dir).map_err(|err| {
+                                      format!("Could not create output directory `{}`: {err}",
+                                              main_output_dir.display())
+                                    })?;
 
     for (ref docset, ref sub_dir) in local_docsets.into_iter().zip(directories) {
-      create_dir(sub_dir).map_err(|err| {
-                           format!("Could not create subdirectory `{}`: {err}", sub_dir.display())
-                         })?;
+      create_dir_all(sub_dir).map_err(|err| {
+                               format!("Could not create subdirectory `{}`: {err}",
+                                       sub_dir.display())
+                             })?;
       render_docset(docset, sub_dir, page_width)?;
     }
-
-    return Ok(());
-  }
-
-  for docset in args {
-    if !is_docset_downloaded(&docset)? {
-      make_sure_docset_is_in_docs(&docset, &deserialize_docs_json()?)?;
-      return Err(format!("Docset `{docset}` is not downloaded. Try running \
-                        `{PROGRAM_NAME} download {docset}`."));
+  } else {
+    for docset in args {
+      if !is_docset_downloaded(&docset)? {
+        make_sure_docset_is_in_docs(&docset, &deserialize_docs_json()?)?;
+        return Err(format!("Docset `{docset}` is not downloaded. Try running \
+                          `{PROGRAM_NAME} download {docset}`."));
+      }
+      let output_dir =
+        if !changed_directory { main_output_dir.join(&docset) } else { main_output_dir.clone() };
+      create_dir_all(&output_dir).map_err(|err| {
+                                   format!("Could not create subdirectory `{}`: {err}",
+                                           output_dir.display())
+                                 })?;
+      render_docset(&docset, &output_dir, page_width)?;
     }
-    let output_dir =
-      if !changed_directory { main_output_dir.join(&docset) } else { main_output_dir.clone() };
-    create_dir_all(&output_dir).map_err(|err| {
-                                 format!("Could not create subdirectory `{}`: {err}",
-                                         output_dir.display())
-                               })?;
-    render_docset(&docset, &output_dir, page_width)?;
   }
 
   println!("{BOLD}Render has successfully finished{RESET}.");

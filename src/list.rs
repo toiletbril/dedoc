@@ -6,6 +6,7 @@ use crate::common::{
   deserialize_docs_json, get_flag_error, get_local_docsets, is_docs_json_exists,
 };
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
+use crate::print_warning;
 
 fn show_list_help() -> ResultS
 {
@@ -50,9 +51,12 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     flag_help: BoolFlag,      ["--help"]
   ];
 
-  parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
+  let args = parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
   if flag_help {
     return show_list_help();
+  }
+  if !args.is_empty() {
+    print_warning!("Arguments were not used.");
   }
 
   if !is_docs_json_exists()? {
@@ -94,6 +98,8 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     }
     if !first_result {
       println!();
+    } else {
+      return Err("Nothing to do.".to_string());
     }
 
     return Ok(());
