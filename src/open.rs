@@ -5,8 +5,8 @@ use toiletcli::flags::*;
 
 use crate::common::{
   deserialize_docs_json, get_flag_error, get_terminal_width,
-  is_docs_json_exists, print_docset_file, print_page_from_docset,
-  split_to_item_and_fragment,
+  is_docs_json_exists, is_docset_downloaded, print_docset_file,
+  print_page_from_docset, split_to_item_and_fragment,
 };
 use crate::common::{make_sure_docset_is_in_docs, ResultS};
 use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
@@ -24,7 +24,7 @@ fn show_open_help() -> ResultS
     -h, --html                      Interpret arguments as a path to HTML file
                                     and translate it to markdown.
     -c, --columns <number>          Make output N columns wide.
-    -n, --line-numbers              Number output lines.
+    -n, --line-numbers              Number outputted lines.
         --help                      Display help message."
   );
   Ok(())
@@ -84,7 +84,11 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
     return show_open_help();
   };
 
-  make_sure_docset_is_in_docs(&docset, &deserialize_docs_json()?)?;
+  if !is_docset_downloaded(&docset)? {
+    make_sure_docset_is_in_docs(&docset, &deserialize_docs_json()?)?;
+    return Err(format!("Docset `{docset}` is not downloaded. Try running \
+                        `{PROGRAM_NAME} download {docset}`."));
+  }
 
   let query = args.collect::<Vec<String>>().join(" ");
   if query.is_empty() {

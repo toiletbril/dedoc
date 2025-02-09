@@ -47,8 +47,11 @@ dedoc {version}
 
 License GPLv3: GNU GPL version 3.
 This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law."
-  );
+There is NO WARRANTY, to the extent permitted by law.
+
+Report bugs and ask for features at <{UNDERLINE}https://github.com/toiletbril/dedoc{RESET}>.
+Have a great day!"
+);
   Ok(())
 }
 
@@ -58,15 +61,19 @@ fn show_help() -> ResultS
            "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
-    Search DevDocs pages from terminal.
+    Search and display DevDocs pages from terminal.
 
 {GREEN}SUBCOMMANDS{RESET}
-    ft, fetch                       Fetch available docsets.
-    ls, list                        Show docsets available for download.
-    dl, download                    Download and update docsets.
+    ft, fetch                       Fetch a list of available docsets.
+    ls, list                        Display docsets from the fetched list.
+    dl, download                    Download or update a docset from the list.
     rm, remove                      Delete local docsets.
-    ss, search                      List pages that match your query.
-    op, open                        Display specified pages.
+    ss, search                      List or display docset pages that match a
+                                    query.
+    op, open                        Display docset pages.
+
+  Each subcommand has its own `--help` option. Upon the first usage, please run
+  `dedoc fetch`.
 
 {GREEN}OPTIONS{RESET}
     -c, --force-colors              Forcefully enable colors.
