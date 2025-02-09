@@ -13,7 +13,7 @@ use toiletcli::flags::*;
 use crate::common::{
   deserialize_docs_json, get_docset_path, get_flag_error, get_program_directory,
   get_terminal_width, is_docs_json_exists, is_docset_downloaded, print_page_from_docset,
-  split_to_item_and_fragment,
+  split_to_item_and_fragment, validate_number_of_columns,
 };
 use crate::common::{make_sure_docset_is_in_docs, ResultS};
 use crate::common::{
@@ -34,7 +34,7 @@ fn show_search_help() -> ResultS
     -i, --ignore-case               Ignore character case.
     -p, --precise                   Look inside files (like `grep`).
     -o, --open <number>             Open N-th result.
-        --porcelain                 Give the in simpler format for scripts.
+        --porcelain                 Display the output in simpler format.
         --help                      Display help message.
 
   Options that work with `--open`:
@@ -651,18 +651,11 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
 
   let open_number = if flag_open.is_empty() { None } else { Some(flag_open.parse::<usize>().ok()) };
 
-  let mut page_width = None;
-  if let Ok(c) = flag_open_columns.parse::<usize>() {
-    if c == 0 {
-      page_width = Some(999);
-    } else if c >= 10 {
-      page_width = Some(c);
-    } else {
-      return Err("Invalid number of columns (less than 10).".to_string());
-    }
-  } else if !flag_open_columns.is_empty() {
-    return Err("Invalid number of columns.".to_string());
-  }
+  let page_width = if flag_open_columns.is_empty() {
+    None
+  } else {
+    Some(validate_number_of_columns(&flag_open_columns)?)
+  };
 
   let open_options = OpenOptions { open_number,
                                    ignore_fragment: flag_open_ignore_fragment,

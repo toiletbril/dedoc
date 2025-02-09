@@ -27,7 +27,9 @@ pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub(crate) const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
 pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";
 pub(crate) const DEFAULT_PROGRAM_DIR_ENV_VARIABLE: &str = "DEDOC_HOME";
+
 pub(crate) const DEFAULT_WIDTH: usize = 80;
+pub(crate) const MAX_WIDTH: usize = 144;
 
 pub(crate) const MTIME_FILENAME: &str = ".dedoc_mtime";
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
@@ -180,10 +182,10 @@ pub(crate) fn get_flag_error(flag_error: &FlagError) -> String
 pub(crate) fn get_terminal_width() -> usize
 {
   if let Some((terminal_size::Width(w), _)) = terminal_size::terminal_size() {
-    if w < 144 {
+    if w < MAX_WIDTH as u16 {
       return w as usize;
     }
-    return 144;
+    return MAX_WIDTH;
   }
   DEFAULT_WIDTH
 }
@@ -263,12 +265,14 @@ fn get_fragment_bounds(tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
   (current_fragment_line, None)
 }
 
-pub(crate) fn print_docset_file(path: PathBuf,
-                                fragment: Option<&String>,
-                                width: usize,
-                                number_lines: bool)
-                                -> Result<bool, String>
+pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
+                                                fragment: Option<&String>,
+                                                width: usize,
+                                                number_lines: bool,
+                                                use_colors: bool)
+                                                -> Result<(String, bool), String>
 {
+  let mut output = String::new();
   let file =
     File::open(&path).map_err(|err| format!("Could not open `{}`: {err}", path.display()))?;
   let reader = BufReader::new(file);
@@ -301,12 +305,17 @@ pub(crate) fn print_docset_file(path: PathBuf,
     // @@@: figure out better way to short-circuit search when it fails a test
     #[cfg(debug_assertions)]
     if !is_fragment_found {
-      return Err(format!("debug: #{fragment} is specified but wasn't found in the page"));
+      return Err(format!("debug: #{fragment} is specified but wasn't found in the {}",
+                         path.display()));
     }
   }
 
   if is_fragment_found {
-    println!("{GRAYER}...{RESET}")
+    if use_colors {
+      output += &format!("{GRAYER}...{RESET}\n");
+    } else {
+      output += &format!("...\n");
+    }
   }
 
   let mut skipped_empty_lines = false;
@@ -330,11 +339,15 @@ pub(crate) fn print_docset_file(path: PathBuf,
 
     if number_lines {
       line_number += 1;
-      line_buffer += &format!("{GRAYER}{line_number:>5}{RESET}  ");
+      if use_colors {
+        line_buffer += &format!("{GRAYER}{line_number:>5}{RESET}  ");
+      } else {
+        line_buffer += &format!("{line_number:>5}  ");
+      }
     }
 
     for tagged_string in tagged_strings {
-      let style = get_tag_style(&tagged_string.tag);
+      let style = if use_colors { get_tag_style(&tagged_string.tag) } else { "".to_string() };
 
       if !tagged_string.s.is_empty() {
         line_is_empty = false;
@@ -343,7 +356,7 @@ pub(crate) fn print_docset_file(path: PathBuf,
       line_buffer += style.as_str();
       line_buffer += &tagged_string.s;
 
-      if is_only_tag {
+      if is_only_tag && use_colors {
         // Pad preformat to terminal width for cool background.
         if let Some(RichAnnotation::Preformat(_)) = tagged_string.tag.first() {
           let padding_amount = actual_width.saturating_sub(tagged_string.s.len());
@@ -354,23 +367,41 @@ pub(crate) fn print_docset_file(path: PathBuf,
         }
       }
 
-      line_buffer += &Style::Reset.to_string();
+      if use_colors {
+        line_buffer += &Style::Reset.to_string();
+      }
     }
 
     if !line_is_empty {
       skipped_empty_lines = true;
     }
     if skipped_empty_lines {
-      println!("{}", line_buffer);
+      output += &line_buffer;
+      output += "\n";
     }
     line_buffer.clear();
   }
 
   if has_next_fragment {
-    println!("{GRAYER}...{RESET}")
+    if use_colors {
+      output += &format!("{GRAYER}...{RESET}\n");
+    } else {
+      output += &format!("...\n");
+    }
   }
 
-  Ok(is_fragment_found)
+  Ok((output, is_fragment_found))
+}
+
+pub(crate) fn print_docset_file(path: PathBuf,
+                                fragment: Option<&String>,
+                                width: usize,
+                                number_lines: bool)
+                                -> Result<bool, String>
+{
+  let (output, ret) = translate_docset_file_to_markdown(path, fragment, width, number_lines, true)?;
+  println!("{}", output);
+  Ok(ret)
 }
 
 pub(crate) fn print_page_from_docset(docset_name: &str,
@@ -593,7 +624,7 @@ pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>
   let mtime_path = get_docset_path(docset_name)?.join(MTIME_FILENAME);
   let mtime_exists =
     mtime_path.try_exists()
-              .map_err(|err| format!("Could not check `{}`: {err}", mtime_path.display()))?;
+              .map_err(|err| format!("could not check `{}`: {err}", mtime_path.display()))?;
   if !mtime_exists {
     // Could not determine mtime. Since that docset belongs to older version of
     // dedoc, assume that the docset is old.
@@ -651,7 +682,11 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
       return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
     }
   }
-  let docsets_dir = read_dir(docsets_path).map_err(|err| err.to_string())?;
+  let docsets_dir = read_dir(&docsets_path).map_err(|err| {
+                                             format!("Could not traverse `{}`: {}",
+                                                     docsets_path.display(),
+                                                     err.to_string())
+                                           })?;
 
   let mut result = vec![];
 
@@ -693,4 +728,19 @@ pub(crate) fn get_docset_path(docset_name: &str) -> Result<PathBuf, String>
 pub(crate) fn get_default_user_agent() -> String
 {
   format!("{PROGRAM_NAME}/{VERSION}")
+}
+
+pub(crate) fn validate_number_of_columns(w: &str) -> Result<usize, String>
+{
+  if let Ok(c) = w.parse::<usize>() {
+    if c == 0 {
+      Ok(999)
+    } else if c >= 10 {
+      Ok(c)
+    } else {
+      Err("Invalid number of columns (less than 10).".to_string())
+    }
+  } else {
+    Err("Invalid number of columns.".to_string())
+  }
 }

@@ -93,7 +93,7 @@ fn download_db_and_index_json_with_progress(docset_name: &str, docs: &[DocsEntry
 
         print!("\rReceived {file_size} bytes, file {} of 2...", i + 1);
 
-        stdout().flush().map_err(|err| format!("Could not flush stdout:{err}"))?;
+        stdout().flush().map_err(|err| format!("Could not flush stdout: {err}"))?;
       }
       println!();
     }
@@ -306,6 +306,9 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
       print_warning!("Your `docs.json` was updated more than a week ago. Run \
                       `{PROGRAM_NAME} fetch` to retrieve a new list of \
                       available docsets.");
+    }
+    if !args.is_empty() {
+      print_warning!("Arguments are ignored due to `--update-all` flag.");
     }
     for ref docset in get_local_docsets()? {
       if is_docset_old(docset, &docs)? {

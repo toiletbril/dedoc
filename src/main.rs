@@ -15,6 +15,7 @@ mod fetch;
 mod list;
 mod open;
 mod remove;
+mod render;
 mod search;
 
 #[cfg(debug_assertions)]
@@ -25,6 +26,7 @@ use fetch::fetch;
 use list::list;
 use open::open;
 use remove::remove;
+use render::render;
 use search::search;
 
 #[cfg(debug_assertions)]
@@ -71,6 +73,7 @@ fn show_help() -> ResultS
     ss, search                      List or display docset pages that match a
                                     query.
     op, open                        Display docset pages.
+    rr, render                      Render docsets to markdown.
 
   Each subcommand has its own `--help` option. Upon the first usage, please run
   `dedoc fetch`.
@@ -140,6 +143,7 @@ fn entry<Args>(mut args: Args) -> ResultS
     "rm" | "remove" => remove(args),
     "ss" | "search" => search(args),
     "op" | "open" => open(args),
+    "rr" | "render" => render(args),
     #[cfg(debug_assertions)]
     "test" => debug_test(args),
     other => Err(format!("Unknown subcommand `{other}`")),

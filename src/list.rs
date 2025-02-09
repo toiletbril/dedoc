@@ -21,6 +21,8 @@ fn show_list_help() -> ResultS
                                     downloaded.
     -a, --all                       Show all version-specific docsets.
     -n, --newlines                  Print each docset on a separate line.
+        --porcelain                 Do what to -n, does and also don't print
+                                    `[downloaded]` labels.
     -s, --search <query>            Filter docsets based on a query.
         --help                      Display help message."
   );
@@ -35,15 +37,17 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   let mut flag_nonlocal;
   let mut flag_newlines;
   let mut flag_search;
+  let mut flag_porcelain;
   let mut flag_help;
 
   let mut flags = flags![
-    flag_all: BoolFlag,      ["-a", "--all"],
-    flag_local: BoolFlag,    ["-l", "--local"],
-    flag_nonlocal: BoolFlag, ["-o", "--non-local"],
-    flag_newlines: BoolFlag, ["-n", "--newlines"],
-    flag_search: StringFlag, ["-s", "--search"],
-    flag_help: BoolFlag,     ["--help"]
+    flag_all: BoolFlag,       ["-a", "--all"],
+    flag_local: BoolFlag,     ["-l", "--local"],
+    flag_nonlocal: BoolFlag,  ["-o", "--non-local"],
+    flag_newlines: BoolFlag,  ["-n", "--newlines"],
+    flag_search: StringFlag,  ["-s", "--search"],
+    flag_porcelain: BoolFlag, ["--porcelain"],
+    flag_help: BoolFlag,      ["--help"]
   ];
 
   parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
@@ -54,7 +58,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   if !is_docs_json_exists()? {
     return Err(format!(
       "The list of available documents has not yet been downloaded. \
-                 Please run `{PROGRAM_NAME} fetch` first."
+       Please run `{PROGRAM_NAME} fetch` first."
     ));
   }
 
@@ -62,9 +66,9 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
 
   let local_docsets = get_local_docsets()?;
   let should_filter = !flag_search.is_empty();
-  let separator = if flag_newlines { "\n" } else { ", " };
+  let separator = if flag_newlines || flag_porcelain { "\n" } else { ", " };
 
-  // show everything when searching :3c
+  // Show everything when searching.
   if should_filter {
     flag_all = true;
   }
@@ -81,7 +85,11 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
       if !first_result {
         print!("{}", separator);
       }
-      print!("{GREEN}{} [downloaded]{RESET}", entry);
+      print!("{GREEN}{}", entry);
+      if !flag_porcelain {
+        print!(" [downloaded]");
+      }
+      print!("{RESET}");
       first_result = false;
     }
     if !first_result {
@@ -109,7 +117,11 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
       if !first_result {
         print!("{}", separator);
       }
-      print!("{GREEN}{} [downloaded]{RESET}", entry);
+      print!("{GREEN}{}", entry);
+      if !flag_porcelain {
+        print!(" [downloaded]");
+      }
+      print!("{RESET}");
     } else {
       if !first_result {
         print!("{}", separator);
@@ -118,7 +130,8 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     }
     first_result = false;
   }
-  // a final newline only if something was found
+
+  // A final newline only if something was found.
   if !first_result {
     println!();
   }
