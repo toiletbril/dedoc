@@ -124,7 +124,7 @@ use `ss` instead of `search` and pipe output to a pager or markdown reader, like
 $ dedoc -c ss rust bufreader -o 2 | less -r
 ```
 
-## Script support
+## Scripting support
 
 There is a `render` subcommand, which allows you to render the entire docset to
 markdown. By default, all docsets are stored in HTML files and are rendered on

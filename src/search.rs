@@ -513,7 +513,9 @@ fn search_impl(is_porcelain: bool,
       }
     }
     if !exact_results.is_empty() {
-      println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+      if !is_porcelain {
+        println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+      }
       print_search_results(&exact_results, 1, is_porcelain)?;
     } else {
       if !is_porcelain {
@@ -522,7 +524,9 @@ fn search_impl(is_porcelain: bool,
     }
 
     if !vague_results.is_empty() {
-      println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
+      if !is_porcelain {
+        println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
+      }
       print_vague_search_results(&vague_results, exact_results_offset + 1, is_porcelain)?;
     } else {
       if !is_porcelain {

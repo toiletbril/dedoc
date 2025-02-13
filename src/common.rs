@@ -265,6 +265,7 @@ fn get_fragment_bounds(tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
   (current_fragment_line, None)
 }
 
+// -> (translated file as a string, whether specified fragment was found)
 pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
                                                 fragment: Option<&String>,
                                                 width: usize,
@@ -401,7 +402,7 @@ pub(crate) fn print_docset_file(path: PathBuf,
                                 -> Result<bool, String>
 {
   let (output, ret) = translate_docset_file_to_markdown(path, fragment, width, number_lines, true)?;
-  println!("{}", output);
+  print!("{}", output);
   Ok(ret)
 }
 
