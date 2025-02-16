@@ -7,9 +7,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Once;
 use std::time::{Duration, SystemTime};
 
-use html2text::render::text_renderer::{
-  RichAnnotation, TaggedLine, TaggedLineElement::*, TaggedString,
-};
+use html2text::render::RichAnnotation;
+use html2text::render::TaggedLine;
+use html2text::render::TaggedLineElement::FragmentStart;
 use html2text::Colour;
 
 use toiletcli::colors::{Color, Style};
@@ -281,7 +281,11 @@ pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
   // If we are outputting line numbers, leave 7 columns for ourselves.
   let actual_width = if number_lines { width - 7 } else { width };
 
-  let rich_page = html2text::from_read_rich(reader, actual_width);
+  let rich_page =
+    html2text::from_read_rich(reader, actual_width).map_err(|err| {
+                                                     format!("Failed to parse `{}`: {err}",
+                                                             path.display())
+                                                   })?;
 
   let mut current_fragment_line = 0;
   let mut next_fragment_line = 0;
@@ -316,14 +320,14 @@ pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
     if use_colors {
       output += &format!("{GRAYER}...{RESET}\n");
     } else {
-      output += &format!("...\n");
+      output += "...\n";
     }
   }
 
   let mut skipped_empty_lines = false;
   let mut line_number = 0;
 
-  for (i, rich_line) in rich_page.iter().enumerate() {
+  for (i, tagged_line) in rich_page.iter().enumerate() {
     if is_fragment_found && i < current_fragment_line {
       continue;
     }
@@ -331,8 +335,7 @@ pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
       break;
     }
 
-    let tagged_strings: Vec<&TaggedString<Vec<RichAnnotation>>> =
-      rich_line.tagged_strings().collect();
+    let tagged_strings: Vec<_> = tagged_line.tagged_strings().collect();
 
     let is_only_tag = tagged_strings.len() == 1;
 
@@ -388,7 +391,7 @@ pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
     if use_colors {
       output += &format!("{GRAYER}...{RESET}\n");
     } else {
-      output += &format!("...\n");
+      output += "...\n";
     }
   }
 
@@ -521,7 +524,7 @@ pub(crate) fn create_program_directory() -> ResultS
   if program_path.is_dir() {
     Ok(())
   } else {
-    Err("Could not create `{program_path:?}`".to_string())
+    Err(format!("Seems like `{}` is a file?", program_path.display()))
   }
 }
 
@@ -684,11 +687,10 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
       return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
     }
   }
-  let docsets_dir = read_dir(&docsets_path).map_err(|err| {
-                                             format!("Could not traverse `{}`: {}",
-                                                     docsets_path.display(),
-                                                     err.to_string())
-                                           })?;
+  let docsets_dir =
+    read_dir(&docsets_path).map_err(|err| {
+                             format!("Could not traverse `{}`: {}", docsets_path.display(), err)
+                           })?;
 
   let mut result = vec![];
 

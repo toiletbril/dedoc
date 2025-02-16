@@ -427,12 +427,10 @@ fn print_search_results(search_results: &[ExactResult],
       } else {
         println!("{}{GRAY}#{}{RESET}", result.item, fragment);
       }
+    } else if !is_porcelain {
+      println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}", result.item);
     } else {
-      if !is_porcelain {
-        println!("{GRAY}{start_index:>4}{RESET}{HALF_TAB}{}", result.item);
-      } else {
-        println!("{}", result.item);
-      }
+      println!("{}", result.item);
     }
 
     prev_item = &result.item;
@@ -517,10 +515,8 @@ fn search_impl(is_porcelain: bool,
         println!("{BOLD}Exact matches in `{docset}`{RESET}:");
       }
       print_search_results(&exact_results, 1, is_porcelain)?;
-    } else {
-      if !is_porcelain {
-        println!("{BOLD}No exact matches in `{docset}`{RESET}.");
-      }
+    } else if !is_porcelain {
+      println!("{BOLD}No exact matches in `{docset}`{RESET}.");
     }
 
     if !vague_results.is_empty() {
@@ -528,10 +524,8 @@ fn search_impl(is_porcelain: bool,
         println!("{BOLD}Mentions in other files from `{docset}`{RESET}:");
       }
       print_vague_search_results(&vague_results, exact_results_offset + 1, is_porcelain)?;
-    } else {
-      if !is_porcelain {
-        println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
-      }
+    } else if !is_porcelain {
+      println!("{BOLD}No mentions in other files from `{docset}`{RESET}.");
     }
 
     Ok(warnings)
@@ -574,9 +568,11 @@ fn search_impl(is_porcelain: bool,
       }
     }
     if !results.is_empty() {
-      println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+      if !is_porcelain {
+        println!("{BOLD}Exact matches in `{docset}`{RESET}:");
+      }
       print_search_results(&results, 1, is_porcelain)?;
-    } else {
+    } else if !is_porcelain {
       println!("{BOLD}No exact matches in `{docset}`{RESET}.");
     }
 

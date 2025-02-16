@@ -45,19 +45,17 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
                                              counter: &mut usize)
                                              -> ResultS
   {
-    let docset_dir = read_dir(&path).map_err(|err| {
-                                      format!("Could not read `{}` directory: {err}",
-                                              docset_path.display())
-                                    })?;
+    let docset_dir = read_dir(path).map_err(|err| {
+                                     format!("Could not read `{}` directory: {err}",
+                                             docset_path.display())
+                                   })?;
 
     for entry in docset_dir {
       let entry =
-        entry.map_err(|err| {
-               format!("Could not traverse `{}`: {}", docset_path.display(), err.to_string())
-             })?;
+        entry.map_err(|err| format!("Could not traverse `{}`: {}", docset_path.display(), err))?;
 
       let path_relative_to_docset =
-        entry.path().strip_prefix(&docset_path).expect("no way :(").to_owned();
+        entry.path().strip_prefix(docset_path).expect("no way :(").to_owned();
 
       if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
         let md_dir_path = &output_dir.join(&path_relative_to_docset);
@@ -66,10 +64,10 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
                          format!("Could not check if {} exists: {err}", docset_path.display())
                        })?
         {
-          create_dir(&md_dir_path).map_err(|err| {
-                                    format!("Could not create subdirectory `{}`: {err}",
-                                            md_dir_path.display())
-                                  })?;
+          create_dir(md_dir_path).map_err(|err| {
+                                   format!("Could not create subdirectory `{}`: {err}",
+                                           md_dir_path.display())
+                                 })?;
         }
         recurse_and_render_docset_with_progress(docset,
                                                 docset_path,
@@ -93,11 +91,11 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
       let mut file = File::create(&md_file_path).map_err(|err| {
                                                   format!("Could not create `{}`: {}",
                                                           md_file_path.display(),
-                                                          err.to_string())
+                                                          err)
                                                 })?;
 
-      file.write(&translate_docset_file_to_markdown(entry.path(), None, page_width, false, false)?.0.as_bytes())
-        .map_err(|err| format!("Could not write to `{}`: {}", md_file_path.display(), err.to_string()))?;
+      file.write(translate_docset_file_to_markdown(entry.path(), None, page_width, false, false)?.0.as_bytes())
+        .map_err(|err| format!("Could not write to `{}`: {}", md_file_path.display(), err))?;
 
       let _ = file.flush();
       *counter += 1;
