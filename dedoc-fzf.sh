@@ -2,7 +2,7 @@
 # List all pages from a docset, start `fzf`, search for a page and open it in
 # `less`.
 
-set -e
+set -eu
 
 # Find fzf.
 if ! which fzf > /dev/null; then
@@ -44,15 +44,17 @@ if test -z "$1"; then
   exit 0
 fi
 
+DOCSET=$1
+
 # Make sure the docset we need is installed. Command result substitution below
 # doesn't catch errors, so test it manually.
-T=`$DEDOC ls --porcelain -l -s=$D`
+T=`$DEDOC ls --porcelain -l -s="$DOCSET"`
 
 if test -z "$T"; then
-  echo "ERROR: \`$D\` is not downloaded." >&2
+  echo "ERROR: \`$DOCSET\` is not downloaded." >&2
   exit 1
 fi
 
-DOCSET=$1
-
-$DEDOC -c open $DOCSET `$DEDOC -c ss $DOCSET --porcelain | fzf --ansi --layout=reverse --header-lines=1` | $PAGER
+$DEDOC -c open $DOCSET \
+`$DEDOC -c ss $DOCSET --porcelain | fzf --ansi --layout=reverse --header-lines=1` | \
+$PAGER
