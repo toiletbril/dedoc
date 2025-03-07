@@ -25,10 +25,17 @@ strip    = false
 debug    = true
 
 [dependencies]
+# clap
 toiletcli     = { version = "0.12.3", default-features = false, features = ["colors", "escapes", "flags"] }
+# create cache and parse docs.json
 serde         = { version = "1.0.204", features = ["derive"] }
-libc          = "0.2.148"
 serde_json    = "1.0.120"
+# signal()
+libc          = "0.2.148"
+# the package name
 html2text     = "0.14.0"
 terminal_size = "0.3.0"
+# html client
 ureq          = "2.10.1"
+# commit in --version
+git-const = "1.1.0"

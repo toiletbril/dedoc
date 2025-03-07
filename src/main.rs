@@ -8,7 +8,7 @@ mod common;
 
 use common::get_flag_error;
 use common::ResultS;
-use common::{BOLD, GREEN, PROGRAM_NAME, RED, RESET, UNDERLINE, VERSION};
+use common::{BOLD, BUILD_TYPE, GREEN, HEAD, PROGRAM_NAME, RED, RESET, UNDERLINE, VERSION};
 
 mod download;
 mod fetch;
@@ -36,15 +36,17 @@ use test::debug_test;
 #[cfg(not(windows))]
 const OS: ! = panic!("Temple OS is not supported.");
 
+fn show_short_version() -> ResultS
+{
+  println!("{VERSION}-{BUILD_TYPE} {HEAD}");
+  Ok(())
+}
+
 fn show_version() -> ResultS
 {
-  #[cfg(debug_assertions)]
-  let version = format!("{VERSION} debug build");
-  #[cfg(not(debug_assertions))]
-  let version = VERSION;
   println!(
            "\
-dedoc {version}
+dedoc {VERSION}, {BUILD_TYPE} build on {HEAD}
 (c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
 
 License GPLv3: GNU GPL version 3.
@@ -81,7 +83,8 @@ fn show_help() -> ResultS
 {GREEN}OPTIONS{RESET}
     -c, --force-colors              Forcefully enable colors.
         --color <on/off/auto>       Control output colors.
-    -v, --version                   Display version.
+    -V, --short-version             Display short version.
+    -v, --version                   Display version and license.
         --help                      Display help message."
   );
   Ok(())
@@ -101,16 +104,18 @@ fn entry<Args>(mut args: Args) -> ResultS
     libc::signal(libc::SIGPIPE, libc::SIG_DFL);
   }
 
+  let mut flag_short_version;
   let mut flag_version;
   let mut flag_color;
   let mut flag_color_force;
   let mut flag_help;
 
   let mut flags = flags![
-    flag_version: BoolFlag,     ["-v", "--version"],
-    flag_color_force: BoolFlag, ["-c", "--force-colors"],
-    flag_color: StringFlag,     ["--color"],
-    flag_help: BoolFlag,        ["--help"]
+    flag_short_version: BoolFlag, ["-V", "--short-version"],
+    flag_version: BoolFlag,       ["-v", "--version"],
+    flag_color_force: BoolFlag,   ["-c", "--force-colors"],
+    flag_color: StringFlag,       ["--color"],
+    flag_help: BoolFlag,          ["--help"]
   ];
 
   let subcommand =
@@ -131,6 +136,9 @@ fn entry<Args>(mut args: Args) -> ResultS
   }
   if flag_version {
     return show_version();
+  }
+  if flag_short_version {
+    return show_short_version();
   }
   if flag_help || subcommand.is_empty() {
     return show_help();
