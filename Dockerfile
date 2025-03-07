@@ -11,6 +11,7 @@ RUN apk add --no-cache \
     musl-dev \
     linux-headers \
     mingw-w64-gcc \
+    git \
     curl
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to

@@ -93,8 +93,7 @@ fn show_help() -> ResultS
 fn entry<Args>(mut args: Args) -> ResultS
   where Args: Iterator<Item = String>
 {
-  debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}. Run `test` \
-                  to perform tests.");
+  debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
 
   #[cfg(unix)]
   unsafe {
@@ -117,6 +116,11 @@ fn entry<Args>(mut args: Args) -> ResultS
     flag_color: StringFlag,       ["--color"],
     flag_help: BoolFlag,          ["--help"]
   ];
+
+  #[cfg(debug_assertions)]
+  let mut flag_integration_test = false;
+  #[cfg(debug_assertions)]
+  flags.push((FlagType::BoolFlag(&mut flag_integration_test), vec!["--integration-test"]));
 
   let subcommand =
     parse_flags_until_subcommand(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?
@@ -152,8 +156,6 @@ fn entry<Args>(mut args: Args) -> ResultS
     "ss" | "search" => search(args),
     "op" | "open" => open(args),
     "rr" | "render" => render(args),
-    #[cfg(debug_assertions)]
-    "test" => debug_test(args),
     other => Err(format!("Unknown subcommand `{other}`")),
   }
 }
