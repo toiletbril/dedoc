@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Test docset 1",
+    "slug": "test-docset-1",
+    "type": "test",
+    "links": {
+      "home": "",
+      "code": ""
+    },
+    "version": "",
+    "release": "",
+    "mtime": 1,
+    "db_size": 1,
+    "attribution": "",
+    "alias": ""
+  },
+  {
+    "name": "Test docset 2",
+    "slug": "test-docset-2",
+    "type": "test",
+    "links": {
+      "home": "",
+      "code": ""
+    },
+    "version": "",
+    "release": "",
+    "mtime": 1,
+    "db_size": 1,
+    "attribution": "",
+    "alias": ""
+  }
+]

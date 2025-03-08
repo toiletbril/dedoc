@@ -18,9 +18,6 @@ mod remove;
 mod render;
 mod search;
 
-#[cfg(debug_assertions)]
-mod test;
-
 use download::download;
 use fetch::fetch;
 use list::list;
@@ -30,7 +27,7 @@ use render::render;
 use search::search;
 
 #[cfg(debug_assertions)]
-use test::debug_test;
+use common::FLAG_INTEGRATION_TEST;
 
 #[cfg(not(unix))]
 #[cfg(not(windows))]
@@ -117,10 +114,12 @@ fn entry<Args>(mut args: Args) -> ResultS
     flag_help: BoolFlag,          ["--help"]
   ];
 
+  // Hack for integration tests. I promise I will do it better in the future :3
   #[cfg(debug_assertions)]
-  let mut flag_integration_test = false;
-  #[cfg(debug_assertions)]
-  flags.push((FlagType::BoolFlag(&mut flag_integration_test), vec!["--integration-test"]));
+  #[allow(static_mut_refs)]
+  unsafe {
+    flags.push((FlagType::BoolFlag(&mut FLAG_INTEGRATION_TEST), vec!["--integration-test"]));
+  }
 
   let subcommand =
     parse_flags_until_subcommand(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?

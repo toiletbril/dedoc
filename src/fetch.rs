@@ -88,8 +88,7 @@ pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
   }
   if !flag_force && is_docs_json_exists()? && !is_docs_json_old()? {
     return Err("It seems that your `docs.json` was updated less than a week \
-                ago. Run `fetch --force` to ignore this warning."
-                                                                 .to_string());
+                ago. Run `fetch --force` to ignore this warning.".to_string());
   }
 
   println!("Fetching `{DEFAULT_DOCS_JSON_LINK}`...");

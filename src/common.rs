@@ -47,6 +47,9 @@ pub(crate) const BOLD: Style = Style::Bold;
 pub(crate) const UNDERLINE: Style = Style::Underlined;
 pub(crate) const RESET: Style = Style::Reset;
 
+#[cfg(debug_assertions)]
+pub(crate) static mut FLAG_INTEGRATION_TEST: bool = false;
+
 pub(crate) type ResultS = Result<(), String>;
 
 #[macro_export]

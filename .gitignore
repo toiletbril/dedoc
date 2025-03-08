@@ -1,4 +1,5 @@
 /target
+/target-docker
 /garbage
 perf.*
 xargo.toml

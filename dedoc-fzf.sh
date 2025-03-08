@@ -44,7 +44,7 @@ if test -z "$1"; then
   exit 0
 fi
 
-DOCSET=$1
+DOCSET="$1"
 
 # Make sure the docset we need is installed. Command result substitution below
 # doesn't catch errors, so test it manually.
@@ -55,6 +55,6 @@ if test -z "$T"; then
   exit 1
 fi
 
-$DEDOC -c open $DOCSET \
-`$DEDOC -c ss $DOCSET --porcelain | fzf --ansi --layout=reverse --header-lines=1` | \
-$PAGER
+$DEDOC -c open "$DOCSET" \
+`"$DEDOC" -c ss "$DOCSET" --porcelain | fzf --ansi --layout=reverse --header-lines=1` | \
+"$PAGER"

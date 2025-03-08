@@ -12,17 +12,18 @@ RUN apk add --no-cache \
     linux-headers \
     mingw-w64-gcc \
     git \
+    netcat-openbsd \
     curl
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to
 # nightly.
 RUN for t in $TS; do TC="$TC -t $t"; done && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-    sh -s -- -y --default-toolchain nightly $TC
+    sh -s -- -y --default-toolchain nightly $TC && \
+    git config --global --add safe.directory '*'
 
 ENV PATH="$H/.cargo/bin:$PATH"
 
-# Make sure rustc knows we're static.
 ENV RUSTFLAGS="-C target-feature=+crt-static"
 ENV RUSTTARGETS=$TS
 
