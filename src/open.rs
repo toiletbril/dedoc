@@ -20,7 +20,7 @@ fn show_open_help() -> ResultS
 
 {GREEN}OPTIONS{RESET}
     -h, --html                      Interpret arguments as a path to HTML file
-                                    and translate it to markdown.
+                                    and translate it to text.
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number outputted lines.
         --help                      Display help message."

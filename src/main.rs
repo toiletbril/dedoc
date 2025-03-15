@@ -72,7 +72,7 @@ fn show_help() -> ResultS
     ss, search                      List or display docset pages that match a
                                     query.
     op, open                        Display docset pages.
-    rr, render                      Render docsets to markdown.
+    rr, render                      Render entire docsets to text.
 
   Each subcommand has its own `--help` option. Upon the first usage, please run
   `dedoc fetch`.

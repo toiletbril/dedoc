@@ -7,7 +7,7 @@ use toiletcli::flags::*;
 
 use crate::common::{
   deserialize_docs_json, get_docset_path, get_flag_error, get_local_docsets, is_docs_json_exists,
-  is_docset_downloaded, make_sure_docset_is_in_docs, translate_docset_file_to_markdown,
+  is_docset_downloaded, make_sure_docset_is_in_docs, translate_docset_html_file_to_text,
   DOC_PAGE_EXTENSION,
 };
 use crate::common::{get_program_directory, validate_number_of_columns, ResultS, MAX_WIDTH};
@@ -20,7 +20,7 @@ fn show_render_help() -> ResultS
            "\
 {GREEN}USAGE{RESET}
     {BOLD}{PROGRAM_NAME} render{RESET} [-cd] <docset1> [docset2, ...]
-    Render a whole docset to markdown.
+    Render a whole docset to text.
 
 {GREEN}OPTIONS{RESET}
     -c, --columns                   Change output width in columns. Default is
@@ -94,7 +94,7 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
                                                           err)
                                                 })?;
 
-      file.write(translate_docset_file_to_markdown(entry.path(), None, page_width, false, false)?.0.as_bytes())
+      file.write(translate_docset_html_file_to_text(entry.path(), None, page_width, false, false)?.0.as_bytes())
         .map_err(|err| format!("Could not write to `{}`: {}", md_file_path.display(), err))?;
 
       let _ = file.flush();

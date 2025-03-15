@@ -270,12 +270,12 @@ fn get_fragment_bounds(tagged_lines: &[TaggedLine<Vec<RichAnnotation>>],
 }
 
 // -> (translated file as a string, whether specified fragment was found)
-pub(crate) fn translate_docset_file_to_markdown(path: PathBuf,
-                                                fragment: Option<&String>,
-                                                width: usize,
-                                                number_lines: bool,
-                                                use_colors: bool)
-                                                -> Result<(String, bool), String>
+pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
+                                                 fragment: Option<&String>,
+                                                 width: usize,
+                                                 number_lines: bool,
+                                                 use_colors: bool)
+                                                 -> Result<(String, bool), String>
 {
   let mut output = String::new();
   let file =
@@ -408,7 +408,8 @@ pub(crate) fn print_docset_file(path: PathBuf,
                                 number_lines: bool)
                                 -> Result<bool, String>
 {
-  let (output, ret) = translate_docset_file_to_markdown(path, fragment, width, number_lines, true)?;
+  let (output, ret) =
+    translate_docset_html_file_to_text(path, fragment, width, number_lines, true)?;
   print!("{}", output);
   Ok(ret)
 }
