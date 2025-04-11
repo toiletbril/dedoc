@@ -364,6 +364,14 @@ pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
 
       line_buffer += style.as_str();
       line_buffer += &tagged_string.s;
+      if let Some(RichAnnotation::Link(link)) = tagged_string.tag.first() {
+        line_buffer += &format!(" {}<{}{link}{}{}>{}",
+                                Color::Blue,
+                                Style::Underlined,
+                                Style::Reset,
+                                Color::Blue,
+                                Style::Reset);
+      }
 
       if is_only_tag && use_colors {
         // Pad preformat to terminal width for cool background.

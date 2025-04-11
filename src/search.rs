@@ -102,11 +102,11 @@ pub(crate) fn try_use_cache<'a>(search_options: &SearchContext) -> Option<Search
   let program_dir = get_program_directory().ok()?;
   let cache_options_path = program_dir.join("search_cache_options.json");
 
+  // Do the options match?
   {
-    let cache_options_file = File::open(cache_options_path).ok()?;
-    let cache_options_reader = BufReader::new(cache_options_file);
+    let cached_search_options: SearchContext =
+      serde_json::from_reader(File::open(cache_options_path).ok()?).ok()?;
 
-    let cached_search_options: SearchContext = serde_json::from_reader(cache_options_reader).ok()?;
     if cached_search_options != *search_options {
       return None;
     }

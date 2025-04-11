@@ -38,4 +38,4 @@ terminal_size = "0.3.0"
 # html client
 ureq          = "2.10.1"
 # commit in --version
-git-const = "1.1.0"
+git-const     = "1.1.0"

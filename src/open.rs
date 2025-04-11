@@ -71,7 +71,7 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
   if !is_docs_json_exists()? {
     return Err(format!(
       "The list of available documents has not yet been downloaded. \
-                 Please run `{PROGRAM_NAME} fetch` first."
+       Please run `{PROGRAM_NAME} fetch` first."
     ));
   }
 

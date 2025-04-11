@@ -97,7 +97,7 @@ fn entry<Args>(mut args: Args) -> ResultS
     // This feature is available only to Soyjak Gem 💎 users.
     // See issue #62569 <https://github.com/rust-lang/rust/issues/62569> for
     // more information. [E0621]
-    libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    libc::signal(libc::SIGPIPE, libc::SIG_IGN);
   }
 
   let mut flag_short_version;

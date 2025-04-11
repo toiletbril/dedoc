@@ -57,6 +57,7 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
       let path_relative_to_docset =
         entry.path().strip_prefix(docset_path).expect("no way :(").to_owned();
 
+      // Is this a directory?
       if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
         let md_dir_path = &output_dir.join(&path_relative_to_docset);
         if !md_dir_path.try_exists()
@@ -64,11 +65,13 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
                          format!("Could not check if {} exists: {err}", docset_path.display())
                        })?
         {
+          // Create the respective path in our target directory.
           create_dir(md_dir_path).map_err(|err| {
                                    format!("Could not create subdirectory `{}`: {err}",
                                            md_dir_path.display())
                                  })?;
         }
+        // Recurse into the directory.
         recurse_and_render_docset_with_progress(docset,
                                                 docset_path,
                                                 &entry.path(),
@@ -81,6 +84,7 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
       if entry.path().extension().unwrap_or_default() != DOC_PAGE_EXTENSION {
         continue;
       }
+      // Ok, this is a docset page file.
 
       print!("\rRendered {} files from `{}` into `{}`...", counter, docset, output_dir.display());
       stdout().flush().map_err(|err| format!("Could not flush stdout: {err}"))?;
@@ -145,9 +149,9 @@ pub(crate) fn render<Args>(mut args: Args) -> ResultS
 
   let is_directory_changed = !flag_output_dir.is_empty();
 
-  // Subdirectories are not used if `-d` was specified, and the docset is rendered
-  // directly into the specified directory. However, in case of `--all` with
-  // `-d`, a subfolder for each docset is created inside the directory from
+  // Subdirectories are not used if `-d` was specified, and the docset is
+  // rendered directly into the specified directory. However, in case of `--all`
+  // with `-d`, a subfolder for each docset is created inside the directory from
   // `-d`.
   let main_output_dir = if !is_directory_changed {
     get_program_directory()?.join("rendered")
