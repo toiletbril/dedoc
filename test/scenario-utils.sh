@@ -32,30 +32,12 @@ printf "$2"'\t'"$1"'\n' >> /etc/hosts
 
 KEY_PATH="data/mock-key.pem"
 CERT_PATH="data/mock-cert.pem"
-CERT_CONFIG_PATH="data/cert-config"
 INSTALLED_CERT_PATH="/usr/local/share/ca-certificates/mock-cert.pem"
+
+CERT_CONFIG_PATH="data/openssl.cnf"
 
 prepare_mock_key() {
 log "Preparing mock SSL key ($KEY_PATH, $CERT_PATH)..."
-
-cat > "$CERT_CONFIG_PATH" <<EOF
-[req]
-distinguished_name = req_distinguished_name
-x509_extensions = v3_req
-prompt = no
-
-[req_distinguished_name]
-CN = devdocs.io
-
-[v3_req]
-basicConstraints = critical, CA:FALSE
-keyUsage = critical, digitalSignature, keyEncipherment
-extendedKeyUsage = serverAuth
-subjectAltName = @alt_names
-
-[alt_names]
-DNS.1 = devdocs.io
-EOF
 
 openssl req -x509 -newkey rsa:2048 -nodes \
   -keyout "$KEY_PATH" \

@@ -24,7 +24,7 @@ available in [releases](https://github.com/toiletbril/dedoc/releases).
 
 Everything as in your usual Rust project that uses Cargo.
 
-As for releases, [`Dockerfile`](./Dockefile) is used as a base image for
+As for releases, [`Dockerfile`](./Dockerfile) is used as a base image for
 `x86_64` Linux/Windows cross-compilation and integration tests. See
 [`./Shfile.sh`](./Shfile.sh).
 

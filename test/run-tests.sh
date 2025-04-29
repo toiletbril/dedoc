@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Entrypoint for running integration tests inside a Docker image. See README.md
-# for more information.
+# and top-level Shfile.sh for more information.
 
 . "$(dirname "$0")"/scenario-utils.sh
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# An splendid alternative to Makefile, used for cross-compiling and running
+# A splendid alternative to Makefile, used for cross-compiling and running
 # integration tests.
 
 set -eu
