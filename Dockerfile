@@ -13,6 +13,10 @@ RUN apk add --no-cache \
     mingw-w64-gcc \
     git \
     netcat-openbsd \
+    openssl-dev \
+    openssl-libs-static \
+    ca-certificates \
+    pkgconf \
     curl
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to
@@ -25,6 +29,6 @@ RUN for t in $TS; do TC="$TC -t $t"; done && \
 ENV PATH="$H/.cargo/bin:$PATH"
 
 ENV RUSTFLAGS="-C target-feature=+crt-static"
-ENV RUSTTARGETS=$TS
+ENV RUSTTARGETS="$TS"
 
 WORKDIR /src

@@ -29,7 +29,7 @@ if test -e "$REL"; then
 elif test -e "$DBG"; then
   DEDOC="$DBG"
 else
-  DEDOC=`which dedoc`
+  DEDOC="$(which dedoc)"
 fi
 
 if test -z "$DEDOC"; then
@@ -48,7 +48,7 @@ DOCSET="$1"
 
 # Make sure the docset we need is installed. Command result substitution below
 # doesn't catch errors, so test it manually.
-T=`$DEDOC ls --porcelain -l -s="$DOCSET"`
+T="$($DEDOC ls --porcelain -l -s="$DOCSET")"
 
 if test -z "$T"; then
   echo "ERROR: \`$DOCSET\` is not downloaded." >&2
@@ -56,5 +56,6 @@ if test -z "$T"; then
 fi
 
 $DEDOC -c open "$DOCSET" \
-`"$DEDOC" -c ss "$DOCSET" --porcelain | fzf --ansi --layout=reverse --header-lines=1` | \
+"$("$DEDOC" -c ss "$DOCSET" --porcelain | \
+   fzf --ansi --layout=reverse --header-lines=1)" | \
 "$PAGER"

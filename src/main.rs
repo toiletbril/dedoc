@@ -114,7 +114,7 @@ fn entry<Args>(mut args: Args) -> ResultS
     flag_help: BoolFlag,          ["--help"]
   ];
 
-  // Hack for integration tests. I promise I will do it better in the future :3
+  // Every day I like Rust less and less.
   #[cfg(debug_assertions)]
   #[allow(static_mut_refs)]
   unsafe {

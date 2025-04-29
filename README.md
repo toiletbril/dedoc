@@ -20,6 +20,11 @@ $ cargo install dedoc
 Alternatively, precompiled `x86_64` binaries for Windows and Linux are
 available in [releases](https://github.com/toiletbril/dedoc/releases).
 
+## Development
+
+[Dockerfile](./Dockefile) is used as a base image for x86_64 Linux/Windows
+cross-compilation and tests. See [./Shfile.sh](./Shfile.sh).
+
 ## Usage
 
 Remember that running anything with `--help` prints a more detailed usage:
