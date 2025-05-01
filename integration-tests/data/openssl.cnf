@@ -14,3 +14,4 @@ subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = devdocs.io
+DNS.2 = documents.devdocs.io

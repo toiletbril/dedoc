@@ -14,7 +14,7 @@ done
 '
 TEST_CMD='
 cargo build --target x86_64-unknown-linux-musl --target-dir target-docker &&
-./test/run-tests.sh
+./integration-tests/run-tests.sh
 '
 
 C="${1:-}"
@@ -25,7 +25,7 @@ case $C in
     docker rmi -f "$IMG"
     DOCKER_TARGET="$(dirname "$0")/target-docker"
     if test -d "$DOCKER_TARGET"; then
-      sudo rm -r "$DOCKER_TARGET"
+      rm -r "$DOCKER_TARGET"
     fi
   fi
   docker build --network=host -f Dockerfile -t "$IMG" "$(dirname "$0")"

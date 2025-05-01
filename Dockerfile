@@ -12,8 +12,7 @@ RUN apk add --no-cache \
     linux-headers \
     mingw-w64-gcc \
     git \
-    netcat-openbsd \
-    openssl-dev \
+    openssl \
     openssl-libs-static \
     ca-certificates \
     pkgconf \

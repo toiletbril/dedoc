@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Test docset 1",
+    "slug": "docset-1",
+    "type": "test",
+    "links": {
+      "home": "",
+      "code": ""
+    },
+    "version": "1",
+    "release": "",
+    "mtime": 1,
+    "db_size": 1,
+    "attribution": "",
+    "alias": ""
+  },
+  {
+    "name": "Test docset 2",
+    "slug": "docset-2",
+    "type": "test",
+    "links": {
+      "home": "",
+      "code": ""
+    },
+    "version": "",
+    "release": "",
+    "mtime": 1,
+    "db_size": 1,
+    "attribution": "",
+    "alias": ""
+  },
+  {
+    "name": "Test docset 3.1",
+    "slug": "docset-3~1",
+    "type": "test",
+    "links": {
+      "home": "",
+      "code": ""
+    },
+    "version": "1",
+    "release": "",
+    "mtime": 1,
+    "db_size": 1,
+    "attribution": "",
+    "alias": ""
+  },
+  {
+    "name": "Test docset 3.2",
+    "slug": "docset-3~2",
+    "type": "test",
+    "links": {
+      "home": "",
+      "code": ""
+    },
+    "version": "2",
+    "release": "",
+    "mtime": 1,
+    "db_size": 1,
+    "attribution": "",
+    "alias": ""
+  }
+]

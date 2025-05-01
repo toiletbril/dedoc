@@ -1,7 +1,9 @@
 /target
 /target-docker
 /garbage
+xargo.toml
+
 perf.*
 *.pem
 *.crt
-xargo.toml
+*.pid

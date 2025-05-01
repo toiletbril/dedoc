@@ -3,13 +3,34 @@
 # Utilies for integration tests. This file is not meant to be run directly, but
 # rather sourced in other scripts.
 
+_log_date() {
+date "+%Y-%m-%d at %X"
+}
+
 log() {
-  printf "$(date "+%x,%X"),LOG,%s\n" "$@" >&2
+  printf "$(_log_date) [LOG] %s\n" "$@" >&2
 }
 
 log_err_and_die() {
-  printf "$(date "+%x,%X"),ERR,%s\n" "$@" >&2
+  printf "$(_log_date) [ERR] %s\n" "$@" >&2
   exit 1
+}
+
+diff_to_expected() {
+E="expected/$2.out"
+log "Diffing $1 and $E..."
+if ! diff -su "$1" "$E"; then
+  log_err_and_die "$1 and $E differ!"
+fi
+}
+
+mock_cat() {
+for F in "$@"; do
+  log "Catting $F:"
+  printf '```\n'
+  cat "$F"
+  printf '\n```\n'
+done
 }
 
 mock_dedoc() {
@@ -65,35 +86,14 @@ if ! test -e "$INSTALLED_CERT_PATH"; then
 fi
 }
 
-mock_https_response() {
-if test -z "$1" || test -z "$2"; then
-  log_err_and_die "USAGE: mock_https_response <port> data/<file>"
-fi
+MOCK_SERVER_PID_PATH="data/mock_server.pid"
 
-PORT="$1"
-FILE="data/$2"
-KEY="$KEY_PATH"
-CERT="$CERT_PATH"
-
-if test ! -f "$KEY" || ! test -f "$CERT"; then
-  log_err_and_die "Certificate files not found. Run make_sure_mock_cert_is_installed first."
-fi
-
-BODY=$(cat "$FILE")
-BODY_LENGTH=$(printf "%s" "$BODY" | wc -c)
-
-RESPONSE="\
-HTTP/1.1 200 OK\r
-Content-Type: application/json\r
-Content-Length: $BODY_LENGTH\r
-\r
-$BODY"
-
-log "Mocking HTTPS response on port $PORT with contents of $FILE..."
-printf "%b" "$RESPONSE" | openssl s_server \
-  -quiet \
-  -key "$KEY" \
-  -cert "$CERT" \
-  -accept "$PORT" \
-  -naccept 1
+mock_server() {
+cd data/ || log_err_and_die "No data/, invalid directory structure!"
+KEY="../$KEY_PATH"
+CERT="../$CERT_PATH"
+PID_PATH="../$MOCK_SERVER_PID_PATH"
+openssl s_server -key "$KEY" -cert "$CERT" -accept 443 -WWW &
+PID="$!"
+echo "$PID" > "$PID_PATH"
 }
