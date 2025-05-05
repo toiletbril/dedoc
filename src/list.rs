@@ -22,8 +22,8 @@ fn show_list_help() -> ResultS
                                     downloaded.
     -a, --all                       Show all version-specific docsets.
     -n, --newlines                  Print each docset on a separate line.
-        --porcelain                 Do what to -n, does and also don't print
-                                    `[downloaded]` labels.
+    -d, --no-labels                 Don't print `[downloaded]` labels.
+        --porcelain                 Same as -nd.
     -s, --search <query>            Filter docsets based on a query.
         --help                      Display help message."
   );
@@ -37,6 +37,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   let mut flag_local;
   let mut flag_nonlocal;
   let mut flag_newlines;
+  let mut flag_labels;
   let mut flag_search;
   let mut flag_porcelain;
   let mut flag_help;
@@ -46,6 +47,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     flag_local: BoolFlag,     ["-l", "--local"],
     flag_nonlocal: BoolFlag,  ["-o", "--non-local"],
     flag_newlines: BoolFlag,  ["-n", "--newlines"],
+    flag_labels: BoolFlag,    ["-d", "--no-labels"],
     flag_search: StringFlag,  ["-s", "--search"],
     flag_porcelain: BoolFlag, ["--porcelain"],
     flag_help: BoolFlag,      ["--help"]
@@ -66,11 +68,14 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     ));
   }
 
-  let mut first_result = true;
+  if flag_porcelain {
+    flag_labels = true;
+    flag_newlines = true;
+  }
 
   let local_docsets = get_local_docsets()?;
   let should_filter = !flag_search.is_empty();
-  let separator = if flag_newlines || flag_porcelain { "\n" } else { ", " };
+  let separator = if flag_newlines { "\n" } else { ", " };
 
   // Show everything when searching.
   if should_filter {
@@ -81,6 +86,8 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     return Err("Both -o and -l are enabled. Please make a final decision.".to_string());
   }
 
+  let mut first_result = true;
+
   if flag_local {
     for ref entry in local_docsets {
       if should_filter && !entry.contains(&flag_search) {
@@ -90,7 +97,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
         print!("{}", separator);
       }
       print!("{GREEN}{}", entry);
-      if !flag_porcelain {
+      if !flag_labels {
         print!(" [downloaded]");
       }
       print!("{RESET}");
@@ -124,7 +131,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
         print!("{}", separator);
       }
       print!("{GREEN}{}", entry);
-      if !flag_porcelain {
+      if !flag_labels {
         print!(" [downloaded]");
       }
       print!("{RESET}");
