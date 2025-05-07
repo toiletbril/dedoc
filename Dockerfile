@@ -31,4 +31,6 @@ ENV PATH="$H/.cargo/bin:$PATH"
 ENV RUSTFLAGS="-C target-feature=+crt-static"
 ENV RUSTTARGETS="$TS"
 
+ENV RUST_BACKTRACE="1"
+
 WORKDIR /src

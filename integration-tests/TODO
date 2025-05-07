@@ -1,24 +1,7 @@
 things that should be tested I think:
 
-ft:
-  - fetch --force
-
-ls:
-  - ls --non-local
-  - ls --all --non-local
-  - ls --search
-  - ls -nd, ls --porcelain
-  - ls -n and combinations
-
-dl:
-  - dl <many>
-  - dl --update-all, with error and without
-  - dl --force, make sure it replaces files
-
 rm:
-  - rm <many>
-  - rm --purge-all
-  - edge cases
+  - edge cases?
 
 op:
   - op --html

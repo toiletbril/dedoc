@@ -3,6 +3,10 @@
 # Utilies for integration tests. This file is not meant to be run directly, but
 # rather sourced in other scripts.
 
+export RUST_BACKTRACE="1"
+
+DEDOC_HOME="/root/.dedoc"
+
 _log_date() {
 date "+%Y-%m-%d at %X"
 }
@@ -16,11 +20,14 @@ log_err_and_die() {
   exit 1
 }
 
-diff_to_expected() {
-E="expected/$2.out"
-log "Diffing $1 and $E..."
-if ! diff -su "$1" "$E"; then
-  log_err_and_die "$1 and $E differ!"
+mock_diff_stdin_to_text() {
+log "Diffing..."
+P="$(mktemp)"
+if ! test -z "$1"; then
+  echo "$1" > "$P"
+fi
+if ! diff -s "$P" -; then
+  log_err_and_die "Stdins differ!"
 fi
 }
 
