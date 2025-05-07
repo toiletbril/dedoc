@@ -1,5 +1,0 @@
-things that should be tested I think:
-
-ss:
-  - ss with, without and with missing fragment
-  - ss --open --ignore-fragment
