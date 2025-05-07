@@ -38,7 +38,7 @@ run_test ./setup.sh
 
 # Cleanup on exit.
 trap 'kill -9 $(cat "$MOCK_SERVER_PID_PATH") && \
-      rm "$MOCK_SERVER_PID_PATH"' \
+      rm "$MOCK_SERVER_PID_PATH" "$KEY_PATH" "$CERT_PATH"' \
      EXIT
 
 # Use every file in scenario/ as a test.

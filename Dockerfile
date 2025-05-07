@@ -16,6 +16,7 @@ RUN apk add --no-cache \
     openssl-libs-static \
     ca-certificates \
     pkgconf \
+    python3 \
     curl
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to

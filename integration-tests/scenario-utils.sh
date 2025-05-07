@@ -51,11 +51,12 @@ log "Overriding /etc/hosts ($1 -> $2)..."
 printf "$2"'\t'"$1"'\n' >> /etc/hosts
 }
 
-KEY_PATH="data/mock-key.pem"
-CERT_PATH="data/mock-cert.pem"
+KEY_PATH="$(realpath "./data/mock-key.pem")"
+CERT_PATH="$(realpath "./data/mock-cert.pem")"
+
 INSTALLED_CERT_PATH="/usr/local/share/ca-certificates/mock-cert.pem"
 
-CERT_CONFIG_PATH="data/openssl.cnf"
+CERT_CONFIG_PATH="$(realpath "data/openssl.cnf")"
 
 prepare_mock_key() {
 log "Preparing mock SSL key ($KEY_PATH, $CERT_PATH)..."
@@ -86,14 +87,11 @@ if ! test -e "$INSTALLED_CERT_PATH"; then
 fi
 }
 
-MOCK_SERVER_PID_PATH="data/mock_server.pid"
+MOCK_SERVER_PID_PATH="$(realpath "data/mock_server.pid")"
 
 mock_server() {
 cd data/ || log_err_and_die "No data/, invalid directory structure!"
-KEY="../$KEY_PATH"
-CERT="../$CERT_PATH"
-PID_PATH="../$MOCK_SERVER_PID_PATH"
-openssl s_server -key "$KEY" -cert "$CERT" -accept 443 -WWW &
+python3 ../https-server.py "127.0.0.1" "443" "$KEY_PATH" "$CERT_PATH" &
 PID="$!"
-echo "$PID" > "$PID_PATH"
+echo "$PID" > "$MOCK_SERVER_PID_PATH"
 }

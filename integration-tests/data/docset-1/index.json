@@ -1,1 +1,18 @@
-{}
+{
+  "entries":
+    [
+      {
+        "name": "1",
+        "path": "type-1/1",
+        "type": "Type 1"
+      }
+    ],
+  "types":
+    [
+      {
+        "name":"Type 1",
+        "count": 1,
+        "slug": "type-1"
+      }
+    ]
+}
