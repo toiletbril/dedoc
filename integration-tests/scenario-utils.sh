@@ -20,6 +20,14 @@ log_err_and_die() {
   exit 1
 }
 
+mock_diff_stdin_to_expected() {
+log "Diffing..."
+P="./expected/$1.out"
+if ! diff -s "$P" -; then
+  log_err_and_die "Files differ!"
+fi
+}
+
 mock_diff_stdin_to_text() {
 log "Diffing..."
 P="$(mktemp)"
