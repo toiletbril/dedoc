@@ -45,3 +45,5 @@ trap 'kill -9 $(cat "$MOCK_SERVER_PID_PATH") && \
 for F in ./scenario/*.sh; do
   run_test "$F"
 done
+
+log "👍"

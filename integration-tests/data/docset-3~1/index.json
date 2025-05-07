@@ -1,16 +1,101 @@
 {
-  "entries":
-    [
-      "name": "1",
-      "path": "type-3/1",
-      "type": "Type 3"
-    ],
-  "types":
-    [
-      {
-        "name":"Type 3",
-        "count": 1,
-        "slug": "type-3"
-      }
-    ]
+  "entries": [
+    {
+      "name": "Lifetime Errors",
+      "path": "guides/e_lifetime_errors",
+      "type": "guide"
+    },
+    {
+      "name": "Mayonnaise Benchmarks",
+      "path": "guides/mayonnaise_benchmarks",
+      "type": "guide"
+    },
+    {
+      "name": "Anime Schema",
+      "path": "tables/e_anime_schema",
+      "type": "table"
+    },
+    {
+      "name": "Anime Schema Definition",
+      "path": "tables/e_anime_schema#schema-definition",
+      "type": "table"
+    },
+    {
+      "name": "Anime Schema Index Recommendations",
+      "path": "tables/e_anime_schema#index-recommendations",
+      "type": "table"
+    },
+    {
+      "name": "Borrow Checker",
+      "path": "functions/e_borrow_checker",
+      "type": "function"
+    },
+    {
+      "name": "VACUUM FULL",
+      "path": "commands/vacuum_full",
+      "type": "command"
+    },
+    {
+      "name": "Mom Yelling",
+      "path": "errors/e_mom_yelling",
+      "type": "error"
+    },
+    {
+      "name": "Commit Failed",
+      "path": "errors/commit_failed",
+      "type": "error"
+    },
+    {
+      "name": "Waifu Index",
+      "path": "indexes/waifu_index",
+      "type": "index"
+    },
+    {
+      "name": "NULL Problems",
+      "path": "concepts/null_problems",
+      "type": "concept"
+    },
+    {
+      "name": "ORM Cringe",
+      "path": "concepts/orm_cringe",
+      "type": "concept"
+    },
+    {
+      "name": "Bloat Storage",
+      "path": "concepts/bloat_storage",
+      "type": "concept"
+    },
+    {
+      "name": "Compile Time",
+      "path": "concepts/compile_time",
+      "type": "concept"
+    }
+  ],
+  "types": [
+    {
+      "name": "concept",
+      "count": 0,
+      "slug": "concept"
+    },
+    {
+      "name": "index",
+      "count": 0,
+      "slug": "index"
+    },
+    {
+      "name": "error",
+      "count": 0,
+      "slug": "error"
+    },
+    {
+      "name": "guide",
+      "count": 0,
+      "slug": "guide"
+    },
+    {
+      "name": "table",
+      "count": 0,
+      "slug": "table"
+    }
+  ]
 }

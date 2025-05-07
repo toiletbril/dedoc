@@ -26,7 +26,7 @@ P="$(mktemp)"
 if ! test -z "$1"; then
   echo "$1" > "$P"
 fi
-if ! diff -s "$P" -; then
+if ! diff -su "$P" -; then
   log_err_and_die "Stdins differ!"
 fi
 }

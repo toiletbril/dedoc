@@ -1,20 +1,5 @@
 things that should be tested I think:
 
-rm:
-  - edge cases?
-
-op:
-  - op --html
-  - op --columns
-  - op --line-numbers
-
 ss:
-  - ss --whole
-  - ss --whole --open
-  - ss --precise
   - ss with, without and with missing fragment
-  - ss --whole --precise
   - ss --open --ignore-fragment
-  - ss --open --columns
-  - ss --open --line-numbers
-

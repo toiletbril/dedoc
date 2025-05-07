@@ -10,6 +10,9 @@ mock_dedoc dl docset-1 docset-3~1
 # Everything is up to date.
 ! mock_dedoc dl -u
 
+# Non-existent docset.
+! mock_dedoc dl whatever
+
 # Break .mtime files, so dedoc would have to update both docsets.
 rm "$DEDOC_HOME/docsets/docset-1/.dedoc_mtime"
 printf "0" > "$DEDOC_HOME/docsets/docset-3~1/.dedoc_mtime"
