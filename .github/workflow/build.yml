@@ -1,0 +1,42 @@
+name: Build and test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ created ]
+
+jobs:
+  test:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Make image
+        run: ./Shfile.sh make-image
+      - name: Run tests
+        run: ./Shfile.sh test
+
+  cross-compile:
+    if: github.event_name == 'release' && github.event.action == 'created'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [ x86_64-unknown-linux-musl, x86_64-pc-windows-gnu ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate docker image
+        run: ./Shfile.sh make-image
+      - name: Cross-compile for ${{ matrix.target }}
+        run: ./Shfile.sh cross-compile
+        env:
+          TS: ${{ matrix.target }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dedoc-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/dedoc${{ endsWith(matrix.target, 'windows-gnu') && '.exe' || '' }}
