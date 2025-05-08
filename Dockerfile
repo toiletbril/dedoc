@@ -4,8 +4,6 @@ FROM alpine:latest
 
 SHELL ["sh", "-eu", "-c"]
 
-ARG TS="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
-
 RUN apk update
 RUN apk add \
     build-base \
@@ -19,6 +17,8 @@ RUN apk add \
     pkgconf \
     python3 \
     curl
+
+ARG TS="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to
 # nightly.
