@@ -1,7 +1,5 @@
 * fuzzy search?
 
-* make good tests
-
 * transpile to markdown instead of text?
 
 * transpile html only once when building docset with `download`
