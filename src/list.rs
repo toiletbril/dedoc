@@ -1,7 +1,7 @@
 use toiletcli::flags;
 use toiletcli::flags::*;
 
-use crate::common::ResultS;
+use crate::common::{is_docset_downloaded, make_sure_docset_is_in_docs, ResultS};
 use crate::common::{
   deserialize_docs_json, get_flag_error, get_local_docsets, is_docs_json_exists,
 };
@@ -25,6 +25,7 @@ fn show_list_help() -> ResultS
     -d, --no-labels                 Don't print `[downloaded]` labels.
         --porcelain                 Same as -nd.
     -s, --search <query>            Filter docsets based on a query.
+    -e, --exists <docset>           Error out if docset does not exist.
         --help                      Display help message."
   );
   Ok(())
@@ -40,6 +41,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
   let mut flag_labels;
   let mut flag_search;
   let mut flag_porcelain;
+  let mut flag_exists;
   let mut flag_help;
 
   let mut flags = flags![
@@ -50,6 +52,7 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
     flag_labels: BoolFlag,    ["-d", "--no-labels"],
     flag_search: StringFlag,  ["-s", "--search"],
     flag_porcelain: BoolFlag, ["--porcelain"],
+    flag_exists: StringFlag,  ["-e", "--exists"],
     flag_help: BoolFlag,      ["--help"]
   ];
 
@@ -84,6 +87,21 @@ pub(crate) fn list<Args>(mut args: Args) -> ResultS
 
   if flag_local && flag_nonlocal {
     return Err("Both -o and -l are enabled. Please make a final decision.".to_string());
+  }
+
+  if !flag_exists.is_empty() {
+    let docs = deserialize_docs_json()?;
+
+    make_sure_docset_is_in_docs(&flag_exists, &docs)?;
+
+    if flag_local {
+      if is_docset_downloaded(&flag_exists)? {
+        return Ok(())
+      }
+      return Err(format!("Docset `{flag_exists}` is not downloaded."));
+    }
+
+    return Ok(());
   }
 
   let mut first_result = true;
