@@ -97,6 +97,7 @@ MOCK_SERVER_PID_PATH="$(realpath "./data/mock_server.pid")"
 
 start_mock_file_server() {
 cd data/ || log_err_and_die "No data/, invalid directory structure!"
+log "Starting mock file server (key=$KEY_PATH, cert=$CERT_PATH)"
 python3 ../https-server.py "127.0.0.1" "443" "$KEY_PATH" "$CERT_PATH" &
 PID="$!"
 echo "$PID" > "$MOCK_SERVER_PID_PATH"

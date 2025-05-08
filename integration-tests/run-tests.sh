@@ -46,6 +46,7 @@ override_host devdocs.io 127.0.0.1
 override_host documents.devdocs.io 127.0.0.1
 make_sure_mock_cert_is_installed
 start_mock_file_server &
+sleep 2
 
 # Use every file in scenario/ as a test.
 for F in ./scenario/*.sh; do
