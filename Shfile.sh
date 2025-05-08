@@ -20,7 +20,11 @@ cargo build --target x86_64-unknown-linux-musl --target-dir target-docker &&
 clean_docker_target() {
 DOCKER_TARGET="$(dirname "$0")/target-docker"
 if test -d "$DOCKER_TARGET"; then
-  rm -r "$DOCKER_TARGET"
+  if ! test -w "$DOCKER_TARGET"; then
+    echo "No write rights for $DOCKER_TARGET. Using sudo." 2>&1
+    S=sudo
+  fi
+  ${S:-} rm -r "$DOCKER_TARGET"
 fi
 }
 
