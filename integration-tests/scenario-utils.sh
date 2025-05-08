@@ -62,7 +62,7 @@ CERT_PATH="$(realpath "./data/mock-cert.pem")"
 
 INSTALLED_CERT_PATH="/usr/local/share/ca-certificates/mock-cert.pem"
 
-CERT_CONFIG_PATH="$(realpath "data/openssl.cnf")"
+CERT_CONFIG_PATH="$(realpath "./data/openssl.cnf")"
 
 prepare_mock_key() {
 log "Preparing mock SSL key ($KEY_PATH, $CERT_PATH)..."
@@ -93,7 +93,7 @@ if ! test -e "$INSTALLED_CERT_PATH"; then
 fi
 }
 
-MOCK_SERVER_PID_PATH="$(realpath "data/mock_server.pid")"
+MOCK_SERVER_PID_PATH="$(realpath "./data/mock_server.pid")"
 
 start_mock_file_server() {
 cd data/ || log_err_and_die "No data/, invalid directory structure!"
