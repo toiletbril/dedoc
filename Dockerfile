@@ -2,11 +2,12 @@
 
 FROM alpine:latest
 
-ARG H="/root"
+SHELL ["sh", "-eu", "-c"]
+
 ARG TS="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
 
 RUN apk update
-RUN apk add --no-cache \
+RUN apk add \
     build-base \
     musl-dev \
     linux-headers \
@@ -21,12 +22,15 @@ RUN apk add --no-cache \
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to
 # nightly.
-RUN for t in $TS; do TC="$TC -t $t"; done && \
+RUN for t in $TS; do TC="${TC:-} -t $t"; done && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --default-toolchain nightly $TC && \
     git config --global --add safe.directory '*'
 
-ENV PATH="$H/.cargo/bin:$PATH"
+# Test whether we really installed Rust.
+RUN stat "/root/.cargo" || exit 1
+
+ENV PATH="/root/.cargo/bin:$PATH"
 
 ENV RUSTFLAGS="-C target-feature=+crt-static"
 ENV RUSTTARGETS="$TS"

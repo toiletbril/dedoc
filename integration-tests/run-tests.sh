@@ -33,13 +33,17 @@ else
 fi
 }
 
-# Prepare the environment.
-run_test ./setup.sh
-
 # Cleanup on exit.
 trap 'kill -9 $(cat "$MOCK_SERVER_PID_PATH") && \
       rm "$MOCK_SERVER_PID_PATH" "$KEY_PATH" "$CERT_PATH"' \
      EXIT
+
+# Prepare the environment.
+mkdir -p "$DEDOC_HOME"
+override_host devdocs.io 127.0.0.1
+override_host documents.devdocs.io 127.0.0.1
+make_sure_mock_cert_is_installed
+start_mock_file_server &
 
 # Use every file in scenario/ as a test.
 for F in ./scenario/*.sh; do

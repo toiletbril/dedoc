@@ -3,9 +3,7 @@
 # Utilies for integration tests. This file is not meant to be run directly, but
 # rather sourced in other scripts.
 
-export RUST_BACKTRACE="1"
-
-DEDOC_HOME="/root/.dedoc"
+export DEDOC_HOME="/root/.dedoc"
 
 _log_date() {
 date "+%Y-%m-%d at %X"
@@ -20,9 +18,10 @@ log_err_and_die() {
   exit 1
 }
 
-mock_diff_stdin_to_text() {
+diff_stdin_to_text() {
 log "Diffing..."
-P="$(mktemp)"
+F="$(echo "${1:-"blank"}" | head -n 1 | tr ' ' '_').XXXXXX"
+P="$(mktemp -p /tmp "$F")"
 if ! test -z "$1"; then
   echo "$1" > "$P"
 fi
@@ -31,7 +30,7 @@ if ! diff -su "$P" -; then
 fi
 }
 
-mock_cat() {
+wrapped_cat() {
 for F in "$@"; do
   log "Catting $F:"
   printf '```\n'
@@ -40,7 +39,7 @@ for F in "$@"; do
 done
 }
 
-mock_dedoc() {
+wrapped_dedoc() {
 DEDOC="$(find ../target-docker/ -name dedoc | head -n 1)"
 if test -z "$DEDOC"; then
   log "dedoc binary not found, building..."
@@ -96,7 +95,7 @@ fi
 
 MOCK_SERVER_PID_PATH="$(realpath "data/mock_server.pid")"
 
-mock_server() {
+start_mock_file_server() {
 cd data/ || log_err_and_die "No data/, invalid directory structure!"
 python3 ../https-server.py "127.0.0.1" "443" "$KEY_PATH" "$CERT_PATH" &
 PID="$!"

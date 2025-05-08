@@ -5,15 +5,15 @@
 set -eu
 . "$(dirname "$0")"/../scenario-utils.sh
 
-mock_dedoc dl docset-1
+wrapped_dedoc dl docset-1
 
 # Open a page from some docset.
-mock_dedoc open docset-1 type-1/1 | mock_diff_stdin_to_text "# test"
+wrapped_dedoc open docset-1 type-1/1 | diff_stdin_to_text "# test"
 
 # Check whether dedoc can act as a HTML transpiler. Default width is 80
 # characters.
-mock_dedoc open --html "./data/example-page-mayonnaise.html" | \
-mock_diff_stdin_to_text \
+wrapped_dedoc open --html "./data/example-page-mayonnaise.html" | \
+diff_stdin_to_text \
 '# postgresql confessed its love to rust but got a compile-time error: "lifetime
 # forever too short" (´；ω；｀)
 
@@ -48,8 +48,8 @@ while cargo downloads half of crates.io     │than my therapists notepad (；´
 ────────────────────────────────────────────┴───────────────────────────────────'
 
 # Use 66 columns and -n.
-mock_dedoc open --html "./data/example-page-mayonnaise.html" -c 66 -n | \
-mock_diff_stdin_to_text \
+wrapped_dedoc open --html "./data/example-page-mayonnaise.html" -c 66 -n | \
+diff_stdin_to_text \
 '    1  # postgresql confessed its love to rust but got a
     2  # compile-time error: "lifetime forever too short"
     3  # (´；ω；｀)

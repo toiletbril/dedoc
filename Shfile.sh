@@ -17,17 +17,24 @@ cargo build --target x86_64-unknown-linux-musl --target-dir target-docker &&
 ./integration-tests/run-tests.sh
 '
 
+clean_docker_target() {
+DOCKER_TARGET="$(dirname "$0")/target-docker"
+if test -d "$DOCKER_TARGET"; then
+  rm -r "$DOCKER_TARGET"
+fi
+}
+
+remove_docker_image() {
+if docker image inspect "$IMG" > /dev/null 2>&1; then
+  docker rmi -f "$IMG"
+fi
+}
+
 C="${1:-}"
 
 case $C in
 "make-image")
-  if docker image inspect "$IMG" > /dev/null 2>&1; then
-    docker rmi -f "$IMG"
-    DOCKER_TARGET="$(dirname "$0")/target-docker"
-    if test -d "$DOCKER_TARGET"; then
-      rm -r "$DOCKER_TARGET"
-    fi
-  fi
+  remove_docker_image
   docker build --network=host -f Dockerfile -t "$IMG" "$(dirname "$0")"
   ;;
 "cross-compile")
@@ -38,8 +45,13 @@ case $C in
   docker run --pull=never --rm --network=host -e BUILDMODE="dev" -v \
              "$PWD":/src $IMG sh -c "$TEST_CMD"
   ;;
+"clean")
+  cargo clean
+  remove_docker_image
+  clean_docker_target
+  ;;
 *)
-  echo "USAGE: $0 <make-image/cross-compile/test>"
+  echo "USAGE: $0 <make-image/cross-compile/test/clean>"
   exit 1
   ;;
 esac
