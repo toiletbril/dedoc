@@ -5,10 +5,6 @@
 set -eu
 . "$(dirname "$0")"/../scenario-utils.sh
 
-curl https://devdocs.io/docs.json
-
-exit 1
-
 # Ordinary fetch.
 wrapped_dedoc fetch
 wrapped_dedoc ls
