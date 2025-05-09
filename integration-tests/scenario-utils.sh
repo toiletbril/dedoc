@@ -10,12 +10,12 @@ date "+%Y-%m-%d at %X"
 }
 
 log() {
-  printf "$(_log_date) [LOG] %s\n" "$@" >&2
+printf "$(_log_date) [LOG] %s\n" "$@" >&2
 }
 
 log_err_and_die() {
-  printf "$(_log_date) [ERR] %s\n" "$@" >&2
-  exit 1
+printf "$(_log_date) [ERR] %s\n" "$@" >&2
+exit 1
 }
 
 diff_stdin_to_text() {

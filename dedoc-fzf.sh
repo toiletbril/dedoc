@@ -1,4 +1,5 @@
 #!/bin/sh
+
 # List all pages from a docset, start `fzf`, search for a page and open it in
 # `less`.
 
