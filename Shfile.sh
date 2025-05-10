@@ -54,7 +54,7 @@ case $C in
   cargo clean
   remove_docker_image
   clean_docker_target
-  rm -r ./integration-tests/coverage/profraw/*.profraw
+  rm -rf ./integration-tests/coverage/profraw/*.profraw
   ;;
 *)
   echo "USAGE: $0 <make-image/cross-compile/test/clean>"

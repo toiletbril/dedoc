@@ -16,3 +16,9 @@ jobs:
         run: ./Shfile.sh make-image
       - name: Run tests
         run: ./Shfile.sh test
+      - uses: michaelhenry/create-report@v2
+        name: View HTML report
+        with:
+          title: "HTML report"
+          path: ./integration-tests/coverage/report/index.html
+          format: html
