@@ -5,8 +5,6 @@
 set -eu
 . "$(dirname "$0")"/../scenario-utils.sh
 
-wrapped_dedoc rm --purge-all
-
 wrapped_dedoc dl docset-3~1
 
 # Search for files.

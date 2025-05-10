@@ -91,3 +91,5 @@ diff_stdin_to_text \
    39  downloads half of crates.io     │therapists notepad        
    40  (￢_￢;)                        │(；´∀｀)                  
    41  ────────────────────────────────┴──────────────────────────'
+
+wrapped_dedoc rm --purge-all

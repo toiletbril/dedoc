@@ -27,3 +27,5 @@ export DEDOC_HOME="/root/.dedoc2"
 mkdir -p "$DEDOC_HOME"
 wrapped_dedoc ft | grep 'dedoc2'
 wrapped_dedoc ls
+
+wrapped_dedoc rm --purge-all
