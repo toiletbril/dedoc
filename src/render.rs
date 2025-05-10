@@ -29,7 +29,7 @@ fn show_render_help() -> ResultS
                                     `~/.dedoc/rendered/<docset>`.
         --all                       Render all docsets. In case of `-d`, a
                                     subdirectory will be created for each
-                                    docset anyway.
+                                    docset.
         --help                      Display help message."
   );
   Ok(())
@@ -86,9 +86,6 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
       }
       // Ok, this is a docset page file.
 
-      print!("\rRendered {} files from `{}` into `{}`...", counter, docset, output_dir.display());
-      stdout().flush().map_err(|err| format!("Could not flush stdout: {err}"))?;
-
       let mut md_file_path = output_dir.join(&path_relative_to_docset);
       md_file_path.set_extension("md");
 
@@ -100,9 +97,12 @@ fn render_docset_with_progess(docset: &str, output_dir: &Path, page_width: usize
 
       file.write(translate_docset_html_file_to_text(entry.path(), None, page_width, false, false)?.0.as_bytes())
         .map_err(|err| format!("Could not write to `{}`: {}", md_file_path.display(), err))?;
-
       let _ = file.flush();
+
       *counter += 1;
+
+      print!("\rRendered {} files from `{}` into `{}`...", counter, docset, output_dir.display());
+      stdout().flush().map_err(|err| format!("Could not flush stdout: {err}"))?;
     }
 
     Ok(())
