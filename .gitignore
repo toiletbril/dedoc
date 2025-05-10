@@ -1,7 +1,7 @@
 /target
 /target-docker
 /garbage
-/integration-tests/coverage/report
+/integration-tests/coverage/report.md
 
 xargo.toml
 

@@ -105,3 +105,15 @@ PID="$!"
 echo "$PID" > "$MOCK_SERVER_PID_PATH"
 sleep 2
 }
+
+COVERAGE_FILE_PATH="$COVERAGE_DIR/report.md"
+
+generate_coverage_report() {
+log "Generating coverage report at $COVERAGE_FILE_PATH..."
+grcov --binary-path "../target-docker/x86_64-unknown-linux-musl/debug" \
+      -s .. --ignore-not-existing --branch -t markdown \
+      --keep-only 'src/*' -o "$COVERAGE_FILE_PATH" "$COVERAGE_DIR/profraw/"
+if ! test -z "${GITHUB_STEP_SUMMARY:-}"; then
+  cat "$COVERAGE_FILE_PATH" > "$GITHUB_STEP_SUMMARY"
+fi
+}
