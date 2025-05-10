@@ -21,16 +21,20 @@ RUN apk add \
 ARG TS="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to
-# nightly.
+# nightly. llvm-components-preview is needed for code coverage.
 RUN for t in $TS; do TC="${TC:-} -t $t"; done && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-    sh -s -- -y --default-toolchain nightly $TC && \
+    sh -s -- -y --default-toolchain nightly $TC \
+       --component llvm-tools-preview && \
     git config --global --add safe.directory '*'
 
 # Test whether we really installed Rust.
 RUN stat "/root/.cargo" || exit 1
 
 ENV PATH="/root/.cargo/bin:$PATH"
+
+# Code coverage!
+RUN cargo install grcov
 
 ENV RUSTFLAGS="-C target-feature=+crt-static"
 ENV RUSTTARGETS="$TS"

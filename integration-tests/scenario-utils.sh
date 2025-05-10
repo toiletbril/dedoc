@@ -4,6 +4,8 @@
 # rather sourced in other scripts.
 
 export DEDOC_HOME="/root/.dedoc"
+export COVERAGE_DIR="$(realpath "./coverage")"
+export LLVM_PROFILE_FILE="$COVERAGE_DIR/profraw/dedoc-%p-%m.profraw"
 
 _log_date() {
 date "+%Y-%m-%d at %X"

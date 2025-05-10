@@ -13,6 +13,7 @@ for T in $RUSTTARGETS; do
 done
 '
 TEST_CMD='
+RUSTFLAGS="-Cinstrument-coverage" \
 cargo build --target x86_64-unknown-linux-musl --target-dir target-docker &&
 ./integration-tests/run-tests.sh
 '
@@ -53,6 +54,7 @@ case $C in
   cargo clean
   remove_docker_image
   clean_docker_target
+  rm -r ./integration-tests/coverage/profraw/*.profraw
   ;;
 *)
   echo "USAGE: $0 <make-image/cross-compile/test/clean>"

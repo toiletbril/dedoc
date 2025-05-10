@@ -53,4 +53,9 @@ for F in ./scenario/*.sh; do
   run_test "$F"
 done
 
+# Collect coverage!
+grcov --binary-path "../target-docker/x86_64-unknown-linux-musl/debug" \
+      --branch -s ../src -t html -o "$COVERAGE_DIR/report" \
+      "$COVERAGE_DIR/profraw/" 
+
 log "👍"
