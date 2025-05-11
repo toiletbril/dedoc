@@ -16,5 +16,5 @@ jobs:
         run: ./Shfile.sh make-image
       - name: Run tests
         run: ./Shfile.sh test
-      - name: Collecting summary
+      - name: Collect summary
         run: cat ./integration-tests/coverage/report.md >> $GITHUB_STEP_SUMMARY

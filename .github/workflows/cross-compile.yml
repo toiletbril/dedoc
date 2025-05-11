@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Generate docker image
         run: ./Shfile.sh make-image
-      - name: Cross-compile for ${{ matrix.target }}
+      - name: Run cross-compilation
         run: ./Shfile.sh cross-compile
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
