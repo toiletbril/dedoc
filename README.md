@@ -1,5 +1,7 @@
 # dedoc
 
+[![Integration Tests](https://github.com/toiletbril/dedoc/actions/workflows/integration-tests.yml/badge.svg?branch=staging)](https://github.com/toiletbril/dedoc/actions/workflows/integration-tests.yml)
+
 Search and view [DevDocs](https://devdocs.io/) offline from your terminal.
 **Without browser**. Without Python, Javascript or other inconveniences. Even
 without desktop environment.
