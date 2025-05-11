@@ -1,4 +1,4 @@
-name: Build binaries
+name: Build Binaries
 
 on:
   release:
@@ -7,9 +7,6 @@ on:
 jobs:
   cross-compile:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [ x86_64-unknown-linux-musl, x86_64-pc-windows-gnu ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,10 +14,13 @@ jobs:
         run: ./Shfile.sh make-image
       - name: Cross-compile for ${{ matrix.target }}
         run: ./Shfile.sh cross-compile
-        env:
-          TS: ${{ matrix.target }}
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+      - name: Upload Linux binary
+        uses: actions/upload-artifact@v4
         with:
-          name: dedoc-${{ matrix.target }}
-          path: target-docker/${{ matrix.target }}/release/dedoc${{ endsWith(matrix.target, 'windows-gnu') && '.exe' || '' }}
+          name: dedoc-x86_64-linux-musl
+          path: ./target-docker/x86_64-unknown-linux-musl/release/dedoc
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: dedoc-x86_64-win32
+          path: ./target-docker/x86_64-pc-windows-gnu/release/dedoc.exe
