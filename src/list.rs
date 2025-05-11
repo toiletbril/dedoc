@@ -13,8 +13,11 @@ fn show_list_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} list{RESET} [-lans]
+    {BOLD}{PROGRAM_NAME} list{RESET} [-OPTIONS]
     Show available docsets.
+
+    {BOLD}{PROGRAM_NAME} list{RESET} [-OPTIONS] --exists <docset>
+    Check whether a docset exists.
 
 {GREEN}OPTIONS{RESET}
     -l, --local                     Only show local docsets.
@@ -25,7 +28,8 @@ fn show_list_help() -> ResultS
     -d, --no-labels                 Don't print `[downloaded]` labels.
         --porcelain                 Same as -nd.
     -s, --search <query>            Filter docsets based on a query.
-    -e, --exists <docset>           Error out if docset does not exist.
+    -e, --exists <docset>           Fail and print message with cause if 
+                                    specified docset does not exist.
         --help                      Display help message."
   );
   Ok(())

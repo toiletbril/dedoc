@@ -13,8 +13,11 @@ fn show_remove_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} remove{RESET} <docset1> [docset2, ...]
+    {BOLD}{PROGRAM_NAME} remove{RESET} [-OPTIONS] <docset1> [docset2, ...]
     Delete a local docset.
+
+    {BOLD}{PROGRAM_NAME} remove{RESET} --purge-all
+    Delete all local docsets.
 
 {GREEN}OPTIONS{RESET}
         --purge-all                 Remove all installed docsets.

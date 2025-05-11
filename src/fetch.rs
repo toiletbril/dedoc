@@ -19,7 +19,7 @@ fn show_fetch_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} fetch{RESET} [-f]
+    {BOLD}{PROGRAM_NAME} fetch{RESET} [-OPTIONS]
     Fetch latest `docs.json` which lists available languages and frameworks.
 
 {GREEN}OPTIONS{RESET}

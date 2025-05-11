@@ -26,9 +26,12 @@ fn show_download_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} download{RESET} [-fu] <docset1> [docset2, ..]
+    {BOLD}{PROGRAM_NAME} download{RESET} [-OPTIONS] <docset1> [docset2, ..]
     Download or update a docset. Available docsets can be displayed using
     `list`.
+
+    {BOLD}{PROGRAM_NAME} download{RESET} --update-all
+    Try to update all downloaded docsets against a recent `docs.json`.
 
 {GREEN}OPTIONS{RESET}
     -f, --force                     Force the download and overwrite files.

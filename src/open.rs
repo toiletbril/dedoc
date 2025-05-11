@@ -15,8 +15,11 @@ fn show_open_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} open{RESET} [-hcn] <docset> <page>
+    {BOLD}{PROGRAM_NAME} open{RESET} [-OPTIONS] <docset> <page>
     Print a page. Pages can be searched using `search`.
+
+    {BOLD}{PROGRAM_NAME} open{RESET} [-OPTIONS] --html <HTML file>
+    Translate an HTML file to text.
 
 {GREEN}OPTIONS{RESET}
     -h, --html                      Interpret arguments as a path to HTML file

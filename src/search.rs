@@ -26,8 +26,11 @@ fn show_search_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} search{RESET} [-wipofcn] <docset> [query]
-    List docset pages that match your query.
+    {BOLD}{PROGRAM_NAME} search{RESET} [-OPTIONS] <docset> [query]
+    List docset pages that match the query.
+
+    {BOLD}{PROGRAM_NAME} search{RESET} [-OPTIONS] <docset> [query] --open <number>
+    Open a docset page that matches the query and a page number.
 
 {GREEN}OPTIONS{RESET}
     -w, --whole                     Search for the whole sentence.

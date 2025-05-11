@@ -19,7 +19,7 @@ fn show_render_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} render{RESET} [-cd] <docset1> [docset2, ...]
+    {BOLD}{PROGRAM_NAME} render{RESET} [-OPTIONS] <docset1> [docset2, ...]
     Render a whole docset to text.
 
 {GREEN}OPTIONS{RESET}

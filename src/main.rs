@@ -61,7 +61,7 @@ fn show_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME}{RESET} <subcommand> [args]
+    {BOLD}{PROGRAM_NAME}{RESET} [-OPTIONS] <subcommand> [-OPTIONS] [args]
     Search and display DevDocs pages from terminal.
 
 {GREEN}SUBCOMMANDS{RESET}
