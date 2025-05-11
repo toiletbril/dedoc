@@ -16,6 +16,7 @@ RUN apk add \
     ca-certificates \
     pkgconf \
     python3 \
+    ncurses \
     curl
 
 ARG TS="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"

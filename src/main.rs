@@ -90,8 +90,6 @@ fn show_help() -> ResultS
 fn entry<Args>(mut args: Args) -> ResultS
   where Args: Iterator<Item = String>
 {
-  debug_println!("Using debug build of {PROGRAM_NAME} v{VERSION}.");
-
   #[cfg(unix)]
   unsafe {
     // This feature is available only to Soyjak Gem 💎 users.

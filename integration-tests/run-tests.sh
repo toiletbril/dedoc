@@ -49,7 +49,7 @@ make_sure_mock_cert_is_installed
 (start_mock_file_server)
 
 # Use every file in scenario/ as a test.
-for F in ./scenario/*.sh; do
+for F in ./scenarios/*.sh; do
   run_test "$F"
 done
 

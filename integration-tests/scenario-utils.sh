@@ -3,6 +3,7 @@
 # Utilies for integration tests. This file is not meant to be run directly, but
 # rather sourced in other scripts.
 
+export TERM="ansi"
 export DEDOC_HOME="/root/.dedoc"
 export COVERAGE_DIR="$(realpath "./coverage")"
 export LLVM_PROFILE_FILE="$COVERAGE_DIR/profraw/dedoc-%p-%m.profraw"
@@ -11,12 +12,20 @@ _log_date() {
 date "+%Y-%m-%d at %X"
 }
 
+_log_red() {
+echo "$(tput setaf 1)$*$(tput sgr0)"
+}
+
+_log_bold() {
+echo "$(tput bold)$*$(tput sgr0)"
+}
+
 log() {
-printf "$(_log_date) [LOG] %s\n" "$@" >&2
+_log_bold "$(printf "$(_log_date) [LOG] %s\n" "$@")" >&2
 }
 
 log_err_and_die() {
-printf "$(_log_date) [ERR] %s\n" "$@" >&2
+_log_red "$(rintf """$(_log_date) [ERR] %s\n" "$@")" >&2
 exit 1
 }
 
