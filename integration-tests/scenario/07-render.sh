@@ -13,6 +13,9 @@ diff_stdin_to_text "# test" < "/root/.dedoc/rendered/docset-1/type-1/1.md"
 wrapped_dedoc render docset-3~1 -d /root/rendered2
 test -e "/root/rendered2/errors/e_mom_yelling.md"
 
+# Can't use already existing directories.
+! wrapped_dedoc render docset-3~1 -d /root/rendered2
+
 wrapped_dedoc render --all
 test -e "/root/.dedoc/rendered/docset-3~1/errors/e_mom_yelling.md"
 

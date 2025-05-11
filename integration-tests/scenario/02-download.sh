@@ -24,4 +24,9 @@ rm "$DEDOC_HOME/docsets/docset-3~1/.dedoc_mtime"
 
 wrapped_dedoc dl -u | grep "1 item was successfully updated."
 
+# Swap mock docs.json to confuse dedoc with non-existing docsets on update.
+swap_docs_json
+wrapped_dedoc dl -u 2>&1 | grep "Unable to find"
+swap_docs_json
+
 wrapped_dedoc rm --purge-all

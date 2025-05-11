@@ -48,6 +48,10 @@ Mentions in other files from \`docset-3~1\`:
    1  errors/e_mom_yelling
         ...'><h3>Option 2: \"Im working on a startup!\"</h3><p>Buys you 3-6 months</p>..."
 
+! wrapped_dedoc ss docset-3~1 -p startup -o 2
+
+wrapped_dedoc ss docset-3~1 -p startup -o 1
+
 wrapped_dedoc ss docset-3~1 -pw you | diff_stdin_to_text \
 'Searching for ` you `...
 No exact matches in `docset-3~1`.
@@ -85,6 +89,10 @@ Works until she unplugs the router
 
 Buys you 3-6 months'
 
+! wrapped_dedoc ss docset-3~1 -o 69
+! wrapped_dedoc ss docset-3~1 -o 0
+! wrapped_dedoc ss docset-3~1 -o -5
+! wrapped_dedoc ss docset-3~1 -o aboba
 
 wrapped_dedoc ss docset-3~1 -o 12 | diff_stdin_to_text \
 "# Anime Database Schema (￣ω￣;)

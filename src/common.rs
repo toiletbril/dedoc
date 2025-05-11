@@ -680,8 +680,8 @@ pub(crate) fn is_docset_old(docset_name: &str, docs: &[DocsEntry]) -> Result<boo
                      first_three.join("`/`"));
     }
     SearchMatch::None => {
-      print_warning!("Unable to find downloaded `{docset_name}` recent \
-                      `docs.json`.")
+      print_warning!("Unable to find downloaded `{docset_name}` in the recent \
+                      `docs.json`. It was possibly removed.")
     }
     SearchMatch::Exact => unreachable!(),
   };
