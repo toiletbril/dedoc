@@ -11,15 +11,12 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, find_docset_in_docs, get_default_user_agent,
-  get_docset_path, get_flag_error, get_local_docsets, is_docs_json_exists,
-  is_docs_json_old, is_docset_downloaded, is_docset_in_docs_or_print_warning,
-  is_docset_old,
+  deserialize_docs_json, find_docset_in_docs, get_default_user_agent, get_docset_path,
+  get_flag_error, get_local_docsets, is_docs_json_exists, is_docs_json_old, is_docset_downloaded,
+  is_docset_in_docs_or_print_warning, is_docset_old,
 };
 use crate::common::{DocsEntry, ResultS};
-use crate::common::{
-  BOLD, DEFAULT_DB_JSON_LINK, GREEN, MTIME_FILENAME, PROGRAM_NAME, RESET,
-};
+use crate::common::{BOLD, DEFAULT_DB_JSON_LINK, GREEN, MTIME_FILENAME, PROGRAM_NAME, RESET};
 use crate::print_warning;
 
 const DOWNLOAD_BUFFER_SIZE: usize = 1024 * 32;
@@ -29,9 +26,12 @@ fn show_download_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} download{RESET} [-fu] <docset1> [docset2, ..]
+    {BOLD}{PROGRAM_NAME} download{RESET} [-OPTIONS] <docset1> [docset2, ..]
     Download or update a docset. Available docsets can be displayed using
     `list`.
+
+    {BOLD}{PROGRAM_NAME} download{RESET} --update-all
+    Try to update all downloaded docsets against a recent `docs.json`.
 
 {GREEN}OPTIONS{RESET}
     -f, --force                     Force the download and overwrite files.
@@ -42,33 +42,35 @@ fn show_download_help() -> ResultS
   Ok(())
 }
 
-fn download_db_and_index_json_with_progress(docset_name: &str,
-                                            docs: &[DocsEntry])
-                                            -> ResultS
+fn download_db_and_index_json_with_progress(docset_name: &str, docs: &[DocsEntry]) -> ResultS
 {
   if let Some(entry) = find_docset_in_docs(docset_name, docs) {
     let docset_path = get_docset_path(docset_name)?;
-    if !docset_path.try_exists().map_err(|err| {
-      format!("Could not check if {} exists: {err}", docset_path.display())
-    })?
+    if !docset_path.try_exists()
+                   .map_err(|err| {
+                     format!("Could not check if {} exists: {err}", docset_path.display())
+                   })?
     {
       create_dir_all(&docset_path).map_err(|err| {
-        format!("Cannot create `{}` directory: {err}", docset_path.display())
-      })?;
+                                    format!("Cannot create `{}` directory: {err}",
+                                            docset_path.display())
+                                  })?;
     }
 
     for (i, file_name) in ["db.json", "index.json"].iter().enumerate() {
       let file_path = docset_path.join(file_name);
 
       let file = File::create(&file_path).map_err(|err| {
-                   format!("Could not create `{}`: {err}", file_path.display())
-                 })?;
+                                           format!("Could not create `{}`: {err}",
+                                                   file_path.display())
+                                         })?;
 
-      let download_link = format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}",
-                                  file_name, entry.mtime);
+      let download_link =
+        format!("{DEFAULT_DB_JSON_LINK}/{docset_name}/{}?{}", file_name, entry.mtime);
 
       let response =
         get(&download_link).set("User-Agent", &get_default_user_agent())
+                           .set("Accept-Encoding", "gzip")
                            .call()
                            .map(|x| x.into_reader())
                            .map_err(|err| {
@@ -94,20 +96,20 @@ fn download_db_and_index_json_with_progress(docset_name: &str,
 
         print!("\rReceived {file_size} bytes, file {} of 2...", i + 1);
 
-        stdout().flush()
-                .map_err(|err| format!("Could not flush stdout:{err}"))?;
+        stdout().flush().map_err(|err| format!("Could not flush stdout: {err}"))?;
       }
       println!();
     }
     // Create a file that will store current version of the docset.
     let mtime_path = docset_path.join(MTIME_FILENAME);
     let mut mtime_file = File::create(&mtime_path).map_err(|err| {
-                           format!("Could not open `{}`: {err}",
-                                   mtime_path.display())
-                         })?;
+                                                    format!("Could not open `{}`: {err}",
+                                                            mtime_path.display())
+                                                  })?;
     write!(mtime_file, "{}", entry.mtime).map_err(|err| {
-      format!("Could not write to `{}`: {err}", mtime_path.display())
-    })?;
+                                           format!("Could not write to `{}`: {err}",
+                                                   mtime_path.display())
+                                         })?;
   }
 
   Ok(())
@@ -143,22 +145,13 @@ fn sanitize_html_line(html_line: String) -> String
         sanitized_line_buffer.push(ch);
       }
       State::InTag => match ch {
-        'd'
-          if position + 15 < length &&
-             bytes[position..position + 15] == *b"data-language=\"" =>
-        {
+        'd' if position + 15 < length && bytes[position..position + 15] == *b"data-language=\"" => {
           state = State::InKey;
         }
-        't'
-          if position + 7 < length &&
-             bytes[position..position + 7] == *b"title=\"" =>
-        {
+        't' if position + 7 < length && bytes[position..position + 7] == *b"title=\"" => {
           state = State::InKey;
         }
-        'c'
-          if position + 7 < length &&
-             bytes[position..position + 7] == *b"class=\"" =>
-        {
+        'c' if position + 7 < length && bytes[position..position + 7] == *b"class=\"" => {
           state = State::InKey;
         }
         '>' => {
@@ -185,9 +178,7 @@ fn sanitize_html_line(html_line: String) -> String
   sanitized_line_buffer
 }
 
-fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
-                                               mut map: M)
-                                               -> ResultS
+fn build_docset_from_map_with_progress<'de, M>(docset_name: &str, mut map: M) -> ResultS
   where M: MapAccess<'de>
 {
   #[inline]
@@ -195,9 +186,7 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
   fn sanitize_filename_for_windows(filename: String) -> String
   {
     const FORBIDDEN_CHARS: &[char] = &['<', '>', ':', '"', '|', '?', '*'];
-    filename.chars()
-            .map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c })
-            .collect::<String>()
+    filename.chars().map(|c| if FORBIDDEN_CHARS.contains(&c) { '_' } else { c }).collect::<String>()
   }
 
   let docset_path = get_docset_path(docset_name)?;
@@ -212,8 +201,9 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
 
     if let Some(parent) = file_path.parent() {
       create_dir_all(docset_path.join(parent)).map_err(|err| {
-        format!("Could not create `{}`: {err}", parent.display())
-      })?;
+                                                format!("Could not create `{}`: {err}",
+                                                        parent.display())
+                                              })?;
     }
 
     let mut file_name_html = file_path.as_os_str().to_owned();
@@ -229,9 +219,8 @@ fn build_docset_from_map_with_progress<'de, M>(docset_name: &str,
 
     let sanitized_contents = sanitize_html_line(contents);
 
-    writer.write_all(sanitized_contents.trim().as_bytes()).map_err(|err| {
-      format!("Could not write to `{}`: {err}", file_path.display())
-    })?;
+    writer.write_all(sanitized_contents.trim().as_bytes())
+          .map_err(|err| format!("Could not write to `{}`: {err}", file_path.display()))?;
 
     print!("\rUnpacked {unpacked_amount} files...");
     stdout().flush().map_err(|err| format!("Could not flush stdout:{err}"))?;
@@ -260,14 +249,12 @@ impl<'de> Visitor<'de> for FileVisitor
   fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
     where M: MapAccess<'de>
   {
-    build_docset_from_map_with_progress(&self.docset_name, map).map_err(
-      |err| {
-        Error::custom(format!(
-          "Error while building `{}`: {err}",
-          self.docset_name
-        ))
-      },
-    )?;
+    build_docset_from_map_with_progress(&self.docset_name, map).map_err(|err| {
+                                                                 Error::custom(format!(
+        "Error while building `{}`: {err}",
+        self.docset_name
+      ))
+                                                               })?;
     Ok(())
   }
 }
@@ -287,14 +274,15 @@ fn build_docset_from_db_json(docset_name: &String) -> ResultS
   let mut db_json_deserializer = serde_json::Deserializer::from_reader(reader);
 
   let file_visitor = FileVisitor { docset_name: docset_name.to_owned() };
-  db_json_deserializer.deserialize_map(file_visitor).map_err(|err| {
-    format!("Could not deserialize `{}`: {err}", db_json_path.display())
-  })?;
+  db_json_deserializer.deserialize_map(file_visitor)
+                      .map_err(|err| {
+                        format!("Could not deserialize `{}`: {err}", db_json_path.display())
+                      })?;
 
   remove_file(&db_json_path).map_err(|err| {
-    format!("Could not remove `{}` after building {docset_name}: {err}",
-            db_json_path.display())
-  })?;
+                              format!("Could not remove `{}` after building {docset_name}: {err}",
+                                      db_json_path.display())
+                            })?;
 
   Ok(())
 }
@@ -312,8 +300,7 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
     flag_help: BoolFlag,       ["--help"]
   ];
 
-  let args =
-    parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
+  let args = parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
   let docs = deserialize_docs_json()?;
   let mut successful_downloads = 0;
 
@@ -322,6 +309,9 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
       print_warning!("Your `docs.json` was updated more than a week ago. Run \
                       `{PROGRAM_NAME} fetch` to retrieve a new list of \
                       available docsets.");
+    }
+    if !args.is_empty() {
+      print_warning!("Arguments are ignored due to `--update-all` flag.");
     }
     for ref docset in get_local_docsets()? {
       if is_docset_old(docset, &docs)? {
@@ -335,12 +325,8 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
 
     match successful_downloads {
       0 => return Err("Nothing to do.".to_string()),
-      1 => println!(
-        "{BOLD}{successful_downloads} item was successfully updated{RESET}."
-      ),
-      _ => println!(
-        "{BOLD}{successful_downloads} items were successfully updated{RESET}."
-      ),
+      1 => println!("{BOLD}{successful_downloads} item was successfully updated{RESET}."),
+      _ => println!("{BOLD}{successful_downloads} items were successfully updated{RESET}."),
     }
     return Ok(());
   }
@@ -360,10 +346,7 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
       continue;
     }
 
-    if !flag_force &&
-       is_docset_downloaded(docset)? &&
-       !is_docset_old(docset, &docs)?
-    {
+    if !flag_force && is_docset_downloaded(docset)? && !is_docset_old(docset, &docs)? {
       print_warning!("Docset `{docset}` is already downloaded and is of recent \
                       version. If you still want to re-download it, re-run \
                       this command with `--force`");
@@ -379,9 +362,7 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
   match successful_downloads {
     0 => return Err("Nothing to do.".to_string()),
     1 => println!("{BOLD}Install has successfully finished{RESET}."),
-    _ => println!(
-      "{BOLD}{successful_downloads} items were successfully installed{RESET}."
-    ),
+    _ => println!("{BOLD}{successful_downloads} items were successfully installed{RESET}."),
   }
 
   Ok(())

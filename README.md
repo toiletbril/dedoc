@@ -1,5 +1,7 @@
 # dedoc
 
+[![Integration Tests](https://github.com/toiletbril/dedoc/actions/workflows/integration-tests.yml/badge.svg?branch=staging)](https://github.com/toiletbril/dedoc/actions/workflows/integration-tests.yml)
+
 Search and view [DevDocs](https://devdocs.io/) offline from your terminal.
 **Without browser**. Without Python, Javascript or other inconveniences. Even
 without desktop environment.
@@ -8,9 +10,9 @@ App directory is `~/.dedoc`. Docsets go into `~/.dedoc/docsets`. You can also
 define `$DEDOC_HOME` environment variable to an existing directory of your
 choice.
 
-Pages are displayed as markdown documents, and can be piped to `less`,
-[`glow`](https://github.com/charmbracelet/glow) if you're fancy, or any other
-pager or markdown reader.
+Pages are translated from HTML to colored text (not markdown), and can be piped
+to `less`, [`glow`](https://github.com/charmbracelet/glow) if you're fancy, or
+any other pager or *maybe* a markdown reader.
 
 If you have Rust, the preferred way to install `dedoc` is by running:
 ```console
@@ -19,6 +21,14 @@ $ cargo install dedoc
 
 Alternatively, precompiled `x86_64` binaries for Windows and Linux are
 available in [releases](https://github.com/toiletbril/dedoc/releases).
+
+## Development
+
+Everything as in your usual Rust project that uses Cargo.
+
+As for releases, [`Dockerfile`](./Dockerfile) is used as a base image for
+`x86_64` Linux/Windows cross-compilation and integration tests. Take a look
+inside [`./Shfile.sh`](./Shfile.sh) for more context.
 
 ## Usage
 
@@ -105,7 +115,7 @@ source
 ```
 
 Using `-h` with `open` makes `dedoc` interpret supplied arguments as a path to
-HTML file and behave like a HTML to markdown transpiler. To make output wider or
+HTML file and behave like a HTML to text transpiler. To make output wider or
 narrower, you can use `-c` flag with the number of columns.
 
 Instead of typing out the whole path, you can conveniently append `-o` flag the
@@ -123,5 +133,20 @@ use `ss` instead of `search` and pipe output to a pager or markdown reader, like
 ```console
 $ dedoc -c ss rust bufreader -o 2 | less -r
 ```
+
+## Scripting support
+
+There is a `render` subcommand, which allows you to render the entire docset to
+text. By default, all docsets are stored in HTML files and are rendered on the
+fly, to support toggling the colors and dynamic output size. By using the
+subcommand, the docset will be rendered without colors and with the width
+specified in `-c` (144 by default) into a directory specified in `-d`
+(`~/.dedoc/rendered/<docset>` by default). You can render all at once with
+`--all` and re-render as much as you want.
+
+Some commands support `--porcelain`, to make life slightly easier when parsing
+the output.
+
+You may take a look at the [example script](./dedoc-fzf.sh) for an inspiration.
 
 Happy coding!

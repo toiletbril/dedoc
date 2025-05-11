@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Test docset 4",
+    "slug": "docset-4",
+    "type": "test",
+    "links": {
+      "home": "",
+      "code": ""
+    },
+    "version": "1",
+    "release": "",
+    "mtime": 1,
+    "db_size": 1,
+    "attribution": "",
+    "alias": ""
+  }
+]

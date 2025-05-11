@@ -1,4 +1,13 @@
 /target
+/target-docker
 /garbage
-perf.*
+/integration-tests/coverage/report.md
+
 xargo.toml
+
+perf.*
+*.profdata
+*.profraw
+*.pem
+*.crt
+*.pid

@@ -1,13 +1,13 @@
 [package]
 name        = "dedoc"
-version     = "0.2.6"
+version     = "0.2.7"
 description = "Terminal-based viewer for DevDocs documentation"
 repository  = "https://github.com/toiletbril/dedoc"
 authors     = ["toiletbril"]
 readme      = "README.md"
 
 edition      = "2021"
-rust-version = "1.66"
+rust-version = "1.71"
 
 license  = "GPL-3.0"
 keywords = ["docs", "cli"]
@@ -25,9 +25,17 @@ strip    = false
 debug    = true
 
 [dependencies]
-toiletcli     = { version = "0.12.1", default-features = false, features = ["colors", "flags"] }
-serde         = { version = "1.0.204", features = ["derive"] }
-serde_json    = "1.0.120"
-html2text     = "0.12.5"
-terminal_size = "0.3.0"
-ureq          = "2.10.1"
+# clap
+toiletcli               = { version = "0.12.3", default-features = false, features = [ "colors", "escapes", "flags" ] }
+# create cache and parse docs.json
+serde                   = { version = "1.0.204", features = ["derive"] }
+serde_json              = "1.0.120"
+# signal()
+libc                    = "0.2.148"
+# the package name
+html2text               = "0.14.0"
+terminal_size           = "0.3.0"
+# html client
+ureq                    = { version = "2.12.1", features = [ "native-certs" ] }
+# commit in --version
+git-const               = "1.1.0"

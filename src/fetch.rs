@@ -6,9 +6,8 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  create_program_directory, get_default_user_agent, get_flag_error,
-  get_program_directory, is_docs_json_exists, is_docs_json_old,
-  write_to_logfile,
+  create_program_directory, get_default_user_agent, get_flag_error, get_program_directory,
+  is_docs_json_exists, is_docs_json_old, write_to_logfile,
 };
 use crate::common::{DocsEntry, ResultS};
 use crate::common::{BOLD, DEFAULT_DOCS_JSON_LINK, GREEN, PROGRAM_NAME, RESET};
@@ -20,7 +19,7 @@ fn show_fetch_help() -> ResultS
   println!(
            "\
 {GREEN}USAGE{RESET}
-    {BOLD}{PROGRAM_NAME} fetch{RESET} [-f]
+    {BOLD}{PROGRAM_NAME} fetch{RESET} [-OPTIONS]
     Fetch latest `docs.json` which lists available languages and frameworks.
 
 {GREEN}OPTIONS{RESET}
@@ -33,23 +32,20 @@ fn show_fetch_help() -> ResultS
 
 fn fetch_docs() -> Result<Vec<DocsEntry>, String>
 {
-  let response = get(DEFAULT_DOCS_JSON_LINK)
-    .set("User-Agent", &get_default_user_agent())
-    .set("Accept-Encoding", "gzip")
-    .call()
-    .map_err(|err| {
-      format!("Could not fetch `{DEFAULT_DOCS_JSON_LINK}`: {err}")
-    })?;
+  let response =
+    get(DEFAULT_DOCS_JSON_LINK).set("User-Agent", &get_default_user_agent())
+                               .set("Accept-Encoding", "gzip")
+                               .call()
+                               .map_err(|err| {
+                                 format!("Could not fetch `{DEFAULT_DOCS_JSON_LINK}`: {err}")
+                               })?;
 
   let body =
-    response.into_string()
-            .map_err(|err| format!("Unable to read response body: {err}"))?;
+    response.into_string().map_err(|err| format!("Unable to read response body: {err}"))?;
 
   let docs: Vec<DocsEntry> =
     serde_json::from_str(body.as_str()).map_err(|err| {
-      let result = write_to_logfile(format!(
-        "Error while parsing JSON body: {err}\n\n{body}"
-      ));
+      let result = write_to_logfile(format!("Error while parsing JSON body: {err}\n\n{body}"));
       let log_file_message = match result {
         Ok(path) => format!("Log file is saved at `{}`.", path.display()),
         Err(err) => format!("Unable to write log file: {err}."),
@@ -60,20 +56,15 @@ fn fetch_docs() -> Result<Vec<DocsEntry>, String>
   Ok(docs)
 }
 
-fn serialize_and_overwrite_docs(path: PathBuf,
-                                docs: Vec<DocsEntry>)
-                                -> Result<(), String>
+fn serialize_and_overwrite_docs(path: PathBuf, docs: Vec<DocsEntry>) -> Result<(), String>
 {
-  let file = File::create(&path).map_err(|err| {
-                                  format!("Could not create `{}`: {err}",
-                                          path.display())
-                                })?;
+  let file =
+    File::create(&path).map_err(|err| format!("Could not create `{}`: {err}", path.display()))?;
 
   let writer = BufWriter::new(file);
 
   serde_json::to_writer(writer, &docs).map_err(|err| {
-                                        format!("Could not write `{}`: {err}",
-                                                path.display())
+                                        format!("Could not write `{}`: {err}", path.display())
                                       })?;
 
   Ok(())
