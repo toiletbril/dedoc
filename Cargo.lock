@@ -81,7 +81,6 @@ dependencies = [
 name = "dedoc"
 version = "0.2.7"
 dependencies = [
- "git-const",
  "html2text",
  "libc",
  "serde",
@@ -151,12 +150,6 @@ dependencies = [
  "libc",
  "wasi",
 ]
-
-[[package]]
-name = "git-const"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4f63cc0cd93d91bcc11b46f61db771bc36c405d96043506ae40facd87b31f7"
 
 [[package]]
 name = "hermit-abi"

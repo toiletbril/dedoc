@@ -35,15 +35,17 @@ const OS: ! = panic!("Temple OS is not supported.");
 
 fn show_short_version() -> ResultS
 {
-  println!("{VERSION}-{BUILD_TYPE} {HEAD}");
+  let commit = HEAD.unwrap_or("unknown commit");
+  println!("{VERSION}-{BUILD_TYPE} {commit}");
   Ok(())
 }
 
 fn show_version() -> ResultS
 {
+  let commit = HEAD.unwrap_or("unknown commit");
   println!(
            "\
-dedoc {VERSION}, {BUILD_TYPE} build on {HEAD}
+dedoc {VERSION}, {BUILD_TYPE} build on {commit}
 (c) toiletbril <{UNDERLINE}https://github.com/toiletbril{RESET}>
 
 License GPLv3: GNU GPL version 3.

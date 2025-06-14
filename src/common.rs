@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Once;
 use std::time::{Duration, SystemTime};
 
-use git_const::git_short_hash;
 use html2text::render::RichAnnotation;
 use html2text::render::TaggedLine;
 use html2text::render::TaggedLineElement::FragmentStart;
@@ -23,7 +22,7 @@ pub(crate) const PROGRAM_NAME: &str = "dedoc";
 pub(crate) const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"));
 pub(crate) const BUILD_TYPE: &str = if cfg!(debug_assertions) { "debug" } else { "release" };
 
-pub(crate) const HEAD: &str = git_short_hash!();
+pub(crate) const HEAD: Option<&str> = option_env!("CI_VERSION");
 
 pub(crate) const DEFAULT_DB_JSON_LINK: &str = "https://documents.devdocs.io";
 pub(crate) const DEFAULT_DOCS_JSON_LINK: &str = "https://devdocs.io/docs.json";

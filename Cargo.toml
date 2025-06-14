@@ -37,5 +37,3 @@ html2text               = "0.15.1"
 terminal_size           = "0.3.0"
 # html client
 ureq                    = { version = "2.12.1", features = [ "native-certs" ] }
-# commit in --version
-git-const               = "1.1.0"

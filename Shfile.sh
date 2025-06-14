@@ -8,11 +8,15 @@ set -eu
 IMG='dedoc-rust-cross'
 
 BUILD_CMD='
+export CI_VERSION="`git rev-parse HEAD`"
+
 for T in $RUSTTARGETS; do
   cargo build --profile "$BUILDMODE" --target "$T" --target-dir target-docker
 done
 '
 TEST_CMD='
+export CI_VERSION="`git rev-parse HEAD`"
+
 RUSTFLAGS="-Cinstrument-coverage" \
 cargo build --target x86_64-unknown-linux-musl --target-dir target-docker &&
 ./integration-tests/run-tests.sh
