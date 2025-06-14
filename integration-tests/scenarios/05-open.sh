@@ -35,8 +35,8 @@ accidentally implemented anime recommendations as a postgres extension... again
 > "this database schema is more chaotic than /b/ during a server meltdown" ┻━┻
 > ︵ヽ(`Д´)ﾉ︵ ┻━┻
 
-click here to discover which sql injection vulnerability matches your zodiac <#>
-sign (◔_◔) <#> my postgresql performance tuning notes are just anime doodles
+click here to discover which sql injection vulnerability matches your zodiac
+sign (◔_◔)[1] my postgresql performance tuning notes are just anime doodles
 
 ────────────────────────────────────────────┬───────────────────────────────────
 your love life has worse indexing than my   │rusts error messages are longer    
@@ -45,7 +45,9 @@ test database (눈_눈)                       │than my list of regrets (╯︵
 "working remotely" means watching anime     │my postgres config has more issues 
 while cargo downloads half of crates.io     │than my therapists notepad (；´∀｀)
 (￢_￢;)                                    │                                   
-────────────────────────────────────────────┴───────────────────────────────────'
+────────────────────────────────────────────┴───────────────────────────────────
+
+[1]: #somehref1'
 
 # Use 66 columns and -n.
 wrapped_dedoc open --html "./data/example-page-mayonnaise.html" -c 66 -n | \
@@ -77,8 +79,8 @@ diff_stdin_to_text \
    25  > "this database schema is more chaotic than /b/ during a
    26  > server meltdown" ┻━┻ ︵ヽ(`Д´)ﾉ︵ ┻━┻
    27  
-   28  click here to discover which sql injection vulnerability <#>
-   29  matches your zodiac sign (◔_◔) <#> my postgresql performance
+   28  click here to discover which sql injection vulnerability
+   29  matches your zodiac sign (◔_◔)[1] my postgresql performance
    30  tuning notes are just anime doodles
    31  
    32  ────────────────────────────────┬──────────────────────────
@@ -90,6 +92,8 @@ diff_stdin_to_text \
    38  watching anime while cargo      │more issues than my       
    39  downloads half of crates.io     │therapists notepad        
    40  (￢_￢;)                        │(；´∀｀)                  
-   41  ────────────────────────────────┴──────────────────────────'
+   41  ────────────────────────────────┴──────────────────────────
+   42  
+   43  [1]: #somehref1'
 
 wrapped_dedoc rm --purge-all
