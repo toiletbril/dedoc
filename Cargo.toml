@@ -1,6 +1,6 @@
 [package]
 name        = "dedoc"
-version     = "0.2.7"
+version     = "0.2.8"
 description = "Terminal-based viewer for DevDocs documentation"
 repository  = "https://github.com/toiletbril/dedoc"
 authors     = ["toiletbril"]
