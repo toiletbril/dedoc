@@ -25,7 +25,7 @@ _log_bold "$(printf "$(_log_date) [LOG] %s\n" "$@")" >&2
 }
 
 log_err_and_die() {
-_log_red "$(rintf """$(_log_date) [ERR] %s\n" "$@")" >&2
+_log_red "$(printf """$(_log_date) [ERR] %s\n" "$@")" >&2
 exit 1
 }
 

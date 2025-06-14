@@ -285,11 +285,11 @@ pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
   // If we are outputting line numbers, leave 7 columns for ourselves.
   let actual_width = if number_lines { width - 7 } else { width };
 
-  let rich_page =
-    html2text::from_read_rich(reader, actual_width).map_err(|err| {
-                                                     format!("Failed to parse `{}`: {err}",
-                                                             path.display())
-                                                   })?;
+  let rich_translator_config =
+    html2text::config::rich().do_decorate().link_footnotes(true).no_link_wrapping();
+  let text_lines =
+    rich_translator_config.lines_from_read(reader, actual_width)
+                          .map_err(|err| format!("Failed to parse `{}`: {err}", path.display()))?;
 
   let mut current_fragment_line = 0;
   let mut next_fragment_line = 0;
@@ -300,7 +300,7 @@ pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
   // If there is a fragment, determine current fragment offset and print
   // everything until the next fragment.
   if let Some(fragment) = fragment {
-    let (current_fragment, next_fragment) = get_fragment_bounds(&rich_page, fragment);
+    let (current_fragment, next_fragment) = get_fragment_bounds(&text_lines, fragment);
 
     if let Some(line) = current_fragment {
       current_fragment_line = line;
@@ -331,7 +331,7 @@ pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
   let mut skipped_empty_lines = false;
   let mut line_number = 0;
 
-  for (i, tagged_line) in rich_page.iter().enumerate() {
+  for (i, tagged_line) in text_lines.iter().enumerate() {
     if is_fragment_found && i < current_fragment_line {
       continue;
     }
@@ -364,14 +364,6 @@ pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
 
       line_buffer += style.as_str();
       line_buffer += &tagged_string.s;
-      if let Some(RichAnnotation::Link(link)) = tagged_string.tag.first() {
-        line_buffer += &format!(" {}<{}{link}{}{}>{}",
-                                Color::Blue,
-                                Style::Underlined,
-                                Style::Reset,
-                                Color::Blue,
-                                Style::Reset);
-      }
 
       if is_only_tag && use_colors {
         // Pad preformat to terminal width for cool background.

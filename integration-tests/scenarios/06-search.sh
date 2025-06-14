@@ -97,46 +97,46 @@ Buys you 3-6 months'
 wrapped_dedoc ss docset-3~1 -o 12 | diff_stdin_to_text \
 "# Anime Database Schema (￣ω￣;)
 
-───────────┬──────┬───────────────────────────
-Column     │Type  │Description                
-───────────┼──────┼───────────────────────────
-best_waifu │TEXT  │Objectively correct opinion
-───────────┼──────┼───────────────────────────
-power_level│BIGINT│Always over 9000           
-───────────┴──────┴───────────────────────────
+─────────────┬────────┬───────────────────────────
+Column       │Type    │Description                
+─────────────┼────────┼───────────────────────────
+\`best_waifu\` │\`TEXT\`  │Objectively correct opinion
+─────────────┼────────┼───────────────────────────
+\`power_level\`│\`BIGINT\`│Always over 9000           
+─────────────┴────────┴───────────────────────────
 
 ## Recommended Indexes
-* CREATE INDEX idx_tsundere_rage ON waifus (anger_level) WHERE dere_type =
-  'tsundere'"
+* \`CREATE INDEX idx_tsundere_rage ON waifus (anger_level) WHERE dere_type =
+  'tsundere'\`"
 
 # Query fragments. Command below triggers an error on old versions of html2text.
 wrapped_dedoc ss docset-3~1 -o 13 | diff_stdin_to_text \
 "...
 ## Recommended Indexes
-* CREATE INDEX idx_tsundere_rage ON waifus (anger_level) WHERE dere_type =
-  'tsundere'"
+* \`CREATE INDEX idx_tsundere_rage ON waifus (anger_level) WHERE dere_type =
+  'tsundere'\`"
 
 wrapped_dedoc ss docset-3~1 -o 14 | diff_stdin_to_text \
-'...
-Column     │Type  │Description                
-───────────┼──────┼───────────────────────────
-best_waifu │TEXT  │Objectively correct opinion
-...'
+"...
+Column       │Type    │Description                
+─────────────┼────────┼───────────────────────────
+\`best_waifu\` │\`TEXT\`  │Objectively correct opinion
+..."
 
 # Ignore the fragment. Will be the same as `-o 12`.
 wrapped_dedoc ss docset-3~1 -o 14 -f | diff_stdin_to_text \
 "# Anime Database Schema (￣ω￣;)
 
-───────────┬──────┬───────────────────────────
-Column     │Type  │Description                
-───────────┼──────┼───────────────────────────
-best_waifu │TEXT  │Objectively correct opinion
-───────────┼──────┼───────────────────────────
-power_level│BIGINT│Always over 9000           
-───────────┴──────┴───────────────────────────
+─────────────┬────────┬───────────────────────────
+Column       │Type    │Description                
+─────────────┼────────┼───────────────────────────
+\`best_waifu\` │\`TEXT\`  │Objectively correct opinion
+─────────────┼────────┼───────────────────────────
+\`power_level\`│\`BIGINT\`│Always over 9000           
+─────────────┴────────┴───────────────────────────
 
 ## Recommended Indexes
-* CREATE INDEX idx_tsundere_rage ON waifus (anger_level) WHERE dere_type =
-  'tsundere'"
+* \`CREATE INDEX idx_tsundere_rage ON waifus (anger_level) WHERE dere_type =
+  'tsundere'\`"
 
 wrapped_dedoc rm --purge-all
