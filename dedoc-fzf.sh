@@ -6,15 +6,19 @@
 set -eu
 
 # Find fzf.
-if ! which fzf > /dev/null; then
+if which skim > /dev/null 2>&1; then
+  FZF=skim
+elif which fzf > /dev/null 2>&1; then
+  FZF=fzf
+else
   echo 'ERROR: Please make sure `fzf` is available in $PATH.' >&2
   exit 1
 fi
 
 # Choose the pager.
-if which moar > /dev/null; then
+if which moar > /dev/null 2>&1; then
   PAGER=moar
-elif which less > /dev/null; then
+elif which less > /dev/null 2>&1; then
   PAGER='less -R'
 else
   echo 'ERROR: Please make sure `less` or `moar` is available in $PATH.' >&2
@@ -22,15 +26,15 @@ else
 fi
 
 # Figure out dedoc's path.
-REL=./target/release/dedoc
-DBG=./target/debug/dedoc
+REL='./target/release/dedoc'
+DBG='./target/debug/dedoc'
 
 if test -e "$REL"; then
   DEDOC="$REL"
 elif test -e "$DBG"; then
   DEDOC="$DBG"
 else
-  DEDOC="$(which dedoc)"
+  DEDOC="$(which dedoc 2>/dev/null)"
 fi
 
 if test -z "$DEDOC"; then
@@ -51,7 +55,11 @@ DOCSET="$1"
 # doesn't catch errors, so test it manually.
 "$DEDOC" ls -l --exists="$DOCSET" || exit 1
 
-$DEDOC -c open "$DOCSET" \
-"$("$DEDOC" -c ss "$DOCSET" --porcelain | \
-   fzf --ansi --layout=reverse --header-lines=1)" | \
-$PAGER
+PAGE="$("$DEDOC" -c ss "$DOCSET" --porcelain | $FZF --ansi --layout=reverse)"
+
+if test -z "$PAGE"; then
+  echo 'ERROR: No page selected.' >&2
+  exit 1
+fi
+
+"$DEDOC" -c open "$DOCSET" "$PAGE" | $PAGER
