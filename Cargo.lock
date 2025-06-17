@@ -79,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "dedoc"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "html2text",
  "libc",
@@ -299,9 +299,9 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "libc"
-version = "0.2.173"
+version = "0.2.174"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8cfeafaffdbc32176b64fb251369d52ea9f0a8fbc6f8759edffef7b525d64bb"
+checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
 
 [[package]]
 name = "linux-raw-sys"
@@ -545,9 +545,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.27"
+version = "0.23.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "730944ca083c1c233a75c09f199e973ca499344a2b7ba9e755c457e86fb4a321"
+checksum = "7160e3e10bf4535308537f3c4e1641468cd0e485175d6163087c0393c7d46643"
 dependencies = [
  "log",
  "once_cell",
@@ -806,9 +806,9 @@ dependencies = [
 
 [[package]]
 name = "toiletcli"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e575048ad8afc6dcfac6dc7cddb3070d3c1cf2339d026becb056e32b632e0ba1"
+checksum = "81c2e6625ad20a63a9eb9236e8295832587ad1d13fc2d44eccdbf659aaa7d75e"
 dependencies = [
  "atty",
 ]
