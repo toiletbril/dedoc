@@ -96,4 +96,7 @@ diff_stdin_to_text \
    42  
    43  [1]: #somehref1'
 
+wrapped_dedoc open docset-1 type-1/1 -P | diff_stdin_to_text \
+'/root/.dedoc/docsets/docset-1/type-1/1.html'
+
 wrapped_dedoc rm --purge-all

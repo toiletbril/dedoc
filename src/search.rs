@@ -44,7 +44,8 @@ fn show_search_help() -> ResultS
     -f, --ignore-fragment           Ignore the fragment and open the entire
                                     page.
     -c, --columns <number>          Make output N columns wide.
-    -n, --line-numbers              Number outputted lines."
+    -n, --line-numbers              Number outputted lines.
+    -P, --only-show-path            Only show path to the page instead of printing."
   );
   Ok(())
 }
@@ -80,6 +81,7 @@ struct OpenOptions
   ignore_fragment: bool,
   page_width: Option<usize>,
   line_numbers: bool,
+  should_only_show_path: bool,
 }
 
 // Sometimes search results are big, and it's cheaper to check a small file if
@@ -500,12 +502,18 @@ fn search_impl(is_porcelain: bool,
                                    &result.item,
                                    fragment,
                                    width,
-                                   open_options.line_numbers)?;
+                                   open_options.line_numbers,
+                                   open_options.should_only_show_path)?;
             return Ok(warnings);
           }
           n => {
             let result = &vague_results[n - exact_results_offset - 1];
-            print_page_from_docset(docset, &result.item, None, width, open_options.line_numbers)?;
+            print_page_from_docset(docset,
+                                   &result.item,
+                                   None,
+                                   width,
+                                   open_options.line_numbers,
+                                   open_options.should_only_show_path)?;
             return Ok(warnings);
           }
         }
@@ -562,7 +570,8 @@ fn search_impl(is_porcelain: bool,
                                    &result.item,
                                    fragment,
                                    width,
-                                   open_options.line_numbers)?;
+                                   open_options.line_numbers,
+                                   open_options.should_only_show_path)?;
             return Ok(warnings);
           }
         }
@@ -593,6 +602,7 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
   let mut flag_open_columns;
   let mut flag_open_ignore_fragment;
   let mut flag_open_line_numbers;
+  let mut flag_open_only_show_path;
   let mut flag_porcelain;
   let mut flag_help;
 
@@ -604,6 +614,7 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
     flag_open_columns: StringFlag,       ["-c", "--columns"],
     flag_open_ignore_fragment: BoolFlag, ["-f", "--ignore-fragment"],
     flag_open_line_numbers: BoolFlag,    ["-n", "--line-numbers"],
+    flag_open_only_show_path: BoolFlag,  ["-P", "--only-show-path"],
     flag_porcelain: BoolFlag,            ["--porcelain"],
     flag_help: BoolFlag,                 ["--help"]
   ];
@@ -663,7 +674,8 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
   let open_options = OpenOptions { open_number,
                                    ignore_fragment: flag_open_ignore_fragment,
                                    page_width,
-                                   line_numbers: flag_open_line_numbers };
+                                   line_numbers: flag_open_line_numbers,
+                                   should_only_show_path: flag_open_only_show_path };
 
   // Print warnings only after search results.
   for warning in search_impl(flag_porcelain, search_options, open_options)? {

@@ -31,7 +31,7 @@ exit 1
 
 diff_stdin_to_text() {
 log "Diffing..."
-F="$(echo "${1:-"blank"}" | head -n 1 | tr ' ' '_').XXXXXX"
+F="$(echo "${1:-"blank"}" | head -n 1 | tr ' /' '_' ).XXXXXX"
 P="$(mktemp -p /tmp "$F")"
 if ! test -z "$1"; then
   echo "$1" > "$P"

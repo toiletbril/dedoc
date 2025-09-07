@@ -139,4 +139,8 @@ Column       │Type    │Description
 * \`CREATE INDEX idx_tsundere_rage ON waifus (anger_level) WHERE dere_type =
   'tsundere'\`"
 
+wrapped_dedoc ss docset-3~1 -P -o 14 | diff_stdin_to_text \
+'/root/.dedoc/docsets/docset-3~1/tables/e_anime_schema.html
+schema-definition'
+
 wrapped_dedoc rm --purge-all

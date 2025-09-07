@@ -26,6 +26,8 @@ fn show_open_help() -> ResultS
                                     and translate it to text.
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number outputted lines.
+    -P, --only-show-path            Print path to the page instead of it's
+                                    contents.
         --help                      Display help message."
   );
   Ok(())
@@ -37,13 +39,15 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
   let mut flag_html;
   let mut flag_columns;
   let mut flag_number_lines;
+  let mut flag_only_show_path;
   let mut flag_help;
 
   let mut flags = flags![
-    flag_html: BoolFlag,         ["-h", "--html"],
-    flag_columns: StringFlag,    ["-c", "--columns"],
-    flag_number_lines: BoolFlag, ["-n", "--line-numbers"],
-    flag_help: BoolFlag,         ["--help"]
+    flag_html: BoolFlag,           ["-h", "--html"],
+    flag_columns: StringFlag,      ["-c", "--columns"],
+    flag_number_lines: BoolFlag,   ["-n", "--line-numbers"],
+    flag_only_show_path: BoolFlag, ["-P", "--only-show-path"],
+    flag_help: BoolFlag,           ["--help"]
   ];
 
   let args = parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
@@ -98,7 +102,12 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
   }
 
   let (item, fragment) = split_to_item_and_fragment(query)?;
-  print_page_from_docset(&docset, &item, fragment.as_ref(), width, flag_number_lines)?;
+  print_page_from_docset(&docset,
+                         &item,
+                         fragment.as_ref(),
+                         width,
+                         flag_number_lines,
+                         flag_only_show_path)?;
 
   Ok(())
 }

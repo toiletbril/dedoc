@@ -401,6 +401,7 @@ pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
   Ok((output, is_fragment_found))
 }
 
+// -> Ok(whether fragment was found)
 pub(crate) fn print_docset_file(path: PathBuf,
                                 fragment: Option<&String>,
                                 width: usize,
@@ -417,7 +418,8 @@ pub(crate) fn print_page_from_docset(docset_name: &str,
                                      page: &str,
                                      fragment: Option<&String>,
                                      width: usize,
-                                     number_lines: bool)
+                                     should_number_lines: bool,
+                                     should_only_show_path: bool)
                                      -> Result<bool, String>
 {
   let docset_path = get_docset_path(docset_name)?;
@@ -430,7 +432,16 @@ pub(crate) fn print_page_from_docset(docset_name: &str,
                         from `search` correctly?"));
   }
 
-  print_docset_file(page_path, fragment, width, number_lines)
+  if should_only_show_path {
+    println!("{}", page_path.display());
+    if let Some(f) = fragment {
+      println!("{}", f);
+      return Ok(true);
+    }
+    return Ok(false);
+  }
+
+  print_docset_file(page_path, fragment, width, should_number_lines)
 }
 
 fn get_home_directory() -> Result<PathBuf, String>
