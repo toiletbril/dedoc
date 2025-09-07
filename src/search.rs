@@ -45,7 +45,8 @@ fn show_search_help() -> ResultS
                                     page.
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number outputted lines.
-    -P, --only-show-path            Only show path to the page instead of printing."
+    -P, --only-show-path            Print path to the page and fragment on the
+                                    second line instead of the page contents.
   );
   Ok(())
 }

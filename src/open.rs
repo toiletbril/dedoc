@@ -26,8 +26,8 @@ fn show_open_help() -> ResultS
                                     and translate it to text.
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number outputted lines.
-    -P, --only-show-path            Print path to the page instead of it's
-                                    contents.
+    -P, --only-show-path            Print path to the page and fragment on the
+                                    second line instead of the page contents.
         --help                      Display help message."
   );
   Ok(())
