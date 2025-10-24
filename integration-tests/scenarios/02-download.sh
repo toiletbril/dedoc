@@ -8,10 +8,10 @@ set -eu
 wrapped_dedoc dl docset-1 docset-3~1
 
 # Everything is up to date.
-! wrapped_dedoc dl -u
+wrapped_dedoc dl -u && log_err_and_die "should be up to date"
 
 # Non-existent docset.
-! wrapped_dedoc dl whatever
+wrapped_dedoc dl whatever && log_err_and_die "should not exist"
 
 # Break .mtime files, so dedoc would have to update both docsets.
 rm "$DEDOC_HOME/docsets/docset-1/.dedoc_mtime"

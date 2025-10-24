@@ -14,7 +14,7 @@ wrapped_dedoc render docset-3~1 -d /root/rendered2
 test -e "/root/rendered2/errors/e_mom_yelling.md"
 
 # Can't use already existing directories.
-! wrapped_dedoc render docset-3~1 -d /root/rendered2
+wrapped_dedoc render docset-3~1 -d /root/rendered2 && log_err_and_die "directory should already exist"
 
 wrapped_dedoc render --all
 test -e "/root/.dedoc/rendered/docset-3~1/errors/e_mom_yelling.md"

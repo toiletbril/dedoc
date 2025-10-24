@@ -78,6 +78,8 @@ pub(crate) const RESET: Style = Style::Reset;
 
 #[cfg(debug_assertions)]
 pub(crate) static mut FLAG_INTEGRATION_TEST: bool = false;
+#[cfg(debug_assertions)]
+pub(crate) static mut FLAG_MODIFY_STARTUP: usize = 0;
 
 pub(crate) type ResultS = Result<(), String>;
 
@@ -205,7 +207,6 @@ impl SingleInstanceLock
   pub(crate) fn acquire() -> Result<Self, String>
   {
     let mut s = System::new();
-    s.refresh_processes(ProcessesToUpdate::All, false);
     let p = get_program_directory()?;
     let lfp = p.join(LOCK_FILENAME);
     let self_pid =
@@ -216,10 +217,11 @@ impl SingleInstanceLock
         File::open(&lfp).map_err(|err| format!("Could not open `{}`: {err}", lfp.display()))?;
       let mut pid_buf = String::new();
       let _ = lf.read_to_string(&mut pid_buf);
-      let pid =
-        pid_buf.parse::<Pid>()
-               .map_err(|_| print_warning!("Lock file is broken. Proceeding as if nothing happened."));
+      let pid = pid_buf.parse::<Pid>().map_err(|_| {});
 
+      if pid.is_ok() {
+        s.refresh_processes(ProcessesToUpdate::Some(&[pid.unwrap()]), true);
+      }
       if pid.is_ok() &&
          let Some(_) = s.process(pid.unwrap())
       {
@@ -233,6 +235,7 @@ impl SingleInstanceLock
         // either another instance was running, but is now dead, or lock file has bogus
         // contents.
         let _ = write!(&mut lf, "{}", self_pid);
+        debug_println!("overwrote obsolete lock");
       }
     } else {
       // no lock file is present at all.
@@ -240,6 +243,8 @@ impl SingleInstanceLock
         File::create(&lfp).map_err(|err| format!("Could not create `{}`: {err}", lfp.display()))?;
       let _ = write!(&mut lf, "{}", self_pid);
     }
+
+    debug_println!("acquired {} for {}", lfp.display(), self_pid);
 
     Ok(Self { pid: self_pid, lock_file_path: lfp })
   }
@@ -249,6 +254,7 @@ impl Drop for SingleInstanceLock
 {
   fn drop(&mut self)
   {
+    debug_println!("dropping {} for {}", self.lock_file_path.display(), self.pid);
     std::fs::remove_file(&self.lock_file_path).expect("lock was created and is available");
   }
 }

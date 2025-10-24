@@ -46,7 +46,10 @@ use render::render;
 use search::search;
 
 #[cfg(debug_assertions)]
-use common::FLAG_INTEGRATION_TEST;
+use common::{
+  FLAG_INTEGRATION_TEST,
+  FLAG_MODIFY_STARTUP,
+};
 
 #[cfg(not(unix))]
 #[cfg(not(windows))]
@@ -140,6 +143,7 @@ fn entry<Args>(mut args: Args) -> ResultS
   #[allow(static_mut_refs)]
   unsafe {
     flags.push((FlagType::BoolFlag(&mut FLAG_INTEGRATION_TEST), vec!["--integration-test"]));
+    flags.push((FlagType::RepeatFlag(&mut FLAG_MODIFY_STARTUP), vec!["-W"]));
   }
 
   let subcommand =
@@ -169,6 +173,15 @@ fn entry<Args>(mut args: Args) -> ResultS
   }
 
   let _l = SingleInstanceLock::acquire()?;
+
+  #[cfg(debug_assertions)]
+  unsafe {
+    match FLAG_MODIFY_STARTUP {
+      1 => std::thread::sleep(std::time::Duration::from_secs(3)),
+      2 => std::process::exit(0),
+      _ => {}
+    }
+  }
 
   match subcommand.as_str() {
     "ft" | "fetch" => fetch(args),

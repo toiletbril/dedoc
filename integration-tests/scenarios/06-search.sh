@@ -48,7 +48,7 @@ Mentions in other files from \`docset-3~1\`:
    1  errors/e_mom_yelling
         ...'><h3>Option 2: \"Im working on a startup!\"</h3><p>Buys you 3-6 months</p>..."
 
-! wrapped_dedoc ss docset-3~1 -p startup -o 2
+wrapped_dedoc ss docset-3~1 -p startup -o 2 && log_err_and_die "out of range"
 
 wrapped_dedoc ss docset-3~1 -p startup -o 1
 
@@ -89,10 +89,10 @@ Works until she unplugs the router
 
 Buys you 3-6 months'
 
-! wrapped_dedoc ss docset-3~1 -o 69
-! wrapped_dedoc ss docset-3~1 -o 0
-! wrapped_dedoc ss docset-3~1 -o -5
-! wrapped_dedoc ss docset-3~1 -o aboba
+wrapped_dedoc ss docset-3~1 -o 69 && log_err_and_die "should be out of range"
+wrapped_dedoc ss docset-3~1 -o 0 && log_err_and_die "should just be invalid"
+wrapped_dedoc ss docset-3~1 -o -5 && log_err_and_die "should just be invalid"
+wrapped_dedoc ss docset-3~1 -o aboba && log_err_and_die "should just be invalid"
 
 wrapped_dedoc ss docset-3~1 -o 12 | diff_stdin_to_text \
 "# Anime Database Schema (￣ω￣;)
