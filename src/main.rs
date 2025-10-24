@@ -2,13 +2,32 @@ use std::process::ExitCode;
 
 use toiletcli::common::overwrite_should_use_colors;
 use toiletcli::flags;
-use toiletcli::flags::{parse_flags_until_subcommand, FlagType};
+use toiletcli::flags::{
+  FlagType,
+  parse_flags_until_subcommand,
+};
 
 mod common;
 
-use common::get_flag_error;
-use common::ResultS;
-use common::{BOLD, BUILD_TYPE, GREEN, HEAD, PROGRAM_NAME, RED, RESET, UNDERLINE, VERSION};
+use common::{
+  BOLD,
+  BUILD_TYPE,
+  GREEN,
+  HEAD,
+  PROGRAM_NAME,
+  RED,
+  RESET,
+  UNDERLINE,
+  VERSION,
+};
+use common::{
+  ResultS,
+  SingleInstanceLock,
+};
+use common::{
+  get_flag_error,
+  make_sure_program_directory_exists,
+};
 
 mod download;
 mod fetch;
@@ -100,6 +119,8 @@ fn entry<Args>(mut args: Args) -> ResultS
     libc::signal(libc::SIGPIPE, libc::SIG_IGN);
   }
 
+  make_sure_program_directory_exists()?;
+
   let mut flag_short_version;
   let mut flag_version;
   let mut flag_color;
@@ -147,6 +168,8 @@ fn entry<Args>(mut args: Args) -> ResultS
     return show_help();
   }
 
+  let _l = SingleInstanceLock::acquire()?;
+
   match subcommand.as_str() {
     "ft" | "fetch" => fetch(args),
     "ls" | "list" => list(args),
@@ -166,7 +189,7 @@ fn main() -> ExitCode
 
   match entry(&mut args) {
     Err(mut err) => {
-      if !err.ends_with(['.', '?', ')']) {
+      if !err.ends_with(['.', '?', '!', ')']) {
         err += ". Try `--help` for more information.";
       }
       eprintln!("{RED}ERROR{RESET}: {err}");

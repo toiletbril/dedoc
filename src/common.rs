@@ -1,21 +1,50 @@
 #![allow(dead_code)]
 
 use std::fmt::Display;
-use std::fs::{create_dir_all, read_dir, File};
-use std::io::{BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::fs::{
+  File,
+  create_dir_all,
+  read_dir,
+};
+use std::io::{
+  BufReader,
+  Read,
+  Write,
+};
+use std::path::{
+  Path,
+  PathBuf,
+};
 use std::sync::Once;
-use std::time::{Duration, SystemTime};
+use std::time::{
+  Duration,
+  SystemTime,
+};
 
+use html2text::Colour;
 use html2text::render::RichAnnotation;
 use html2text::render::TaggedLine;
 use html2text::render::TaggedLineElement::FragmentStart;
-use html2text::Colour;
 
-use toiletcli::colors::{Color, Style};
-use toiletcli::flags::{FlagError, FlagErrorType};
+use toiletcli::colors::{
+  Color,
+  Style,
+};
+use toiletcli::flags::{
+  FlagError,
+  FlagErrorType,
+};
 
-use serde::{Deserialize, Serialize};
+use serde::{
+  Deserialize,
+  Serialize,
+};
+
+use sysinfo::{
+  Pid,
+  ProcessesToUpdate,
+  System,
+};
 
 pub(crate) const PROGRAM_NAME: &str = "dedoc";
 
@@ -31,6 +60,7 @@ pub(crate) const DEFAULT_PROGRAM_DIR_ENV_VARIABLE: &str = "DEDOC_HOME";
 pub(crate) const DEFAULT_WIDTH: usize = 80;
 pub(crate) const MAX_WIDTH: usize = 144;
 
+pub(crate) const LOCK_FILENAME: &str = ".lock";
 pub(crate) const MTIME_FILENAME: &str = ".dedoc_mtime";
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
 
@@ -162,6 +192,65 @@ macro_rules! print_warning
       eprintln!($($e),+);
     }
   };
+}
+
+pub(crate) struct SingleInstanceLock
+{
+  pid: Pid,
+  lock_file_path: PathBuf,
+}
+
+impl SingleInstanceLock
+{
+  pub(crate) fn acquire() -> Result<Self, String>
+  {
+    let mut s = System::new();
+    s.refresh_processes(ProcessesToUpdate::All, false);
+    let p = get_program_directory()?;
+    let lfp = p.join(LOCK_FILENAME);
+    let self_pid =
+      sysinfo::get_current_pid().map_err(|err| format!("Couldn't get PID of self: {err}"))?;
+
+    if lfp.try_exists().map_err(|err| format!("Could not check `{}`: {err}", p.display()))? {
+      let mut lf =
+        File::open(&lfp).map_err(|err| format!("Could not open `{}`: {err}", lfp.display()))?;
+      let mut pid_buf = String::new();
+      let _ = lf.read_to_string(&mut pid_buf);
+      let pid =
+        pid_buf.parse::<Pid>()
+               .map_err(|_| print_warning!("Lock file is broken. Proceeding as if nothing happened."));
+
+      if pid.is_ok() &&
+         let Some(_) = s.process(pid.unwrap())
+      {
+        if pid.unwrap() == self_pid {
+          panic!("two SingleInstanceLock instances in the same program..");
+        }
+        // another instance is running.
+        return Err(format!("Another instance of {PROGRAM_NAME} is currently running. \
+                            Please wait for it to finish!"));
+      } else {
+        // either another instance was running, but is now dead, or lock file has bogus
+        // contents.
+        let _ = write!(&mut lf, "{}", self_pid);
+      }
+    } else {
+      // no lock file is present at all.
+      let mut lf =
+        File::create(&lfp).map_err(|err| format!("Could not create `{}`: {err}", lfp.display()))?;
+      let _ = write!(&mut lf, "{}", self_pid);
+    }
+
+    Ok(Self { pid: self_pid, lock_file_path: lfp })
+  }
+}
+
+impl Drop for SingleInstanceLock
+{
+  fn drop(&mut self)
+  {
+    std::fs::remove_file(&self.lock_file_path).expect("lock was created and is available");
+  }
 }
 
 pub(crate) fn get_flag_error(flag_error: &FlagError) -> String
@@ -527,6 +616,15 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String>
   }
 }
 
+pub(crate) fn make_sure_program_directory_exists() -> ResultS
+{
+  let p = get_program_directory()?;
+  if !p.try_exists().map_err(|err| format!("Could not check `{}`: {err}", p.display()))? {
+    create_program_directory()?;
+  }
+  Ok(())
+}
+
 pub(crate) fn create_program_directory() -> ResultS
 {
   let program_path = get_program_directory()?;
@@ -552,11 +650,7 @@ pub(crate) fn is_docs_json_old() -> Result<bool, String>
   let modified_time = metadata.modified().map_err(|err| err.to_string())?;
   let elapsed_time =
     SystemTime::now().duration_since(modified_time).map_err(|err| err.to_string())?;
-  if elapsed_time > WEEK {
-    Ok(true)
-  } else {
-    Ok(false)
-  }
+  if elapsed_time > WEEK { Ok(true) } else { Ok(false) }
 }
 
 pub(crate) fn write_to_logfile(message: impl Display) -> Result<PathBuf, String>
@@ -632,11 +726,7 @@ pub(crate) fn is_docset_in_docs(docset_name: &str, docs: &[DocsEntry]) -> Search
     }
   }
 
-  if vague_matches.is_empty() {
-    SearchMatch::None
-  } else {
-    SearchMatch::Vague(vague_matches)
-  }
+  if vague_matches.is_empty() { SearchMatch::None } else { SearchMatch::Vague(vague_matches) }
 }
 
 pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>

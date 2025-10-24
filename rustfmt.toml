@@ -1,4 +1,5 @@
 indent_style = "visual"
+imports_layout = "vertical"
 brace_style = "alwaysnextline"
 max_width = 100
 tab_spaces = 2

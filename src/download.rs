@@ -1,22 +1,54 @@
-use std::fs::{create_dir_all, remove_file, File};
-use std::io::{stdout, BufReader, BufWriter, Read, Write};
+use std::fs::{
+  File,
+  create_dir_all,
+  remove_file,
+};
+use std::io::{
+  BufReader,
+  BufWriter,
+  Read,
+  Write,
+  stdout,
+};
 use std::path::PathBuf;
 
 use ureq::get;
 
-use serde::de::{Error, MapAccess, Visitor};
 use serde::Deserializer;
+use serde::de::{
+  Error,
+  MapAccess,
+  Visitor,
+};
 
 use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, find_docset_in_docs, get_default_user_agent, get_docset_path,
-  get_flag_error, get_local_docsets, is_docs_json_exists, is_docs_json_old, is_docset_downloaded,
-  is_docset_in_docs_or_print_warning, is_docset_old,
+  BOLD,
+  DEFAULT_DB_JSON_LINK,
+  GREEN,
+  MTIME_FILENAME,
+  PROGRAM_NAME,
+  RESET,
 };
-use crate::common::{DocsEntry, ResultS};
-use crate::common::{BOLD, DEFAULT_DB_JSON_LINK, GREEN, MTIME_FILENAME, PROGRAM_NAME, RESET};
+use crate::common::{
+  DocsEntry,
+  ResultS,
+};
+use crate::common::{
+  deserialize_docs_json,
+  find_docset_in_docs,
+  get_default_user_agent,
+  get_docset_path,
+  get_flag_error,
+  get_local_docsets,
+  is_docs_json_exists,
+  is_docs_json_old,
+  is_docset_downloaded,
+  is_docset_in_docs_or_print_warning,
+  is_docset_old,
+};
 use crate::print_warning;
 
 const DOWNLOAD_BUFFER_SIZE: usize = 1024 * 32;

@@ -6,11 +6,24 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  create_program_directory, get_default_user_agent, get_flag_error, get_program_directory,
-  is_docs_json_exists, is_docs_json_old, write_to_logfile,
+  BOLD,
+  DEFAULT_DOCS_JSON_LINK,
+  GREEN,
+  PROGRAM_NAME,
+  RESET,
+  get_program_directory,
 };
-use crate::common::{DocsEntry, ResultS};
-use crate::common::{BOLD, DEFAULT_DOCS_JSON_LINK, GREEN, PROGRAM_NAME, RESET};
+use crate::common::{
+  DocsEntry,
+  ResultS,
+};
+use crate::common::{
+  get_default_user_agent,
+  get_flag_error,
+  is_docs_json_exists,
+  is_docs_json_old,
+  write_to_logfile,
+};
 
 use ureq::get;
 
@@ -40,8 +53,7 @@ fn fetch_docs() -> Result<Vec<DocsEntry>, String>
                                  format!("Could not fetch `{DEFAULT_DOCS_JSON_LINK}`: {err}")
                                })?;
 
-  let body =
-    response.into_string().map_err(|err| format!("Unable to read response body: {err}"))?;
+  let body = response.into_string().map_err(|err| format!("Unable to read response body: {err}"))?;
 
   let docs: Vec<DocsEntry> =
     serde_json::from_str(body.as_str()).map_err(|err| {
@@ -95,11 +107,7 @@ pub(crate) fn fetch<Args>(mut args: Args) -> ResultS
   println!("Fetching `{DEFAULT_DOCS_JSON_LINK}`...");
   let docs = fetch_docs()?;
 
-  let program_path = get_program_directory()?;
-  if !program_path.exists() {
-    create_program_directory()?;
-  }
-  let docs_json_path = program_path.join("docs.json");
+  let docs_json_path = get_program_directory()?.join("docs.json");
 
   println!("Writing `{}`...", docs_json_path.display());
   serialize_and_overwrite_docs(docs_json_path, docs)?;

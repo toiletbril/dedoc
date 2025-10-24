@@ -4,11 +4,25 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, get_flag_error, get_terminal_width, is_docs_json_exists,
-  is_docset_downloaded, print_docset_file, print_page_from_docset, split_to_item_and_fragment,
+  BOLD,
+  GREEN,
+  PROGRAM_NAME,
+  RESET,
 };
-use crate::common::{make_sure_docset_is_in_docs, ResultS};
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
+use crate::common::{
+  ResultS,
+  make_sure_docset_is_in_docs,
+};
+use crate::common::{
+  deserialize_docs_json,
+  get_flag_error,
+  get_terminal_width,
+  is_docs_json_exists,
+  is_docset_downloaded,
+  print_docset_file,
+  print_page_from_docset,
+  split_to_item_and_fragment,
+};
 
 fn show_open_help() -> ResultS
 {

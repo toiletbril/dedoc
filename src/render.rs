@@ -1,17 +1,41 @@
-use std::fs::{create_dir, create_dir_all, read_dir, File};
-use std::io::{stdout, Write};
+use std::fs::{
+  File,
+  create_dir,
+  create_dir_all,
+  read_dir,
+};
+use std::io::{
+  Write,
+  stdout,
+};
 use std::path::Path;
 
 use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, get_docset_path, get_flag_error, get_local_docsets, is_docs_json_exists,
-  is_docset_downloaded, make_sure_docset_is_in_docs, translate_docset_html_file_to_text,
-  DOC_PAGE_EXTENSION,
+  BOLD,
+  GREEN,
+  PROGRAM_NAME,
+  RESET,
 };
-use crate::common::{get_program_directory, validate_number_of_columns, ResultS, MAX_WIDTH};
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
+use crate::common::{
+  DOC_PAGE_EXTENSION,
+  deserialize_docs_json,
+  get_docset_path,
+  get_flag_error,
+  get_local_docsets,
+  is_docs_json_exists,
+  is_docset_downloaded,
+  make_sure_docset_is_in_docs,
+  translate_docset_html_file_to_text,
+};
+use crate::common::{
+  MAX_WIDTH,
+  ResultS,
+  get_program_directory,
+  validate_number_of_columns,
+};
 use crate::print_warning;
 
 fn show_render_help() -> ResultS

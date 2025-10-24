@@ -1,23 +1,51 @@
 #![allow(clippy::useless_format)]
 
 use std::borrow::Cow;
-use std::fs::{read_dir, File};
-use std::io::{BufRead, BufReader, BufWriter};
+use std::fs::{
+  File,
+  read_dir,
+};
+use std::io::{
+  BufRead,
+  BufReader,
+  BufWriter,
+};
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use serde::{
+  Deserialize,
+  Serialize,
+};
 
 use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::{
-  deserialize_docs_json, get_docset_path, get_flag_error, get_program_directory,
-  get_terminal_width, is_docs_json_exists, is_docset_downloaded, print_page_from_docset,
-  split_to_item_and_fragment, validate_number_of_columns,
+  BOLD,
+  DOC_PAGE_EXTENSION,
+  GRAY,
+  GRAYER,
+  GRAYEST,
+  GREEN,
+  LIGHT_GRAY,
+  PROGRAM_NAME,
+  RESET,
 };
-use crate::common::{make_sure_docset_is_in_docs, ResultS};
 use crate::common::{
-  BOLD, DOC_PAGE_EXTENSION, GRAY, GRAYER, GRAYEST, GREEN, LIGHT_GRAY, PROGRAM_NAME, RESET,
+  ResultS,
+  make_sure_docset_is_in_docs,
+};
+use crate::common::{
+  deserialize_docs_json,
+  get_docset_path,
+  get_flag_error,
+  get_program_directory,
+  get_terminal_width,
+  is_docs_json_exists,
+  is_docset_downloaded,
+  print_page_from_docset,
+  split_to_item_and_fragment,
+  validate_number_of_columns,
 };
 use crate::print_warning;
 
@@ -46,7 +74,7 @@ fn show_search_help() -> ResultS
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number outputted lines.
     -P, --only-show-path            Print path to the page and fragment on the
-                                    second line instead of the page contents.
+                                    second line instead of the page contents."
   );
   Ok(())
 }
