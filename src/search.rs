@@ -240,7 +240,10 @@ fn search_docset_in_filenames(docset_name: &str,
 
   let reader = BufReader::new(file);
   let index: IndexJson = serde_json::from_reader(reader).map_err(|err| {
-                           format!("Could not deserialize `{}`: {err}", index_json_path.display())
+                           format!("Could not deserialize `{}`: {err}. \
+                                    Looks like the docset wasn't unpacked properly. \
+                                    Re-download it with \
+                                    `{PROGRAM_NAME} dl -f {docset_name}`.", index_json_path.display())
                          })?;
 
   let mut items = vec![];
