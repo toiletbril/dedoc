@@ -175,7 +175,7 @@ fn entry<Args>(mut args: Args) -> ResultS
     return show_help();
   }
 
-  let _l = SingleInstanceLock::acquire()?;
+  let lock = SingleInstanceLock::acquire()?;
 
   #[cfg(debug_assertions)]
   unsafe {
@@ -194,7 +194,14 @@ fn entry<Args>(mut args: Args) -> ResultS
     "ss" | "search" => search(args),
     "op" | "open" => open(args),
     "rr" | "render" => render(args),
-    "ii" | "interactive" => interactive(args),
+    "ii" | "interactive" => {
+      {
+        // get rid of the lock, as the windows does not replace the process.
+        #[cfg(windows)]
+        drop(lock);
+      }
+      interactive(args)
+    }
     other => Err(format!("Unknown subcommand `{other}`")),
   }
 }

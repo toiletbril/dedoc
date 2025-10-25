@@ -15,6 +15,7 @@ is_exists() {
 # Find a FZF.
 is_exists skim && FZF=skim
 test -z "${FZF:-}" && is_exists sk && FZF=sk
+test -z "${FZF:-}" && is_exists fzf && FZF=fzf
 
 if test -z "${FZF:-}"; then
   echo 'ERROR: Please make sure `skim` is available in $PATH.' >&2
@@ -25,6 +26,7 @@ fi
 FZF="$FZF --ansi --layout=reverse"
 
 is_exists moar && PAGER=moar
+test -z "${PAGER:-}" && is_exists less && PAGER='less -R'
 
 if test -z "${PAGER:-}"; then
   echo 'ERROR: Please make sure `moar` is available in $PATH.' >&2
