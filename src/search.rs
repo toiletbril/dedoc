@@ -243,7 +243,8 @@ fn search_docset_in_filenames(docset_name: &str,
                            format!("Could not deserialize `{}`: {err}. \
                                     Looks like the docset wasn't unpacked properly. \
                                     Re-download it with \
-                                    `{PROGRAM_NAME} dl -f {docset_name}`.", index_json_path.display())
+                                    `{PROGRAM_NAME} dl -f {docset_name}`.",
+                                   index_json_path.display())
                          })?;
 
   let mut items = vec![];
