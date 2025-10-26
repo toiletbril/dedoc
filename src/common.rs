@@ -217,15 +217,15 @@ impl SingleInstanceLock
         File::open(&lfp).map_err(|err| format!("Could not open `{}`: {err}", lfp.display()))?;
       let mut pid_buf = String::new();
       let _ = lf.read_to_string(&mut pid_buf);
-      let pid = pid_buf.parse::<Pid>().map_err(|_| {});
+      let pid_r = pid_buf.parse::<Pid>().map_err(|_| {});
 
-      if pid.is_ok() {
-        s.refresh_processes(ProcessesToUpdate::Some(&[pid.unwrap()]), true);
+      if let Ok(pid) = pid_r {
+        s.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
       }
-      if pid.is_ok() &&
-         let Some(_) = s.process(pid.unwrap())
+      if let Ok(pid) = pid_r &&
+         let Some(_) = s.process(pid)
       {
-        if pid.unwrap() == self_pid {
+        if pid == self_pid {
           panic!("two SingleInstanceLock instances in the same program..");
         }
         // another instance is running.
@@ -793,11 +793,10 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
     docsets_path.try_exists()
                 .map_err(|err| format!("Could not check `{}`: {err}", docsets_path.display()))?;
 
-  if !docsets_dir_exists {
-    if let Err(err) = create_dir_all(&docsets_path) {
+  if !docsets_dir_exists
+    && let Err(err) = create_dir_all(&docsets_path) {
       return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
     }
-  }
   let docsets_dir =
     read_dir(&docsets_path).map_err(|err| {
                              format!("Could not traverse `{}`: {}", docsets_path.display(), err)
