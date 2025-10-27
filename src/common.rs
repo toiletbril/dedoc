@@ -22,18 +22,11 @@ use std::time::{
 };
 
 use html2text::Colour;
-use html2text::render::RichAnnotation;
-use html2text::render::TaggedLine;
-use html2text::render::TaggedLineElement::FragmentStart;
+use html2text::render::TaggedLineElement::*;
+use html2text::render::*;
 
-use toiletcli::colors::{
-  Color,
-  Style,
-};
-use toiletcli::flags::{
-  FlagError,
-  FlagErrorType,
-};
+use toiletcli::colors::*;
+use toiletcli::flags::*;
 
 use serde::{
   Deserialize,
@@ -793,10 +786,9 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
     docsets_path.try_exists()
                 .map_err(|err| format!("Could not check `{}`: {err}", docsets_path.display()))?;
 
-  if !docsets_dir_exists
-    && let Err(err) = create_dir_all(&docsets_path) {
-      return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
-    }
+  if !docsets_dir_exists && let Err(err) = create_dir_all(&docsets_path) {
+    return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
+  }
   let docsets_dir =
     read_dir(&docsets_path).map_err(|err| {
                              format!("Could not traverse `{}`: {}", docsets_path.display(), err)

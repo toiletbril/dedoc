@@ -20,6 +20,7 @@ use serde::{
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::ResultS;
 use crate::common::{
   BOLD,
   DOC_PAGE_EXTENSION,
@@ -32,10 +33,6 @@ use crate::common::{
   RESET,
 };
 use crate::common::{
-  ResultS,
-  make_sure_docset_is_in_docs,
-};
-use crate::common::{
   deserialize_docs_json,
   get_docset_path,
   get_flag_error,
@@ -43,6 +40,7 @@ use crate::common::{
   get_terminal_width,
   is_docs_json_exists,
   is_docset_downloaded,
+  make_sure_docset_is_in_docs,
   print_page_from_docset,
   split_to_item_and_fragment,
   validate_number_of_columns,

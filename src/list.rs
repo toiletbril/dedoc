@@ -1,6 +1,7 @@
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::ResultS;
 use crate::common::{
   BOLD,
   GREEN,
@@ -8,15 +9,12 @@ use crate::common::{
   RESET,
 };
 use crate::common::{
-  ResultS,
-  is_docset_downloaded,
-  make_sure_docset_is_in_docs,
-};
-use crate::common::{
   deserialize_docs_json,
   get_flag_error,
   get_local_docsets,
   is_docs_json_exists,
+  is_docset_downloaded,
+  make_sure_docset_is_in_docs,
 };
 use crate::print_warning;
 

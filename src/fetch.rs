@@ -11,7 +11,6 @@ use crate::common::{
   GREEN,
   PROGRAM_NAME,
   RESET,
-  get_program_directory,
 };
 use crate::common::{
   DocsEntry,
@@ -20,6 +19,7 @@ use crate::common::{
 use crate::common::{
   get_default_user_agent,
   get_flag_error,
+  get_program_directory,
   is_docs_json_exists,
   is_docs_json_old,
   write_to_logfile,

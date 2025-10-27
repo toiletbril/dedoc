@@ -1,11 +1,9 @@
 use std::process::ExitCode;
 
 use toiletcli::common::overwrite_should_use_colors;
+
 use toiletcli::flags;
-use toiletcli::flags::{
-  FlagType,
-  parse_flags_until_subcommand,
-};
+use toiletcli::flags::*;
 
 mod common;
 
@@ -31,7 +29,7 @@ use common::{
 
 mod download;
 mod fetch;
-mod interactive;
+mod install;
 mod list;
 mod open;
 mod remove;
@@ -40,7 +38,7 @@ mod search;
 
 use download::download;
 use fetch::fetch;
-use interactive::interactive;
+use install::install;
 use list::list;
 use open::open;
 use remove::remove;
@@ -99,7 +97,7 @@ fn show_help() -> ResultS
                                     query.
     op, open                        Display docset pages.
     rr, render                      Render entire docsets to text.
-    ii, interactive                 Go interactive.
+    il, install                     Install helper scripts.
 
   Each subcommand has its own `--help` option. Upon the first usage, please run
   `dedoc fetch`.
@@ -194,7 +192,7 @@ fn entry<Args>(mut args: Args) -> ResultS
     "ss" | "search" => search(args),
     "op" | "open" => open(args),
     "rr" | "render" => render(args),
-    "ii" | "interactive" => interactive(args),
+    "il" | "install" => install(args),
     other => Err(format!("Unknown subcommand `{other}`")),
   }
 }

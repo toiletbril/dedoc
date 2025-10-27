@@ -13,27 +13,25 @@ use std::path::Path;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::ResultS;
 use crate::common::{
   BOLD,
+  DOC_PAGE_EXTENSION,
   GREEN,
+  MAX_WIDTH,
   PROGRAM_NAME,
   RESET,
 };
 use crate::common::{
-  DOC_PAGE_EXTENSION,
   deserialize_docs_json,
   get_docset_path,
   get_flag_error,
   get_local_docsets,
+  get_program_directory,
   is_docs_json_exists,
   is_docset_downloaded,
   make_sure_docset_is_in_docs,
   translate_docset_html_file_to_text,
-};
-use crate::common::{
-  MAX_WIDTH,
-  ResultS,
-  get_program_directory,
   validate_number_of_columns,
 };
 use crate::print_warning;

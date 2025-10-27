@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::ResultS;
 use crate::common::{
   BOLD,
   GREEN,
@@ -10,15 +11,12 @@ use crate::common::{
   RESET,
 };
 use crate::common::{
-  ResultS,
-  make_sure_docset_is_in_docs,
-};
-use crate::common::{
   deserialize_docs_json,
   get_flag_error,
   get_terminal_width,
   is_docs_json_exists,
   is_docset_downloaded,
+  make_sure_docset_is_in_docs,
   print_docset_file,
   print_page_from_docset,
   split_to_item_and_fragment,

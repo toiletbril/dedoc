@@ -18,6 +18,7 @@ wrapped_dedoc dl --help
 wrapped_dedoc ss --help
 wrapped_dedoc op --help
 wrapped_dedoc rr --help
+wrapped_dedoc il --help
 
 wrapped_dedoc --color=off
 wrapped_dedoc --color=auto
