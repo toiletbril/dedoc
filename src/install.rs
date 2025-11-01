@@ -15,7 +15,15 @@ use crate::common::{
 
 use crate::print_warning;
 
-const SCRIPT_INTERACTIVE: &str = include_str!("../dedoc-interactive");
+#[cfg(unix)]
+const SCRIPT_NAME: &str = "dedoc-interactive";
+#[cfg(windows)]
+const SCRIPT_NAME: &str = "dedoc-interactive.ps1";
+
+#[cfg(unix)]
+const SCRIPT_CONTENTS: &str = include_str!("../dedoc-interactive");
+#[cfg(windows)]
+const SCRIPT_CONTENTS: &str = include_str!("../dedoc-interactive.ps1");
 
 // Embed a script that uses fzf and less, ask to upack it along the main
 // binary. A .bat wrapper is provided for Windows.
@@ -55,15 +63,15 @@ pub(crate) fn install<Args>(mut args: Args) -> ResultS
   let exe_path =
     std::env::current_exe().map_err(|err| format!("Could not get current path: {err}"))?;
   let exe_dir = exe_path.parent().expect("how");
-  let interactive_program_name = exe_dir.join(format!("{PROGRAM_NAME}-interactive"));
+  let script_path = exe_dir.join(SCRIPT_NAME);
 
   // Ready to unpack?
   if flag_accept {
-    let mut f = File::create(&interactive_program_name).map_err(|err| {
-                                                         format!("Could not create `{}`: {err}",
-                                                                 interactive_program_name.display())
-                                                       })?;
-    f.write_all(SCRIPT_INTERACTIVE.as_bytes()).expect("file is created by self");
+    let mut f = File::create(&script_path).map_err(|err| {
+                                            format!("Could not create `{}`: {err}",
+                                                    script_path.display())
+                                          })?;
+    f.write_all(SCRIPT_CONTENTS.as_bytes()).expect("file is created by self");
 
     #[cfg(unix)]
     {
@@ -75,51 +83,26 @@ pub(crate) fn install<Args>(mut args: Args) -> ResultS
       f.set_permissions(perms).expect("the file is created by self");
     }
 
-    #[cfg(windows)]
-    {
-      // Windows cannot launch shell files by itself. Create .bat wrapper that
-      // calls sh.exe with out script.
-
-      let wrapper_path = exe_dir.join(format!("{PROGRAM_NAME}-interactive.bat"));
-      let mut wrapper = File::create(&wrapper_path).map_err(|err| {
-                                                     format!("Could not create `{}`: {err}",
-                                                             interactive_program_name.display())
-                                                   })?;
-
-      let wrapper_content =
-        format!("@echo off\nsh.exe \"{}\"\n", interactive_program_name.display());
-      wrapper.write_all(wrapper_content.as_bytes()).expect("file is created by self");
-
-      wrapper.sync_all.expect("why");
-
-      println!("Installed wrapper script at `{}`.", wrapper_path.display());
-    }
-
     f.sync_all().expect("why");
 
     println!("{BOLD}The script was successfully unpacked to `{}` with execute \
               permissions.{RESET}",
-             interactive_program_name.display());
+             script_path.display());
 
     return Ok(());
   }
 
   // Otherwise just show the script contents.
 
-  println!("```\n{}```\n", SCRIPT_INTERACTIVE);
+  println!("```\n{}```\n", SCRIPT_CONTENTS);
 
   print_warning!("The binary provides an example script that allows it to become \
                   interactive.");
   print_warning!("Above are the contents of the script that is about to be \
                   unpacked in the same directory as the {PROGRAM_NAME} binary \
                   as `{PROGRAM_NAME}-interactive` (`{}`)",
-                 &interactive_program_name.display());
+                 &script_path.display());
 
-  #[cfg(windows)]
-  print_warning!("You'll need `busybox`/`cosmopolitan`/`mingw` POSIX sh binary to \
-                  run the script itself, `skim`/`fzf` as fuzzy searcher and \
-                  moar/less as a pager.");
-  #[cfg(unix)]
   print_warning!("You'll need `skim`/`fzf` as fuzzy searcher and `moar`/`less` \
                   as a pager.");
 
