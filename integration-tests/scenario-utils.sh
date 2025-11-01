@@ -50,14 +50,18 @@ for F in "$@"; do
 done
 }
 
-wrapped_dedoc() {
+which_dedoc() {
 DEDOC="$(find ../target-docker/ -name dedoc | head -n 1)"
 if test -z "$DEDOC"; then
   log "dedoc binary not found, building..."
   cargo build
 fi
+echo "$DEDOC"
+}
+
+wrapped_dedoc() {
 log "Running dedoc with arguments: $*..."
-$DEDOC --integration-test "$@"
+$(which_dedoc) --integration-test "$@"
 }
 
 override_host() {
