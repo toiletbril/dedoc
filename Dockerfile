@@ -17,9 +17,16 @@ RUN apk add \
     pkgconf \
     python3 \
     ncurses \
-    curl
+    curl \
+    bash \
+    lld \
+    libxml2-dev \
+    openssl-dev \
+    bsd-compat-headers \
+    clang \
+    fts-dev
 
-ARG TS="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
+ARG TS="x86_64-unknown-linux-musl x86_64-pc-windows-gnu x86_64-apple-darwin"
 
 # Install Rust and needed targets via Rustup, with the default toolchain set to
 # nightly. llvm-components-preview is needed for code coverage.

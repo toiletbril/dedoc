@@ -1,0 +1,4 @@
+[target.aarch64-apple-darwin]
+linker = "/opt/osxcross/target/bin/aarch64-apple-darwin20.4-clang"
+ar = "/opt/osxcross/target/bin/aarch64-apple-darwin20.4-ar"
+rustflags = [ "-C", "link-arg=-fuse-ld=lld"]
