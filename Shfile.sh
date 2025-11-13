@@ -17,7 +17,7 @@ git clone --depth=1 https://github.com/tpoechtrager/osxcross /opt/osxcross
 cd /opt/osxcross
 wget -nc "$MAC_SDK_URL"
 mv *.xz tarballs/
-UNATTENDED=yes OSX_VERSION_MIN=11.3 ./build.sh
+UNATTENDED=yes OSX_VERSION_MIN=11.3 ENABLE_ARCHS=arm64 ./build.sh
 cd /src
 
 export PATH="/opt/osxcross/target/bin:$PATH"
