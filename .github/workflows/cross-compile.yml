@@ -25,3 +25,8 @@ jobs:
         with:
           name: dedoc-x86_64-win32
           path: ./target-docker/x86_64-pc-windows-gnu/release/dedoc.exe
+      - name: Upload MacOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: dedoc-aarch64-apple-darwin
+          path: ./target-docker/aarch64-apple-darwin/release/dedoc
