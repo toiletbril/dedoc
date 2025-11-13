@@ -18,6 +18,7 @@ RUN apk add \
     python3 \
     ncurses \
     curl \
+    cmake \
     bash \
     lld \
     libxml2-dev \
