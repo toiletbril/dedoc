@@ -1,21 +1,43 @@
 #![allow(dead_code)]
 
 use std::fmt::Display;
-use std::fs::{create_dir_all, read_dir, File};
-use std::io::{BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::fs::{
+  File,
+  create_dir_all,
+  read_dir,
+};
+use std::io::{
+  BufReader,
+  Read,
+  Write,
+};
+use std::path::{
+  Path,
+  PathBuf,
+};
 use std::sync::Once;
-use std::time::{Duration, SystemTime};
+use std::time::{
+  Duration,
+  SystemTime,
+};
 
-use html2text::render::RichAnnotation;
-use html2text::render::TaggedLine;
-use html2text::render::TaggedLineElement::FragmentStart;
 use html2text::Colour;
+use html2text::render::TaggedLineElement::*;
+use html2text::render::*;
 
-use toiletcli::colors::{Color, Style};
-use toiletcli::flags::{FlagError, FlagErrorType};
+use toiletcli::colors::*;
+use toiletcli::flags::*;
 
-use serde::{Deserialize, Serialize};
+use serde::{
+  Deserialize,
+  Serialize,
+};
+
+use sysinfo::{
+  Pid,
+  ProcessesToUpdate,
+  System,
+};
 
 pub(crate) const PROGRAM_NAME: &str = "dedoc";
 
@@ -31,6 +53,7 @@ pub(crate) const DEFAULT_PROGRAM_DIR_ENV_VARIABLE: &str = "DEDOC_HOME";
 pub(crate) const DEFAULT_WIDTH: usize = 80;
 pub(crate) const MAX_WIDTH: usize = 144;
 
+pub(crate) const LOCK_FILENAME: &str = ".lock";
 pub(crate) const MTIME_FILENAME: &str = ".dedoc_mtime";
 pub(crate) const DOC_PAGE_EXTENSION: &str = "html";
 
@@ -48,6 +71,8 @@ pub(crate) const RESET: Style = Style::Reset;
 
 #[cfg(debug_assertions)]
 pub(crate) static mut FLAG_INTEGRATION_TEST: bool = false;
+#[cfg(debug_assertions)]
+pub(crate) static mut FLAG_MODIFY_STARTUP: usize = 0;
 
 pub(crate) type ResultS = Result<(), String>;
 
@@ -162,6 +187,69 @@ macro_rules! print_warning
       eprintln!($($e),+);
     }
   };
+}
+
+pub(crate) struct SingleInstanceLock
+{
+  pid: Pid,
+  lock_file_path: PathBuf,
+}
+
+impl SingleInstanceLock
+{
+  pub(crate) fn acquire() -> Result<Self, String>
+  {
+    let mut s = System::new();
+    let p = get_program_directory()?;
+    let lfp = p.join(LOCK_FILENAME);
+    let self_pid =
+      sysinfo::get_current_pid().map_err(|err| format!("Couldn't get PID of self: {err}"))?;
+
+    if lfp.try_exists().map_err(|err| format!("Could not check `{}`: {err}", p.display()))? {
+      let mut lf =
+        File::open(&lfp).map_err(|err| format!("Could not open `{}`: {err}", lfp.display()))?;
+      let mut pid_buf = String::new();
+      let _ = lf.read_to_string(&mut pid_buf);
+      let pid_r = pid_buf.parse::<Pid>().map_err(|_| {});
+
+      if let Ok(pid) = pid_r {
+        s.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+      }
+      if let Ok(pid) = pid_r &&
+         let Some(_) = s.process(pid)
+      {
+        if pid == self_pid {
+          panic!("two SingleInstanceLock instances in the same program..");
+        }
+        // another instance is running.
+        return Err(format!("Another instance of {PROGRAM_NAME} is currently running. \
+                            Please wait for it to finish!"));
+      } else {
+        // either another instance was running, but is now dead, or lock file has bogus
+        // contents.
+        let _ = write!(&mut lf, "{}", self_pid);
+        debug_println!("overwrote obsolete lock");
+      }
+    } else {
+      // no lock file is present at all.
+      let mut lf =
+        File::create(&lfp).map_err(|err| format!("Could not create `{}`: {err}", lfp.display()))?;
+      let _ = write!(&mut lf, "{}", self_pid);
+    }
+
+    debug_println!("acquired {} for {}", lfp.display(), self_pid);
+
+    Ok(Self { pid: self_pid, lock_file_path: lfp })
+  }
+}
+
+impl Drop for SingleInstanceLock
+{
+  fn drop(&mut self)
+  {
+    debug_println!("dropping {} for {}", self.lock_file_path.display(), self.pid);
+    std::fs::remove_file(&self.lock_file_path).expect("lock was created and is available");
+  }
 }
 
 pub(crate) fn get_flag_error(flag_error: &FlagError) -> String
@@ -401,6 +489,7 @@ pub(crate) fn translate_docset_html_file_to_text(path: PathBuf,
   Ok((output, is_fragment_found))
 }
 
+// -> Ok(whether fragment was found)
 pub(crate) fn print_docset_file(path: PathBuf,
                                 fragment: Option<&String>,
                                 width: usize,
@@ -417,7 +506,8 @@ pub(crate) fn print_page_from_docset(docset_name: &str,
                                      page: &str,
                                      fragment: Option<&String>,
                                      width: usize,
-                                     number_lines: bool)
+                                     should_number_lines: bool,
+                                     should_only_show_path: bool)
                                      -> Result<bool, String>
 {
   let docset_path = get_docset_path(docset_name)?;
@@ -430,7 +520,16 @@ pub(crate) fn print_page_from_docset(docset_name: &str,
                         from `search` correctly?"));
   }
 
-  print_docset_file(page_path, fragment, width, number_lines)
+  if should_only_show_path {
+    println!("{}", page_path.display());
+    if let Some(f) = fragment {
+      println!("{}", f);
+      return Ok(true);
+    }
+    return Ok(false);
+  }
+
+  print_docset_file(page_path, fragment, width, should_number_lines)
 }
 
 fn get_home_directory() -> Result<PathBuf, String>
@@ -516,6 +615,15 @@ pub(crate) fn get_program_directory() -> Result<PathBuf, String>
   }
 }
 
+pub(crate) fn make_sure_program_directory_exists() -> ResultS
+{
+  let p = get_program_directory()?;
+  if !p.try_exists().map_err(|err| format!("Could not check `{}`: {err}", p.display()))? {
+    create_program_directory()?;
+  }
+  Ok(())
+}
+
 pub(crate) fn create_program_directory() -> ResultS
 {
   let program_path = get_program_directory()?;
@@ -541,11 +649,7 @@ pub(crate) fn is_docs_json_old() -> Result<bool, String>
   let modified_time = metadata.modified().map_err(|err| err.to_string())?;
   let elapsed_time =
     SystemTime::now().duration_since(modified_time).map_err(|err| err.to_string())?;
-  if elapsed_time > WEEK {
-    Ok(true)
-  } else {
-    Ok(false)
-  }
+  if elapsed_time > WEEK { Ok(true) } else { Ok(false) }
 }
 
 pub(crate) fn write_to_logfile(message: impl Display) -> Result<PathBuf, String>
@@ -621,11 +725,7 @@ pub(crate) fn is_docset_in_docs(docset_name: &str, docs: &[DocsEntry]) -> Search
     }
   }
 
-  if vague_matches.is_empty() {
-    SearchMatch::None
-  } else {
-    SearchMatch::Vague(vague_matches)
-  }
+  if vague_matches.is_empty() { SearchMatch::None } else { SearchMatch::Vague(vague_matches) }
 }
 
 pub(crate) fn get_docset_mtime(docset_name: &str) -> Result<u64, String>
@@ -686,10 +786,8 @@ pub(crate) fn get_local_docsets() -> Result<Vec<String>, String>
     docsets_path.try_exists()
                 .map_err(|err| format!("Could not check `{}`: {err}", docsets_path.display()))?;
 
-  if !docsets_dir_exists {
-    if let Err(err) = create_dir_all(&docsets_path) {
-      return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
-    }
+  if !docsets_dir_exists && let Err(err) = create_dir_all(&docsets_path) {
+    return Err(format!("Could not create `{}` directory: {err}", docsets_path.display()));
   }
   let docsets_dir =
     read_dir(&docsets_path).map_err(|err| {

@@ -6,22 +6,48 @@ on:
     types: [ created ]
 
 jobs:
+  build-image:
+    uses: ./.github/workflows/build-image.yml
+    permissions:
+      contents: read
+      packages: write
+
   cross-compile:
+    needs: build-image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Generate docker image
-        run: ./Shfile.sh make-image
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull cached image
+        run: |
+          docker pull ${{ needs.build-image.outputs.image }}
+          docker tag ${{ needs.build-image.outputs.image }} dedoc-rust-cross
+
       - name: Run cross-compilation
         run: ./Shfile.sh cross-compile
+
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
           name: dedoc-x86_64-linux-musl
           path: ./target-docker/x86_64-unknown-linux-musl/release/dedoc
+
       - name: Upload Windows binary
         uses: actions/upload-artifact@v4
         with:
           name: dedoc-x86_64-win32
           path: ./target-docker/x86_64-pc-windows-gnu/release/dedoc.exe
+
+      - name: Upload MacOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: dedoc-aarch64-apple-darwin
+          path: ./target-docker/aarch64-apple-darwin/release/dedoc

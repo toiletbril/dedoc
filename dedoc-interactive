@@ -1,0 +1,57 @@
+#!/bin/sh
+
+# Interactive docset browser via `dedoc`.
+#
+# List all pages from a docset, start `skim`, search for a page and open it in
+# `moar`.
+
+set -eu
+
+is_exists() {
+  which "$1" > /dev/null 2>&1
+  return $?
+}
+
+# Find a FZF.
+is_exists skim && FZF=skim
+test -z "${FZF:-}" && is_exists sk && FZF=sk
+test -z "${FZF:-}" && is_exists fzf && FZF=fzf
+
+if test -z "${FZF:-}"; then
+  echo 'ERROR: Please make sure `skim` is available in $PATH.' >&2
+  exit 1
+fi
+
+# Adjust the layout.
+FZF="$FZF --ansi --layout=reverse"
+
+is_exists moar && PAGER=moar
+test -z "${PAGER:-}" && is_exists less && PAGER='less -R'
+
+if test -z "${PAGER:-}"; then
+  echo 'ERROR: Please make sure `moar` is available in $PATH.' >&2
+  exit 1
+fi
+
+# Figure out dedoc's path.
+DEDOC_REL='./target/release/dedoc'
+DEDOC_DBG='./target/debug/dedoc'
+
+is_exists "$DEDOC_REL" && DEDOC="$DEDOC_REL"
+test -z "${DEDOC:-}" && is_exists "$DEDOC_DBG" && DEDOC="$DEDOC_DBG"
+test -z "${DEDOC:-}" && DEDOC="$(which dedoc 2>/dev/null)"
+
+if test -z "${DEDOC:-}"; then
+  echo 'ERROR: Please make sure `dedoc` is available in $PATH.' >&2
+  exit 1
+fi
+
+while :; do
+  DOCSET="$(dedoc ls -l --porcelain | $FZF)"
+  test -z "$DOCSET" && break
+  while :; do
+    PAGE="$("$DEDOC" -c ss "$DOCSET" --porcelain | $FZF || :)"
+    test -z "$PAGE" && break
+    "$DEDOC" -c open "$DOCSET" "$PAGE" | $PAGER
+  done
+done

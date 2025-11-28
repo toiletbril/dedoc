@@ -63,7 +63,7 @@ docset-3~2'
 # --exists.
 wrapped_dedoc ls --exists docset-2
 wrapped_dedoc ls -l --exists docset-1
-! wrapped_dedoc ls --exists docset-4
-! wrapped_dedoc ls -l --exists docset-2
+wrapped_dedoc ls --exists docset-4 && log_err_and_die "should not exist"
+wrapped_dedoc ls -l --exists docset-2 && log_err_and_die "should not exist"
 
 wrapped_dedoc rm --purge-all

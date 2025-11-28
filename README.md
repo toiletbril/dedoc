@@ -134,6 +134,13 @@ use `ss` instead of `search` and pipe output to a pager or markdown reader, like
 $ dedoc -c ss rust bufreader -o 2 | less -r
 ```
 
+If you want to squeeze the maximum user-experience you can get, there is some
+scripting support explained below.
+
+Alternatively, the software comes with `install` command that unpacks a
+reference script which makes use of `skim` and `moar` to allow using `dedoc`
+interactively!
+
 ## Scripting support
 
 There is a `render` subcommand, which allows you to render the entire docset to
@@ -147,6 +154,8 @@ specified in `-c` (144 by default) into a directory specified in `-d`
 Some commands support `--porcelain`, to make life slightly easier when parsing
 the output.
 
-You may take a look at the [example script](./dedoc-fzf.sh) for an inspiration.
+You may take a look at the reference scripts for
+[POSIX shell](./dedoc-interactive) and [Powershell](./dedoc-interactive.ps1) for
+an inspiration.
 
 Happy coding!

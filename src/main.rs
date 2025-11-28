@@ -1,17 +1,35 @@
 use std::process::ExitCode;
 
 use toiletcli::common::overwrite_should_use_colors;
+
 use toiletcli::flags;
-use toiletcli::flags::{parse_flags_until_subcommand, FlagType};
+use toiletcli::flags::*;
 
 mod common;
 
-use common::get_flag_error;
-use common::ResultS;
-use common::{BOLD, BUILD_TYPE, GREEN, HEAD, PROGRAM_NAME, RED, RESET, UNDERLINE, VERSION};
+use common::{
+  BOLD,
+  BUILD_TYPE,
+  GREEN,
+  HEAD,
+  PROGRAM_NAME,
+  RED,
+  RESET,
+  UNDERLINE,
+  VERSION,
+};
+use common::{
+  ResultS,
+  SingleInstanceLock,
+};
+use common::{
+  get_flag_error,
+  make_sure_program_directory_exists,
+};
 
 mod download;
 mod fetch;
+mod install;
 mod list;
 mod open;
 mod remove;
@@ -20,6 +38,7 @@ mod search;
 
 use download::download;
 use fetch::fetch;
+use install::install;
 use list::list;
 use open::open;
 use remove::remove;
@@ -27,7 +46,10 @@ use render::render;
 use search::search;
 
 #[cfg(debug_assertions)]
-use common::FLAG_INTEGRATION_TEST;
+use common::{
+  FLAG_INTEGRATION_TEST,
+  FLAG_MODIFY_STARTUP,
+};
 
 #[cfg(not(unix))]
 #[cfg(not(windows))]
@@ -75,6 +97,7 @@ fn show_help() -> ResultS
                                     query.
     op, open                        Display docset pages.
     rr, render                      Render entire docsets to text.
+    il, install                     Install helper scripts.
 
   Each subcommand has its own `--help` option. Upon the first usage, please run
   `dedoc fetch`.
@@ -100,6 +123,8 @@ fn entry<Args>(mut args: Args) -> ResultS
     libc::signal(libc::SIGPIPE, libc::SIG_IGN);
   }
 
+  make_sure_program_directory_exists()?;
+
   let mut flag_short_version;
   let mut flag_version;
   let mut flag_color;
@@ -119,6 +144,7 @@ fn entry<Args>(mut args: Args) -> ResultS
   #[allow(static_mut_refs)]
   unsafe {
     flags.push((FlagType::BoolFlag(&mut FLAG_INTEGRATION_TEST), vec!["--integration-test"]));
+    flags.push((FlagType::RepeatFlag(&mut FLAG_MODIFY_STARTUP), vec!["-W"]));
   }
 
   let subcommand =
@@ -147,6 +173,17 @@ fn entry<Args>(mut args: Args) -> ResultS
     return show_help();
   }
 
+  let _lock = SingleInstanceLock::acquire()?;
+
+  #[cfg(debug_assertions)]
+  unsafe {
+    match FLAG_MODIFY_STARTUP {
+      1 => std::thread::sleep(std::time::Duration::from_secs(3)),
+      2 => std::process::exit(0),
+      _ => {}
+    }
+  }
+
   match subcommand.as_str() {
     "ft" | "fetch" => fetch(args),
     "ls" | "list" => list(args),
@@ -155,6 +192,7 @@ fn entry<Args>(mut args: Args) -> ResultS
     "ss" | "search" => search(args),
     "op" | "open" => open(args),
     "rr" | "render" => render(args),
+    "il" | "install" => install(args),
     other => Err(format!("Unknown subcommand `{other}`")),
   }
 }
@@ -166,7 +204,7 @@ fn main() -> ExitCode
 
   match entry(&mut args) {
     Err(mut err) => {
-      if !err.ends_with(['.', '?', ')']) {
+      if !err.ends_with(['.', '?', '!', ')']) {
         err += ". Try `--help` for more information.";
       }
       eprintln!("{RED}ERROR{RESET}: {err}");

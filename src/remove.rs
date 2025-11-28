@@ -4,8 +4,18 @@ use toiletcli::flags;
 use toiletcli::flags::*;
 
 use crate::common::ResultS;
-use crate::common::{get_docset_path, get_flag_error, get_local_docsets, is_docset_downloaded};
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
+use crate::common::{
+  BOLD,
+  GREEN,
+  PROGRAM_NAME,
+  RESET,
+};
+use crate::common::{
+  get_docset_path,
+  get_flag_error,
+  get_local_docsets,
+  is_docset_downloaded,
+};
 use crate::print_warning;
 
 fn show_remove_help() -> ResultS

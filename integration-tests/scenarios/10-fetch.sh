@@ -11,7 +11,7 @@ wrapped_dedoc ls
 
 # Mess with docs.json, ls should fail.
 echo "lol" > "$DEDOC_HOME/docs.json"
-! wrapped_dedoc ls
+wrapped_dedoc ls && log_err_and_die "should fail with bogus docs.json"
 
 # Replace broken docs.json with a proper one.
 wrapped_dedoc fetch -f
@@ -22,8 +22,8 @@ wrapped_dedoc ls
 
 # Test with a different $DEDOC_HOME.
 export DEDOC_HOME="/root/.dedoc2"
-! wrapped_dedoc ls
-! wrapped_dedoc ft | grep 'does not exist'
+wrapped_dedoc ls && log_err_and_die "program directory does not exist"
+wrapped_dedoc ft 2>&1 | grep 'does not exist'
 mkdir -p "$DEDOC_HOME"
 wrapped_dedoc ft | grep 'dedoc2'
 wrapped_dedoc ls

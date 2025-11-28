@@ -1,11 +1,21 @@
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::ResultS;
 use crate::common::{
-  deserialize_docs_json, get_flag_error, get_local_docsets, is_docs_json_exists,
+  BOLD,
+  GREEN,
+  PROGRAM_NAME,
+  RESET,
 };
-use crate::common::{is_docset_downloaded, make_sure_docset_is_in_docs, ResultS};
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
+use crate::common::{
+  deserialize_docs_json,
+  get_flag_error,
+  get_local_docsets,
+  is_docs_json_exists,
+  is_docset_downloaded,
+  make_sure_docset_is_in_docs,
+};
 use crate::print_warning;
 
 fn show_list_help() -> ResultS

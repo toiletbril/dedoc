@@ -8,6 +8,7 @@ set -eu
 IMG='dedoc-rust-cross'
 
 BUILD_CMD='
+cd /src
 export CI_VERSION="`git rev-parse HEAD`"
 
 for T in $RUSTTARGETS; do
@@ -15,6 +16,7 @@ for T in $RUSTTARGETS; do
 done
 '
 TEST_CMD='
+cd /src
 export CI_VERSION="`git rev-parse HEAD`"
 
 RUSTFLAGS="-Cinstrument-coverage" \
@@ -44,15 +46,16 @@ C="${1:-}"
 case $C in
 "make-image")
   remove_docker_image
-  docker build --network=host -f Dockerfile -t "$IMG" "$(dirname "$0")"
+  docker build --network=host --progress=plain -f Dockerfile \
+               -t "$IMG" "$(dirname "$0")"
   ;;
 "cross-compile")
   docker run --pull=never --rm --network=host -e BUILDMODE="release" -v \
-             "$PWD":/src $IMG sh -c "$BUILD_CMD"
+             "$PWD":/src "$IMG" sh -c "$BUILD_CMD"
   ;;
 "test")
   docker run --pull=never --rm --network=host -e BUILDMODE="dev" -v \
-             "$PWD":/src $IMG sh -c "$TEST_CMD"
+             "$PWD":/src "$IMG" sh -c "$TEST_CMD"
   ;;
 "clean")
   cargo clean

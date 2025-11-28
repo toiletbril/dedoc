@@ -3,12 +3,24 @@ use std::path::PathBuf;
 use toiletcli::flags;
 use toiletcli::flags::*;
 
+use crate::common::ResultS;
 use crate::common::{
-  deserialize_docs_json, get_flag_error, get_terminal_width, is_docs_json_exists,
-  is_docset_downloaded, print_docset_file, print_page_from_docset, split_to_item_and_fragment,
+  BOLD,
+  GREEN,
+  PROGRAM_NAME,
+  RESET,
 };
-use crate::common::{make_sure_docset_is_in_docs, ResultS};
-use crate::common::{BOLD, GREEN, PROGRAM_NAME, RESET};
+use crate::common::{
+  deserialize_docs_json,
+  get_flag_error,
+  get_terminal_width,
+  is_docs_json_exists,
+  is_docset_downloaded,
+  make_sure_docset_is_in_docs,
+  print_docset_file,
+  print_page_from_docset,
+  split_to_item_and_fragment,
+};
 
 fn show_open_help() -> ResultS
 {
@@ -26,6 +38,8 @@ fn show_open_help() -> ResultS
                                     and translate it to text.
     -c, --columns <number>          Make output N columns wide.
     -n, --line-numbers              Number outputted lines.
+    -P, --only-show-path            Print path to the page and fragment on the
+                                    second line instead of the page contents.
         --help                      Display help message."
   );
   Ok(())
@@ -37,13 +51,15 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
   let mut flag_html;
   let mut flag_columns;
   let mut flag_number_lines;
+  let mut flag_only_show_path;
   let mut flag_help;
 
   let mut flags = flags![
-    flag_html: BoolFlag,         ["-h", "--html"],
-    flag_columns: StringFlag,    ["-c", "--columns"],
-    flag_number_lines: BoolFlag, ["-n", "--line-numbers"],
-    flag_help: BoolFlag,         ["--help"]
+    flag_html: BoolFlag,           ["-h", "--html"],
+    flag_columns: StringFlag,      ["-c", "--columns"],
+    flag_number_lines: BoolFlag,   ["-n", "--line-numbers"],
+    flag_only_show_path: BoolFlag, ["-P", "--only-show-path"],
+    flag_help: BoolFlag,           ["--help"]
   ];
 
   let args = parse_flags(&mut args, &mut flags).map_err(|err| get_flag_error(&err))?;
@@ -98,7 +114,12 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
   }
 
   let (item, fragment) = split_to_item_and_fragment(query)?;
-  print_page_from_docset(&docset, &item, fragment.as_ref(), width, flag_number_lines)?;
+  print_page_from_docset(&docset,
+                         &item,
+                         fragment.as_ref(),
+                         width,
+                         flag_number_lines,
+                         flag_only_show_path)?;
 
   Ok(())
 }

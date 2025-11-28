@@ -31,7 +31,7 @@ exit 1
 
 diff_stdin_to_text() {
 log "Diffing..."
-F="$(echo "${1:-"blank"}" | head -n 1 | tr ' ' '_').XXXXXX"
+F="$(echo "${1:-"blank"}" | head -n 1 | tr ' /' '_' ).XXXXXX"
 P="$(mktemp -p /tmp "$F")"
 if ! test -z "$1"; then
   echo "$1" > "$P"
@@ -50,14 +50,18 @@ for F in "$@"; do
 done
 }
 
-wrapped_dedoc() {
+which_dedoc() {
 DEDOC="$(find ../target-docker/ -name dedoc | head -n 1)"
 if test -z "$DEDOC"; then
   log "dedoc binary not found, building..."
   cargo build
 fi
+echo "$DEDOC"
+}
+
+wrapped_dedoc() {
 log "Running dedoc with arguments: $*..."
-$DEDOC --integration-test "$@"
+$(which_dedoc) --integration-test "$@"
 }
 
 override_host() {
