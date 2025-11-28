@@ -1,0 +1,71 @@
+name: Build Docker Image
+
+on:
+  workflow_call:
+    inputs:
+      watch_paths:
+        default: 'Dockerfile'
+        type: string
+        description: "Paths to watch for changes"
+    outputs:
+      image:
+        description: "Full image reference"
+        value: ${{ jobs.build.outputs.image }}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: dedoc-rust-cross
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.result.outputs.image }}
+      cache_hit: ${{ steps.check.outputs.cache_hit }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Calculate content hash
+        id: meta
+        run: |
+          CONTENT_HASH=$(cat ${{ inputs.watch_paths }} 2>/dev/null | sha256sum | cut -c1-16)
+          IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}"
+          
+          echo "image_cached=${IMAGE_BASE}:${CONTENT_HASH}" >> $GITHUB_OUTPUT
+          echo "image_base=$IMAGE_BASE" >> $GITHUB_OUTPUT
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check cache
+        id: check
+        run: |
+          if docker manifest inspect ${{ steps.meta.outputs.image_cached }} > /dev/null 2>&1; then
+            echo "cache_hit=true" >> $GITHUB_OUTPUT
+          else
+            echo "cache_hit=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build image
+        if: steps.check.outputs.cache_hit != 'true'
+        run: ./Shfile.sh make-image
+
+      - name: Push to cache
+        if: steps.check.outputs.cache_hit != 'true'
+        run: |
+          docker tag ${{ env.IMAGE_NAME }} ${{ steps.meta.outputs.image_cached }}
+          docker push ${{ steps.meta.outputs.image_cached }}
+
+      - name: Set outputs
+        id: result
+        run: |
+          echo "image=${{ steps.meta.outputs.image_cached }}" >> $GITHUB_OUTPUT
