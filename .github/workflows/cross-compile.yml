@@ -11,12 +11,9 @@ jobs:
     permissions:
       contents: read
       packages: write
-    with:
-      watch_paths: |
-        Dockerfile
-        Shfile.sh
 
   cross-compile:
+    needs: build-image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,8 +28,8 @@ jobs:
 
       - name: Pull cached image
         run: |
-          docker pull ${{ needs.docker.outputs.image }}
-          docker tag ${{ needs.docker.outputs.image }} dedoc-rust-cross
+          docker pull ${{ needs.build-image.outputs.image }}
+          docker tag ${{ needs.build-image.outputs.image }} dedoc-rust-cross
 
       - name: Run cross-compilation
         run: ./Shfile.sh cross-compile

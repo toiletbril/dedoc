@@ -2,11 +2,6 @@ name: Build Docker Image
 
 on:
   workflow_call:
-    inputs:
-      watch_paths:
-        default: 'Dockerfile'
-        type: string
-        description: "Paths to watch for changes"
     outputs:
       image:
         description: "Full image reference"
@@ -33,7 +28,7 @@ jobs:
       - name: Calculate content hash
         id: meta
         run: |
-          CONTENT_HASH=$(cat ${{ inputs.watch_paths }} 2>/dev/null | sha256sum | cut -c1-16)
+          CONTENT_HASH=$(cat Dockerfile 2>/dev/null | sha256sum | cut -c1-16)
           IMAGE_BASE="${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}"
           
           echo "image_cached=${IMAGE_BASE}:${CONTENT_HASH}" >> $GITHUB_OUTPUT
@@ -57,7 +52,10 @@ jobs:
 
       - name: Build image
         if: steps.check.outputs.cache_hit != 'true'
-        run: ./Shfile.sh make-image
+        run: |
+          pwd
+          ls
+          ./Shfile.sh make-image
 
       - name: Push to cache
         if: steps.check.outputs.cache_hit != 'true'
