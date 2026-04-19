@@ -7,6 +7,7 @@ use toiletcli::flags::*;
 
 mod common;
 
+use common::ResultS;
 use common::{
   BOLD,
   BUILD_TYPE,
@@ -17,10 +18,6 @@ use common::{
   RESET,
   UNDERLINE,
   VERSION,
-};
-use common::{
-  ResultS,
-  SingleInstanceLock,
 };
 use common::{
   get_flag_error,
@@ -171,17 +168,6 @@ fn entry<Args>(mut args: Args) -> ResultS
   }
   if flag_help || subcommand.is_empty() {
     return show_help();
-  }
-
-  let _lock = SingleInstanceLock::acquire()?;
-
-  #[cfg(debug_assertions)]
-  unsafe {
-    match FLAG_MODIFY_STARTUP {
-      1 => std::thread::sleep(std::time::Duration::from_secs(3)),
-      2 => std::process::exit(0),
-      _ => {}
-    }
   }
 
   match subcommand.as_str() {

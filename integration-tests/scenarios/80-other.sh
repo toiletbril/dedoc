@@ -37,19 +37,22 @@ unset DEDOC_HOME
 wrapped_dedoc ft
 export DEDOC_HOME="$DEDOC_HOME_BAK"
 
-wrapped_dedoc -W ls &
+wrapped_dedoc -W dl docset-1 &
 sleep 1
 kill -s STOP %%
-# another instance is running
-wrapped_dedoc ls && log_err_and_die "another instance should block execution"
+# another instance is downloading the same docset
+wrapped_dedoc dl docset-1 && log_err_and_die "concurrent download of same docset should block"
+wrapped_dedoc op docset-1 something && log_err_and_die "open should be blocked too"
 kill -s CONT %%
 wait %%
-wrapped_dedoc ls # success
+wrapped_dedoc dl docset-1 # success
 
-# creates a lock file, does not delete it
-wrapped_dedoc -WW ls
-cat "$DEDOC_HOME/.lock"
-wrapped_dedoc ls # success, even though lock file exists, the owning process is dead
+# creates a per-docset lock file, does not delete it (incomplete state)
+wrapped_dedoc -WW dl docset-1
+cat "$DEDOC_HOME/docsets/docset-1/.lock"
+wrapped_dedoc dl docset-1 && log_err_and_die "non-force download should refuse incomplete docset"
+wrapped_dedoc dl -f docset-1 # -f detects stale lock, deletes incomplete docset, re-downloads
 
-echo "what" > "$DEDOC_HOME/.lock"
-wrapped_dedoc ls # success, bogus pid is ignored
+echo "what" > "$DEDOC_HOME/docsets/docset-1/.lock"
+wrapped_dedoc dl docset-1 && log_err_and_die "bogus pid is treated as stale, should refuse"
+wrapped_dedoc dl -f docset-1 # re-downloads with bogus stale lock

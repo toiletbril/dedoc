@@ -40,6 +40,7 @@ use crate::common::{
   get_terminal_width,
   is_docs_json_exists,
   is_docset_downloaded,
+  lock_docset,
   make_sure_docset_is_in_docs,
   print_page_from_docset,
   split_to_item_and_fragment,
@@ -673,6 +674,8 @@ pub(crate) fn search<Args>(mut args: Args) -> ResultS
     return Err(format!("Docset `{docset}` is not downloaded. Try running \
                         `{PROGRAM_NAME} download {docset}`."));
   }
+
+  let _lock = lock_docset(&docset)?;
 
   let query = {
     let mut merged_args = args.collect::<Vec<String>>().join(" ");

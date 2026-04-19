@@ -1,6 +1,7 @@
 use std::fs::{
   File,
   create_dir_all,
+  remove_dir_all,
   remove_file,
 };
 use std::io::{
@@ -32,8 +33,12 @@ use crate::common::{
   PROGRAM_NAME,
   RESET,
 };
+
+#[cfg(debug_assertions)]
+use crate::common::FLAG_MODIFY_STARTUP;
 use crate::common::{
   DocsEntry,
+  DocsetLock,
   ResultS,
 };
 use crate::common::{
@@ -291,7 +296,7 @@ impl<'de> Visitor<'de> for FileVisitor
   }
 }
 
-fn build_docset_from_db_json(docset_name: &String) -> ResultS
+fn build_docset_from_db_json(docset_name: &str) -> ResultS
 {
   let docset_path = get_docset_path(docset_name)?;
   let db_json_path = docset_path.join("db").with_extension("json");
@@ -315,6 +320,43 @@ fn build_docset_from_db_json(docset_name: &String) -> ResultS
                               format!("Could not remove `{}` after building {docset_name}: {err}",
                                       db_json_path.display())
                             })?;
+
+  Ok(())
+}
+
+fn download_single_docset(docset: &str, docs: &[DocsEntry]) -> ResultS
+{
+  let docset_path = get_docset_path(docset)?;
+
+  if DocsetLock::is_stale(&docset_path)? {
+    println!("Docset `{docset}` is in an incomplete state, re-downloading...");
+    remove_dir_all(&docset_path).map_err(|err| {
+                                  format!("Could not remove `{}`: {err}", docset_path.display())
+                                })?;
+  }
+
+  if !docset_path.try_exists()
+                 .map_err(|err| format!("Could not check `{}`: {err}", docset_path.display()))?
+  {
+    create_dir_all(&docset_path).map_err(|err| {
+                                  format!("Could not create `{}`: {err}", docset_path.display())
+                                })?;
+  }
+
+  let _lock = DocsetLock::acquire(&docset_path)?;
+
+  #[cfg(debug_assertions)]
+  #[allow(static_mut_refs)]
+  unsafe {
+    match FLAG_MODIFY_STARTUP {
+      1 => std::thread::sleep(std::time::Duration::from_secs(3)),
+      2 => std::process::exit(0),
+      _ => {}
+    }
+  }
+
+  download_db_and_index_json_with_progress(docset, docs)?;
+  build_docset_from_db_json(docset)?;
 
   Ok(())
 }
@@ -346,11 +388,14 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
       print_warning!("Arguments are ignored due to `--update-all` flag.");
     }
     for ref docset in get_local_docsets()? {
+      let docset_path = get_docset_path(docset)?;
+      if DocsetLock::is_stale(&docset_path)? {
+        return Err(format!("Docset `{docset}` is in an incomplete state. Re-download it with \
+                            `{PROGRAM_NAME} download -f {docset}`."));
+      }
       if is_docset_old(docset, &docs)? {
         println!("Updating `{docset}`...");
-        download_db_and_index_json_with_progress(docset, &docs)?;
-        println!("Extracting to `{}`...", get_docset_path(docset)?.display());
-        build_docset_from_db_json(docset)?;
+        download_single_docset(docset, &docs)?;
         successful_downloads += 1;
       }
     }
@@ -378,16 +423,27 @@ pub(crate) fn download<Args>(mut args: Args) -> ResultS
       continue;
     }
 
-    if !flag_force && is_docset_downloaded(docset)? && !is_docset_old(docset, &docs)? {
-      print_warning!("Docset `{docset}` is already downloaded and is of recent \
-                      version. If you still want to re-download it, re-run \
-                      this command with `--force`");
-    } else if is_docset_in_docs_or_print_warning(docset, &docs) {
-      println!("Downloading `{docset}`...");
-      download_db_and_index_json_with_progress(docset, &docs)?;
-      println!("Extracting to `{}`...", get_docset_path(docset)?.display());
-      build_docset_from_db_json(docset)?;
-      successful_downloads += 1;
+    if flag_force {
+      if is_docset_in_docs_or_print_warning(docset, &docs) {
+        println!("Downloading `{docset}`...");
+        download_single_docset(docset, &docs)?;
+        successful_downloads += 1;
+      }
+    } else {
+      let docset_path = get_docset_path(docset)?;
+      if DocsetLock::is_stale(&docset_path)? {
+        return Err(format!("Docset `{docset}` is in an incomplete state. Re-download it with \
+                            `{PROGRAM_NAME} download -f {docset}`."));
+      }
+      if is_docset_downloaded(docset)? && !is_docset_old(docset, &docs)? {
+        print_warning!("Docset `{docset}` is already downloaded and is of recent \
+                        version. If you still want to re-download it, re-run \
+                        this command with `--force`");
+      } else if is_docset_in_docs_or_print_warning(docset, &docs) {
+        println!("Downloading `{docset}`...");
+        download_single_docset(docset, &docs)?;
+        successful_downloads += 1;
+      }
     }
   }
 

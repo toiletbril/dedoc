@@ -30,6 +30,7 @@ use crate::common::{
   get_program_directory,
   is_docs_json_exists,
   is_docset_downloaded,
+  lock_docset,
   make_sure_docset_is_in_docs,
   translate_docset_html_file_to_text,
   validate_number_of_columns,
@@ -217,6 +218,7 @@ pub(crate) fn render<Args>(mut args: Args) -> ResultS
                                     })?;
 
     for (ref docset, ref sub_dir) in local_docsets.into_iter().zip(directories) {
+      let _lock = lock_docset(docset)?;
       create_dir_all(sub_dir).map_err(|err| {
                                format!("Could not create subdirectory `{}`: {err}",
                                        sub_dir.display())
@@ -230,6 +232,7 @@ pub(crate) fn render<Args>(mut args: Args) -> ResultS
         return Err(format!("Docset `{docset}` is not downloaded. Try running \
                           `{PROGRAM_NAME} download {docset}`."));
       }
+      let _lock = lock_docset(&docset)?;
       let output_dir =
         if !is_directory_changed { main_output_dir.join(&docset) } else { main_output_dir.clone() };
       create_dir_all(&output_dir).map_err(|err| {

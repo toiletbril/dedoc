@@ -15,6 +15,7 @@ use crate::common::{
   get_flag_error,
   get_local_docsets,
   is_docset_downloaded,
+  lock_docset,
 };
 use crate::print_warning;
 
@@ -76,6 +77,7 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
     let local_docsets = get_local_docsets()?;
     for docset in local_docsets {
       let docset_path = get_docset_path(&docset)?;
+      let _lock = lock_docset(&docset)?;
       println!("Removing `{docset}` from `{}`...", docset_path.display());
       remove_dir_all(&docset_path).map_err(|err| {
                                     format!("Unable to remove `{}`: {err}", docset_path.display())
@@ -97,6 +99,7 @@ pub(crate) fn remove<Args>(mut args: Args) -> ResultS
     if is_docset_downloaded(docset)? {
       let docset_path = get_docset_path(docset)?;
       if docset_path.exists() {
+        let _lock = lock_docset(docset)?;
         println!("Removing `{docset}` from `{}`...", docset_path.display());
         remove_dir_all(&docset_path).map_err(|err| {
                                       format!("Unable to remove `{}`: {err}", docset_path.display())

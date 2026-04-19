@@ -189,23 +189,49 @@ macro_rules! print_warning
   };
 }
 
-pub(crate) struct SingleInstanceLock
+pub(crate) struct DocsetLock
 {
   pid: Pid,
   lock_file_path: PathBuf,
 }
 
-impl SingleInstanceLock
+impl DocsetLock
 {
-  pub(crate) fn acquire() -> Result<Self, String>
+  // Returns Ok(true) if the lock in lock_dir is stale (process dead or bogus
+  // PID), Ok(false) if no lock exists, or Err if a live process owns the lock.
+  pub(crate) fn is_stale(lock_dir: &Path) -> Result<bool, String>
+  {
+    let lfp = lock_dir.join(LOCK_FILENAME);
+    if !lfp.try_exists().map_err(|err| format!("Could not check `{}`: {err}", lfp.display()))? {
+      return Ok(false);
+    }
+
+    let mut lf =
+      File::open(&lfp).map_err(|err| format!("Could not open `{}`: {err}", lfp.display()))?;
+    let mut pid_buf = String::new();
+    let _ = lf.read_to_string(&mut pid_buf);
+    let pid_r = pid_buf.parse::<Pid>().map_err(|_| {});
+
+    if let Ok(pid) = pid_r {
+      let mut s = System::new();
+      s.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+      if s.process(pid).is_some() {
+        return Err(format!("Another instance of {PROGRAM_NAME} is already accessing this \
+                            docset. Please wait for it to finish!"));
+      }
+    }
+
+    Ok(true)
+  }
+
+  pub(crate) fn acquire(lock_dir: &Path) -> Result<Self, String>
   {
     let mut s = System::new();
-    let p = get_program_directory()?;
-    let lfp = p.join(LOCK_FILENAME);
+    let lfp = lock_dir.join(LOCK_FILENAME);
     let self_pid =
       sysinfo::get_current_pid().map_err(|err| format!("Couldn't get PID of self: {err}"))?;
 
-    if lfp.try_exists().map_err(|err| format!("Could not check `{}`: {err}", p.display()))? {
+    if lfp.try_exists().map_err(|err| format!("Could not check `{}`: {err}", lfp.display()))? {
       let mut lf =
         File::open(&lfp).map_err(|err| format!("Could not open `{}`: {err}", lfp.display()))?;
       let mut pid_buf = String::new();
@@ -219,11 +245,10 @@ impl SingleInstanceLock
          let Some(_) = s.process(pid)
       {
         if pid == self_pid {
-          panic!("two SingleInstanceLock instances in the same program..");
+          panic!("two DocsetLock instances in the same program..");
         }
-        // another instance is running.
-        return Err(format!("Another instance of {PROGRAM_NAME} is currently running. \
-                            Please wait for it to finish!"));
+        return Err(format!("Another instance of {PROGRAM_NAME} is already accessing this \
+                            docset. Please wait for it to finish!"));
       } else {
         // either another instance was running, but is now dead, or lock file has bogus
         // contents.
@@ -243,13 +268,25 @@ impl SingleInstanceLock
   }
 }
 
-impl Drop for SingleInstanceLock
+impl Drop for DocsetLock
 {
   fn drop(&mut self)
   {
     debug_println!("dropping {} for {}", self.lock_file_path.display(), self.pid);
-    std::fs::remove_file(&self.lock_file_path).expect("lock was created and is available");
+    let _ = std::fs::remove_file(&self.lock_file_path);
   }
+}
+
+// Acquire an exclusive lock on a docset. Returns an error if the docset is
+// being accessed by another instance or is in an incomplete state (stale lock).
+pub(crate) fn lock_docset(docset_name: &str) -> Result<DocsetLock, String>
+{
+  let docset_path = get_docset_path(docset_name)?;
+  if DocsetLock::is_stale(&docset_path)? {
+    return Err(format!("Docset `{docset_name}` is in an incomplete state. Re-download it with \
+                        `{PROGRAM_NAME} download -f {docset_name}`."));
+  }
+  DocsetLock::acquire(&docset_path)
 }
 
 pub(crate) fn get_flag_error(flag_error: &FlagError) -> String

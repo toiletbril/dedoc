@@ -16,6 +16,7 @@ use crate::common::{
   get_terminal_width,
   is_docs_json_exists,
   is_docset_downloaded,
+  lock_docset,
   make_sure_docset_is_in_docs,
   print_docset_file,
   print_page_from_docset,
@@ -107,6 +108,8 @@ pub(crate) fn open<Args>(mut args: Args) -> ResultS
     return Err(format!("Docset `{docset}` is not downloaded. Try running \
                         `{PROGRAM_NAME} download {docset}`."));
   }
+
+  let _lock = lock_docset(&docset)?;
 
   let query = args.collect::<Vec<String>>().join(" ");
   if query.is_empty() {
